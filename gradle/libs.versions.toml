@@ -2,9 +2,6 @@
 # Build plugins
 openrewrite = "7.26.0"
 
-# OpenRewrite dependencies
-openrewrite-bom = "latest.release"
-
 # Lombok
 lombok = "1.18.42"
 
@@ -40,10 +37,6 @@ assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 
 # JSpecify for nullability annotations
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
-
-[bundles]
-junit = ["junit-jupiter-api", "junit-jupiter-params"]
-log4j = ["log4j-api", "log4j-core"]
 
 [plugins]
 openrewrite = { id = "org.openrewrite.rewrite", version.ref = "openrewrite" }
