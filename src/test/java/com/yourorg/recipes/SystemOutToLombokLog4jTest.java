@@ -8,14 +8,6 @@ import org.openrewrite.test.TypeValidation;
 
 import static org.openrewrite.java.Assertions.java;
 
-/**
- * Tests for SystemOutToLombokLog4j recipe.
- * Note: These tests use TypeValidation.none() because Lombok's @Log4j2 annotation
- * generates the 'log' field at compile time, and OpenRewrite's test parser cannot
- * resolve the type information for Lombok-generated fields. This is an acceptable
- * approach per OpenRewrite FAQ when type information cannot be resolved.
- * The recipes work correctly in practice when applied to actual code.
- */
 class SystemOutToLombokLog4jTest implements RewriteTest {
 
     @Override
@@ -297,7 +289,6 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         @Log4j2
                         public class MyClass {
                             public void println(String msg) {
-                                // Custom println method
                             }
 
                             public void doSomething() {

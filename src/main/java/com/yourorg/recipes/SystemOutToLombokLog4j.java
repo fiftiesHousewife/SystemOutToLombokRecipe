@@ -66,7 +66,7 @@ public class SystemOutToLombokLog4j extends Recipe {
                 return mi;
             }
 
-            private boolean isSystemOutOrErr(J.MethodInvocation method) {
+            boolean isSystemOutOrErr(J.MethodInvocation method) {
                 if (method.getSelect() == null) {
                     return false;
                 }
@@ -74,11 +74,11 @@ public class SystemOutToLombokLog4j extends Recipe {
                 return selectStr.equals("System.out") || selectStr.equals("System.err");
             }
 
-            private boolean isSystemErr(J.MethodInvocation method) {
+            boolean isSystemErr(J.MethodInvocation method) {
                 return method.getSelect() != null && method.getSelect().toString().equals("System.err");
             }
 
-            private J.MethodInvocation replacePrintln(J.MethodInvocation method, boolean isError) {
+            J.MethodInvocation replacePrintln(J.MethodInvocation method, boolean isError) {
                 List<Expression> args = method.getArguments();
 
                 if (args.isEmpty()) {
@@ -92,7 +92,7 @@ public class SystemOutToLombokLog4j extends Recipe {
                 return method;
             }
 
-            private J.MethodInvocation replacePrint(J.MethodInvocation method, boolean isError) {
+            J.MethodInvocation replacePrint(J.MethodInvocation method, boolean isError) {
                 List<Expression> args = method.getArguments();
 
                 if (args.size() == 1) {
@@ -102,7 +102,7 @@ public class SystemOutToLombokLog4j extends Recipe {
                 return method;
             }
 
-            private J.MethodInvocation replacePrintf(J.MethodInvocation method, boolean isError) {
+            J.MethodInvocation replacePrintf(J.MethodInvocation method, boolean isError) {
                 List<Expression> args = method.getArguments();
 
                 if (args.isEmpty()) {
@@ -115,17 +115,17 @@ public class SystemOutToLombokLog4j extends Recipe {
                         .apply(getCursor(), method.getCoordinates().replace(), args.toArray());
             }
 
-            private String getLogLevel(boolean isError) {
+            String getLogLevel(boolean isError) {
                 return isError ? "error" : "info";
             }
 
-            private J.MethodInvocation createEmptyLogStatement(J.MethodInvocation method, boolean isError) {
+            J.MethodInvocation createEmptyLogStatement(J.MethodInvocation method, boolean isError) {
                 return JavaTemplate.builder("log." + getLogLevel(isError) + "(\"\")")
                         .build()
                         .apply(getCursor(), method.getCoordinates().replace());
             }
 
-            private String buildLogCallTemplate(int argCount, boolean isError) {
+            String buildLogCallTemplate(int argCount, boolean isError) {
                 StringBuilder template = new StringBuilder("log.")
                         .append(getLogLevel(isError))
                         .append("(#{any()}");
@@ -138,7 +138,7 @@ public class SystemOutToLombokLog4j extends Recipe {
                 return template.toString();
             }
 
-            private J.MethodInvocation handleSingleArgument(J.MethodInvocation method, Expression arg, boolean isError) {
+            J.MethodInvocation handleSingleArgument(J.MethodInvocation method, Expression arg, boolean isError) {
                 if (isStringConcatenation(arg)) {
                     return convertToParameterizedLogging(method, (J.Binary) arg, isError);
                 }
@@ -146,18 +146,18 @@ public class SystemOutToLombokLog4j extends Recipe {
                 return createSimpleLogStatement(method, arg, isError);
             }
 
-            private boolean isStringConcatenation(Expression expression) {
+            boolean isStringConcatenation(Expression expression) {
                 return expression instanceof J.Binary
                         && ((J.Binary) expression).getOperator() == J.Binary.Type.Addition;
             }
 
-            private J.MethodInvocation createSimpleLogStatement(J.MethodInvocation method, Expression arg, boolean isError) {
+            J.MethodInvocation createSimpleLogStatement(J.MethodInvocation method, Expression arg, boolean isError) {
                 return JavaTemplate.builder("log." + getLogLevel(isError) + "(#{any()})")
                         .build()
                         .apply(getCursor(), method.getCoordinates().replace(), arg);
             }
 
-            private J.MethodInvocation convertToParameterizedLogging(
+            J.MethodInvocation convertToParameterizedLogging(
                     J.MethodInvocation method,
                     J.Binary binary,
                     boolean isError) {
@@ -174,7 +174,7 @@ public class SystemOutToLombokLog4j extends Recipe {
                         .apply(getCursor(), method.getCoordinates().replace(), logArgs.toArray());
             }
 
-            private String buildFormatString(List<Expression> parts) {
+            String buildFormatString(List<Expression> parts) {
                 StringBuilder formatString = new StringBuilder();
                 for (Expression part : parts) {
                     if (part instanceof J.Literal) {
@@ -189,7 +189,7 @@ public class SystemOutToLombokLog4j extends Recipe {
                 return formatString.toString();
             }
 
-            private List<Expression> extractNonLiteralArguments(List<Expression> parts) {
+            List<Expression> extractNonLiteralArguments(List<Expression> parts) {
                 List<Expression> logArgs = new ArrayList<>();
                 for (Expression part : parts) {
                     if (!(part instanceof J.Literal)) {
@@ -199,7 +199,7 @@ public class SystemOutToLombokLog4j extends Recipe {
                 return logArgs;
             }
 
-            private String buildParameterizedLogTemplate(String formatString, int argCount, boolean isError) {
+            String buildParameterizedLogTemplate(String formatString, int argCount, boolean isError) {
                 StringBuilder template = new StringBuilder("log.")
                         .append(getLogLevel(isError))
                         .append("(\"")
@@ -214,11 +214,11 @@ public class SystemOutToLombokLog4j extends Recipe {
                 return template.toString();
             }
 
-            private String escapeFormatString(String formatString) {
+            String escapeFormatString(String formatString) {
                 return formatString.replace("\\", "\\\\").replace("\"", "\\\"");
             }
 
-            private void extractConcatenationParts(J.Binary binary, List<Expression> parts) {
+            void extractConcatenationParts(J.Binary binary, List<Expression> parts) {
                 if (binary.getLeft() instanceof J.Binary) {
                     J.Binary leftBinary = (J.Binary) binary.getLeft();
                     if (leftBinary.getOperator() == J.Binary.Type.Addition) {

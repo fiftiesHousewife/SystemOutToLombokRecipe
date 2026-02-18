@@ -4,9 +4,7 @@ import org.jspecify.annotations.NullMarked;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
-import org.openrewrite.java.AddImport;
 import org.openrewrite.java.JavaIsoVisitor;
-import org.openrewrite.java.JavaParser;
 import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.tree.J;
 
@@ -48,21 +46,21 @@ public class AddLombokLog4j2Annotation extends Recipe {
                     return classDecl;
                 }
 
-                return addLog4j2Annotation(classDecl, ctx);
+                return addLog4j2Annotation(classDecl);
             }
 
-            private boolean containsSystemOutCalls(J.ClassDeclaration classDecl) {
+            boolean containsSystemOutCalls(J.ClassDeclaration classDecl) {
                 HasSystemOutVisitor visitor = new HasSystemOutVisitor();
                 visitor.visit(classDecl, false);
                 return visitor.hasSystemOut();
             }
 
-            private boolean hasLombokLoggingAnnotation(J.ClassDeclaration classDecl) {
+            boolean hasLombokLoggingAnnotation(J.ClassDeclaration classDecl) {
                 return classDecl.getLeadingAnnotations().stream()
                         .anyMatch(this::isLombokLoggingAnnotation);
             }
 
-            private boolean isLombokLoggingAnnotation(J.Annotation annotation) {
+            boolean isLombokLoggingAnnotation(J.Annotation annotation) {
                 String simpleName = annotation.getSimpleName();
                 if (simpleName.equals("Slf4j") || simpleName.equals("Log4j") ||
                     simpleName.equals("Log4j2") || simpleName.equals("Log") ||
@@ -85,14 +83,14 @@ public class AddLombokLog4j2Annotation extends Recipe {
                         || typeName.contains("lombok.CustomLog");
             }
 
-            private boolean hasExplicitLoggerField(J.ClassDeclaration classDecl) {
+            boolean hasExplicitLoggerField(J.ClassDeclaration classDecl) {
                 return classDecl.getBody().getStatements().stream()
                         .filter(J.VariableDeclarations.class::isInstance)
                         .map(J.VariableDeclarations.class::cast)
                         .anyMatch(this::isLoggerVariable);
             }
 
-            private boolean isLoggerVariable(J.VariableDeclarations variableDeclarations) {
+            boolean isLoggerVariable(J.VariableDeclarations variableDeclarations) {
                 return variableDeclarations.getVariables().stream()
                         .anyMatch(var -> "log".equals(var.getSimpleName())
                                 || "logger".equals(var.getSimpleName())
@@ -100,7 +98,7 @@ public class AddLombokLog4j2Annotation extends Recipe {
                                 || "LOGGER".equals(var.getSimpleName()));
             }
 
-            private J.ClassDeclaration addLog4j2Annotation(J.ClassDeclaration classDecl, ExecutionContext ctx) {
+            private J.ClassDeclaration addLog4j2Annotation(J.ClassDeclaration classDecl) {
                 maybeAddImport("lombok.extern.log4j.Log4j2", null, false);
 
                 return JavaTemplate.builder("@Log4j2")

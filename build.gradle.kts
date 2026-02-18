@@ -19,7 +19,6 @@ repositories {
 }
 
 dependencies {
-
     //Openrewrite recipe
     implementation(platform("org.openrewrite.recipe:rewrite-recipe-bom:latest.release"))
     implementation(libs.openrewrite.java)
@@ -41,16 +40,6 @@ dependencies {
     rewrite(platform("org.openrewrite.recipe:rewrite-recipe-bom:3.6.0"))
     rewrite("org.openrewrite:rewrite-gradle")
     rewrite(project)
-}
-
-tasks.named<JavaCompile>("compileJava") {
-    options.compilerArgs.add("-parameters")
-    options.release.set(8)
-}
-
-tasks.named<JavaCompile>("compileTestJava") {
-    options.compilerArgs.add("-parameters")
-    options.release.set(21)
 }
 
 tasks.withType<Test> {
