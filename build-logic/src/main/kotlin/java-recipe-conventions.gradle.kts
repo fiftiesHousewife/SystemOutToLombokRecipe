@@ -23,22 +23,20 @@ tasks {
 }
 
 dependencies {
-    val libs = project.extensions.getByType<VersionCatalogsExtension>().named("libs")
-
     implementation(platform("org.openrewrite.recipe:rewrite-recipe-bom:latest.release"))
-    implementation(libs.findLibrary("openrewrite-java").get())
+    implementation("org.openrewrite:rewrite-java")
 
-    compileOnly(libs.findLibrary("jspecify").get())
-    compileOnly(libs.findLibrary("lombok").get())
+    compileOnly("org.jspecify:jspecify:1.0.0")
+    compileOnly("org.projectlombok:lombok:1.18.42")
 
     testImplementation(platform("org.junit:junit-bom:6.0.3"))
-    testImplementation(libs.findLibrary("junit-jupiter-api").get())
-    testImplementation(libs.findLibrary("junit-jupiter-params").get())
-    testImplementation(libs.findLibrary("assertj-core").get())
-    testImplementation(libs.findLibrary("openrewrite-test").get())
-    testImplementation(libs.findLibrary("log4j-api").get())
-    testImplementation(libs.findLibrary("log4j-core").get())
+    testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testImplementation("org.junit.jupiter:junit-jupiter-params")
+    testImplementation("org.assertj:assertj-core:3.27.6")
+    testImplementation("org.openrewrite:rewrite-test")
+    testImplementation("org.apache.logging.log4j:log4j-api:2.25.3")
+    testImplementation("org.apache.logging.log4j:log4j-core:2.25.3")
 
-    testRuntimeOnly(libs.findLibrary("junit-jupiter-engine").get())
-    testRuntimeOnly(libs.findLibrary("junit-platform-launcher").get())
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

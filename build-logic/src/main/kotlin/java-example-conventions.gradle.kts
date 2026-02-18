@@ -19,11 +19,9 @@ tasks {
 }
 
 dependencies {
-    val libs = project.extensions.getByType<VersionCatalogsExtension>().named("libs")
+    compileOnly("org.projectlombok:lombok:1.18.42")
+    annotationProcessor("org.projectlombok:lombok:1.18.42")
 
-    compileOnly(libs.findLibrary("lombok").get())
-    annotationProcessor(libs.findLibrary("lombok").get())
-
-    implementation(libs.findLibrary("log4j-api").get())
-    runtimeOnly(libs.findLibrary("log4j-core").get())
+    implementation("org.apache.logging.log4j:log4j-api:2.25.3")
+    runtimeOnly("org.apache.logging.log4j:log4j-core:2.25.3")
 }
