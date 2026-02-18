@@ -49,5 +49,9 @@ bin/
 ### OpenRewrite ###
 .rewrite/
 
+### OpenRewrite Generated Files ###
+# JAR files downloaded by downloadRecipeDependencies task
+src/main/resources/META-INF/rewrite/*.jar
+
 ### Local Maven ###
 # Don't ignore locally published artifacts in ~/.m2
