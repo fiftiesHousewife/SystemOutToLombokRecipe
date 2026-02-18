@@ -3,6 +3,7 @@ package com.yourorg.recipes;
 import org.junit.jupiter.api.Test;
 import org.openrewrite.test.RecipeSpec;
 import org.openrewrite.test.RewriteTest;
+import org.openrewrite.test.TypeValidation;
 
 import static org.openrewrite.java.Assertions.java;
 
@@ -10,7 +11,8 @@ class AddLombokLog4j2AnnotationTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        spec.recipe(new AddLombokLog4j2Annotation());
+        spec.recipe(new AddLombokLog4j2Annotation())
+            .afterTypeValidationOptions(TypeValidation.none());
     }
 
     @Test

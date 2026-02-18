@@ -10,6 +10,7 @@ jspecify = "1.0.0"
 # OpenRewrite
 openrewrite-java = { module = "org.openrewrite:rewrite-java" }
 openrewrite-java17 = { module = "org.openrewrite:rewrite-java-17" }
+openrewrite-java21 = { module = "org.openrewrite:rewrite-java-21" }
 openrewrite-test = { module = "org.openrewrite:rewrite-test" }
 
 # Lombok

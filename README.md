@@ -17,11 +17,12 @@ A comprehensive OpenRewrite recipe project that automatically converts `System.o
 
 This project demonstrates how to write custom OpenRewrite recipes to perform automated code refactoring. The recipes in this project:
 
-1. **Add Lombok and Log4j2 dependencies** to your project
-2. **Add `@Log4j2` annotation** to classes that use `System.out` print statements
-3. **Convert `System.out.println()`** calls to `log.info()` statements
-4. **Convert string concatenation** to parameterized logging (e.g., `"x = " + x` → `"x = {}", x`)
-5. **Convert `System.err` calls** to `log.error()` statements
+1. **Add Lombok and Log4j2 dependencies** to your project (compileOnly, annotationProcessor, implementation, and runtimeOnly scopes)
+2. **Create a log4j2.xml configuration file** in src/main/resources with console appender
+3. **Add `@Log4j2` annotation** to classes that use `System.out` print statements
+4. **Convert `System.out.println()`** calls to `log.info()` statements
+5. **Convert string concatenation** to parameterized logging (e.g., `"x = " + x` → `"x = {}", x`)
+6. **Convert `System.err` calls** to `log.error()` statements
 
 ### Why This Matters
 
@@ -32,45 +33,41 @@ This project demonstrates how to write custom OpenRewrite recipes to perform aut
 
 ## Project Structure
 
-This is a Gradle 8 multi-module project using modern build conventions:
+This is a single-module Gradle 9 project:
 
 ```
 system-out-to-lombok-log4j/
-├── build.gradle.kts              # Root build configuration
-├── settings.gradle.kts           # Multi-module settings with dependencyResolutionManagement
+├── build.gradle.kts              # Build configuration with recipes and application
+├── settings.gradle.kts           # Project settings
 ├── gradle/
 │   └── libs.versions.toml        # Version catalog for dependency management
-├── build-logic/                  # Convention plugins for build configuration
-│   ├── settings.gradle.kts
-│   ├── build.gradle.kts
-│   └── src/main/kotlin/
-│       ├── java-recipe-conventions.gradle.kts    # Common config for recipes module
-│       └── java-example-conventions.gradle.kts   # Common config for example module
 ├── README.md                     # This file
-├── recipes/                      # Recipe implementation module
-│   ├── build.gradle.kts
-│   ├── src/main/java/com/yourorg/recipes/
-│   │   ├── AddLombokLog4j2Annotation.java        # Adds @Log4j2 annotation
-│   │   └── SystemOutToLombokLog4j.java           # Converts System.out to log
-│   ├── src/main/resources/META-INF/rewrite/
-│   │   └── system-out-to-lombok.yml              # Declarative recipe composition
-│   └── src/test/java/com/yourorg/recipes/
-│       ├── AddLombokLog4j2AnnotationTest.java    # Tests for annotation recipe
-│       └── SystemOutToLombokLog4jTest.java       # Tests for conversion recipe
-└── example/                      # Example project for testing
-    ├── build.gradle.kts
-    └── src/main/java/org/example/
-        └── Main.java             # Sample code with System.out.println
+├── rewrite.yml                   # Declarative recipe composition
+└── src/
+    ├── main/java/
+    │   ├── com/yourorg/recipes/
+    │   │   ├── AddLombokLog4j2Annotation.java        # Adds @Log4j2 annotation
+    │   │   └── SystemOutToLombokLog4j.java           # Converts System.out to log
+    │   └── org/example/
+    │       └── Main.java                              # Example application
+    ├── main/resources/
+    │   ├── META-INF/rewrite/
+    │   │   └── system-out-to-lombok.yml              # Recipe metadata
+    │   └── log4j2.xml                                 # Log4j2 configuration
+    └── test/java/com/yourorg/recipes/
+        ├── AddLombokLog4j2AnnotationTest.java        # Tests for annotation recipe
+        └── SystemOutToLombokLog4jTest.java           # Tests for conversion recipe
 ```
 
 ### Build Structure
 
-This project follows Gradle 8 best practices:
+This project follows Gradle 9 best practices:
 
-- **Convention Plugins**: Shared build logic in `build-logic/` instead of `allprojects`/`subprojects` blocks
+- **Single Module**: Recipe implementation and example application in one module
+- **OpenRewrite Configuration**: Build output on rewrite classpath for recipe discovery
 - **Dependency Resolution Management**: Centralized repository configuration in `settings.gradle.kts`
 - **Version Catalog**: All dependency versions managed in `gradle/libs.versions.toml`
-- **Java Toolchains**: Proper toolchain configuration instead of `sourceCompatibility`/`targetCompatibility`
+- **Java 21 Toolchains**: Using Java 21 (required for OpenRewrite Gradle Kotlin DSL parsing)
 
 ## How It Works
 
@@ -175,7 +172,7 @@ log.info("x = {}, y = {}", x, y);
 
 ### 3. Declarative Recipe (YAML)
 
-The YAML recipe composes everything together:
+The YAML recipe in `src/main/resources/META-INF/rewrite/system-out-to-lombok.yml` composes everything together:
 
 ```yaml
 ---
@@ -185,23 +182,52 @@ displayName: Convert System.out to Lombok @Log4j2
 description: Converts System.out calls to Lombok @Log4j2 logging
 
 recipeList:
-  # Add dependencies
-  - org.openrewrite.java.dependencies.AddDependency:
+  # Add Lombok dependencies (compileOnly and annotationProcessor)
+  - org.openrewrite.gradle.AddDependency:
       groupId: org.projectlombok
       artifactId: lombok
       version: 1.18.x
-      scope: compileOnly
+      configuration: compileOnly
+      acceptTransitive: true
+
+  - org.openrewrite.gradle.AddDependency:
+      groupId: org.projectlombok
+      artifactId: lombok
+      version: 1.18.x
+      configuration: annotationProcessor
+      acceptTransitive: true
 
   # Add Log4j2 dependencies
-  - org.openrewrite.java.dependencies.AddDependency:
+  - org.openrewrite.gradle.AddDependency:
       groupId: org.apache.logging.log4j
       artifactId: log4j-api
       version: 2.x
+      configuration: implementation
 
-  - org.openrewrite.java.dependencies.AddDependency:
+  - org.openrewrite.gradle.AddDependency:
       groupId: org.apache.logging.log4j
       artifactId: log4j-core
       version: 2.x
+      configuration: runtimeOnly
+
+  # Create log4j2.xml configuration file
+  - org.openrewrite.text.CreateTextFile:
+      relativeFileName: src/main/resources/log4j2.xml
+      fileContents: |
+        <?xml version="1.0" encoding="UTF-8"?>
+        <Configuration status="WARN">
+            <Appenders>
+                <Console name="Console" target="SYSTEM_OUT">
+                    <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+                </Console>
+            </Appenders>
+            <Loggers>
+                <Root level="info">
+                    <AppenderRef ref="Console"/>
+                </Root>
+            </Loggers>
+        </Configuration>
+      overwriteExisting: false
 
   # Add annotation and convert calls
   - com.yourorg.recipes.AddLombokLog4j2Annotation
@@ -211,8 +237,8 @@ recipeList:
 ## Building and Testing
 
 ### Prerequisites
-- JDK 17 or higher
-- Gradle 8.x (wrapper included)
+- JDK 21 (required for OpenRewrite Gradle Kotlin DSL support)
+- Gradle 9.x (wrapper included)
 
 ### Build Commands
 
@@ -220,17 +246,14 @@ recipeList:
 # Build the entire project
 ./gradlew build
 
-# Build just the recipes module
-./gradlew :recipes:build
-
 # Run recipe tests - All 15 tests pass
-./gradlew :recipes:test
-
-# Publish recipes to local Maven repository
-./gradlew :recipes:publishToMavenLocal
+./gradlew test
 
 # View test results
-open recipes/build/reports/tests/test/index.html
+open build/reports/tests/test/index.html
+
+# Run the example application
+./gradlew run
 ```
 
 ### Test Results
@@ -260,11 +283,43 @@ The `SystemOutToLombokLog4j` recipe tests (9/9 passing):
 
 ## Usage
 
-### Option 1: Using in Your Project
+### Running the Recipe
 
-1. **Publish recipes to local Maven**:
+This single-module project contains both the recipe implementation and example application code:
+
 ```bash
-./gradlew :recipes:publishToMavenLocal
+# Preview what changes would be made (dry-run)
+./gradlew rewriteDryRun
+
+# Apply changes to the example code
+./gradlew rewriteRun
+
+# View the transformed code
+cat src/main/java/org/example/Main.java
+
+# Build to verify everything compiles
+./gradlew build
+
+# Run the example application
+./gradlew run
+```
+
+The recipe will:
+- Add `@Log4j2` annotation to classes with `System.out` calls
+- Convert `System.out.println()` to `log.info()`
+- Convert `System.err.println()` to `log.error()`
+- Convert string concatenation to parameterized logging
+- Create `log4j2.xml` configuration file
+
+**Tip**: Always run `rewriteDryRun` first to preview changes before applying them!
+
+### Using in Your Own Project
+
+To use this recipe in another project:
+
+1. **Publish to local Maven**:
+```bash
+./gradlew publishToMavenLocal
 ```
 
 2. **Add to your project's `build.gradle.kts`**:
@@ -279,7 +334,9 @@ repositories {
 }
 
 dependencies {
-    rewrite("com.yourorg:recipes:1.0-SNAPSHOT")
+    rewrite("com.yourorg:system-out-to-lombok-log4j:1.0-SNAPSHOT")
+    rewrite(platform("org.openrewrite.recipe:rewrite-recipe-bom:3.6.0"))
+    rewrite("org.openrewrite:rewrite-gradle")
 }
 
 rewrite {
@@ -294,50 +351,7 @@ rewrite {
 
 # Apply changes
 ./gradlew rewriteRun
-
-# Build to verify everything compiles
-./gradlew build
 ```
-
-### Option 2: Testing with Example Module
-
-The `example` module contains a simple Java class with `System.out.println()` calls and custom migration tasks:
-
-```bash
-# 1. Publish the recipes to local Maven repository
-./gradlew :recipes:publishToMavenLocal
-
-# 2. Preview what changes would be made (dry-run)
-./gradlew :example:migrateDryRun
-
-# 3. Apply the migration to the example code
-./gradlew :example:migrate
-
-# 4. View the migrated code
-cat example/src/main/java/org/example/Main.java
-
-# 5. Verify changes compile
-./gradlew :example:build
-```
-
-#### Custom Migration Tasks
-
-The example module provides convenient tasks for migration:
-
-- **`./gradlew :example:migrateDryRun`** - Preview changes without modifying files
-  - Shows a diff of what would change
-  - Safe to run multiple times
-  - No side effects
-
-- **`./gradlew :example:migrate`** - Apply the migration
-  - Modifies source files in place
-  - Adds `@Log4j2` annotation to classes
-  - Converts `System.out`/`System.err` to `log.info()`/`log.error()`
-  - Converts string concatenation to parameterized logging
-
-These tasks wrap the OpenRewrite plugin tasks (`rewriteDryRun` and `rewriteRun`) with helpful messages and automatically publish the recipes first.
-
-**Tip**: Always run `migrateDryRun` first to preview changes before applying them!
 
 ## Example Transformations
 
@@ -461,15 +475,17 @@ public class Formatter {
 #### 3. Build Fails After Running Recipe
 **Problem**: Code doesn't compile after transformation.
 **Solution**:
-- Recipe may not have added dependencies
-- Manually add Lombok and Log4j2 dependencies:
+- The recipe should automatically add all required dependencies
+- Check that dependencies were added to build.gradle.kts:
   ```kotlin
   dependencies {
-      compileOnly("org.projectlombok:lombok:1.18.34")
-      implementation("org.apache.logging.log4j:log4j-api:2.23.1")
-      implementation("org.apache.logging.log4j:log4j-core:2.23.1")
+      compileOnly("org.projectlombok:lombok:1.18.x")
+      annotationProcessor("org.projectlombok:lombok:1.18.x")
+      implementation("org.apache.logging.log4j:log4j-api:2.x")
+      runtimeOnly("org.apache.logging.log4j:log4j-core:2.x")
   }
   ```
+- Verify that log4j2.xml was created in src/main/resources
 
 #### 4. Gradle Plugin Version Conflicts
 **Problem**: OpenRewrite Gradle plugin compatibility issues.
@@ -551,15 +567,20 @@ Consider adding support for:
 
 ## Architecture Notes
 
-### Why Multi-Module?
+### Why Single Module?
 
-1. **Separation of Concerns**: Recipe implementation separate from test subjects
-2. **Reusability**: Recipes can be published and used in other projects
-3. **Testing**: Example module provides real-world testing scenario
+The project was simplified to a single-module structure because:
+1. **OpenRewrite Gradle Plugin Limitation**: The plugin can only modify build files in the same project where it's applied
+2. **Simpler Setup**: Recipe compilation and execution in the same module
+3. **Easier Testing**: Direct recipe application to example code
 
-### Why Java 8 for Recipes?
+### Why Java 8 Bytecode for Recipes?
 
-OpenRewrite recipes target Java 8 bytecode for maximum compatibility. This allows the recipes to run on any project using Java 8+, while the recipes themselves can be developed on modern JDKs.
+OpenRewrite recipes target Java 8 bytecode (via `options.release.set(8)`) for maximum compatibility. This allows the recipes to run on any project using Java 8+, while the recipes are developed and tested on Java 21.
+
+### Why Java 21 Required?
+
+OpenRewrite's Gradle Kotlin DSL parser requires Java 21. Java 25 causes parsing failures when trying to modify build.gradle.kts files.
 
 ### Design Patterns Used
 

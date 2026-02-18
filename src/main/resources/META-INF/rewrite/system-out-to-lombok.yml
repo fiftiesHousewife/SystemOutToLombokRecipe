@@ -1,0 +1,91 @@
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.yourorg.SystemOutToLombokLog4jRecipe
+displayName: Convert System.out to Lombok @Log4j2
+description: >
+  Converts System.out.println/printf calls to Lombok @Log4j2 logging.
+  This recipe adds the necessary Lombok and Log4j2 dependencies, adds the @Log4j2 annotation
+  to classes with System.out calls, converts those calls to parameterized log statements,
+  and creates a log4j2.xml configuration file.
+
+recipeList:
+  # Step 1: Add Lombok dependency (unconditionally)
+  - org.openrewrite.gradle.AddDependency:
+      groupId: org.projectlombok
+      artifactId: lombok
+      version: 1.18.x
+      configuration: compileOnly
+      acceptTransitive: true
+
+  # Step 2: Add Lombok annotation processor (unconditionally)
+  - org.openrewrite.gradle.AddDependency:
+      groupId: org.projectlombok
+      artifactId: lombok
+      version: 1.18.x
+      configuration: annotationProcessor
+      acceptTransitive: true
+
+  # Step 3: Add Log4j2 API dependency (unconditionally)
+  - org.openrewrite.gradle.AddDependency:
+      groupId: org.apache.logging.log4j
+      artifactId: log4j-api
+      version: 2.x
+      configuration: implementation
+
+  # Step 4: Add Log4j2 Core dependency (unconditionally)
+  - org.openrewrite.gradle.AddDependency:
+      groupId: org.apache.logging.log4j
+      artifactId: log4j-core
+      version: 2.x
+      configuration: runtimeOnly
+
+  # Step 5: Create log4j2.xml configuration file
+  - org.openrewrite.text.CreateTextFile:
+      relativeFileName: src/main/resources/log4j2.xml
+      fileContents: |
+        <?xml version="1.0" encoding="UTF-8"?>
+        <Configuration status="WARN">
+            <Appenders>
+                <Console name="Console" target="SYSTEM_OUT">
+                    <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+                </Console>
+            </Appenders>
+            <Loggers>
+                <Root level="info">
+                    <AppenderRef ref="Console"/>
+                </Root>
+            </Loggers>
+        </Configuration>
+      overwriteExisting: false
+
+  # Step 6: Add @Log4j2 annotation to classes with System.out calls
+  - com.yourorg.recipes.AddLombokLog4j2Annotation
+
+  # Step 7: Convert System.out calls to log statements
+  - com.yourorg.recipes.SystemOutToLombokLog4j
+
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.yourorg.AddLombokLog4j2Dependencies
+displayName: Add Lombok and Log4j2 dependencies
+description: Adds Lombok and Log4j2 dependencies to the project
+
+recipeList:
+  - org.openrewrite.java.dependencies.AddDependency:
+      groupId: org.projectlombok
+      artifactId: lombok
+      version: 1.18.x
+      configuration: compileOnly
+      acceptTransitive: true
+
+  - org.openrewrite.java.dependencies.AddDependency:
+      groupId: org.apache.logging.log4j
+      artifactId: log4j-api
+      version: 2.x
+      configuration: implementation
+
+  - org.openrewrite.java.dependencies.AddDependency:
+      groupId: org.apache.logging.log4j
+      artifactId: log4j-core
+      version: 2.x
+      configuration: implementation

@@ -21,8 +21,7 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
     @Override
     public void defaults(RecipeSpec spec) {
         spec.recipe(new SystemOutToLombokLog4j())
-                .parser(JavaParser.fromJavaVersion()
-                        .classpath("lombok", "log4j-api"))
+                .parser(JavaParser.fromJavaVersion())
                 .typeValidationOptions(TypeValidation.none());
     }
 

@@ -4,6 +4,7 @@ import org.jspecify.annotations.NullMarked;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
+import org.openrewrite.java.AddImport;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaParser;
 import org.openrewrite.java.JavaTemplate;
@@ -35,21 +36,19 @@ public class AddLombokLog4j2Annotation extends Recipe {
 
             @Override
             public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext ctx) {
-                J.ClassDeclaration cd = super.visitClassDeclaration(classDecl, ctx);
-
                 if (!containsSystemOutCalls(classDecl)) {
-                    return cd;
+                    return classDecl;
                 }
 
-                if (hasLombokLoggingAnnotation(cd)) {
-                    return cd;
+                if (hasLombokLoggingAnnotation(classDecl)) {
+                    return classDecl;
                 }
 
-                if (hasExplicitLoggerField(cd)) {
-                    return cd;
+                if (hasExplicitLoggerField(classDecl)) {
+                    return classDecl;
                 }
 
-                return addLog4j2Annotation(cd);
+                return addLog4j2Annotation(classDecl, ctx);
             }
 
             private boolean containsSystemOutCalls(J.ClassDeclaration classDecl) {
@@ -64,6 +63,14 @@ public class AddLombokLog4j2Annotation extends Recipe {
             }
 
             private boolean isLombokLoggingAnnotation(J.Annotation annotation) {
+                String simpleName = annotation.getSimpleName();
+                if (simpleName.equals("Slf4j") || simpleName.equals("Log4j") ||
+                    simpleName.equals("Log4j2") || simpleName.equals("Log") ||
+                    simpleName.equals("CommonsLog") || simpleName.equals("Flogger") ||
+                    simpleName.equals("JBossLog") || simpleName.equals("CustomLog")) {
+                    return true;
+                }
+
                 if (annotation.getType() == null) {
                     return false;
                 }
@@ -93,11 +100,10 @@ public class AddLombokLog4j2Annotation extends Recipe {
                                 || "LOGGER".equals(var.getSimpleName()));
             }
 
-            private J.ClassDeclaration addLog4j2Annotation(J.ClassDeclaration classDecl) {
-                maybeAddImport("lombok.extern.log4j.Log4j2");
+            private J.ClassDeclaration addLog4j2Annotation(J.ClassDeclaration classDecl, ExecutionContext ctx) {
+                maybeAddImport("lombok.extern.log4j.Log4j2", null, false);
 
                 return JavaTemplate.builder("@Log4j2")
-                        .javaParser(JavaParser.fromJavaVersion().classpath("lombok"))
                         .imports("lombok.extern.log4j.Log4j2")
                         .build()
                         .apply(
