@@ -1,0 +1,66 @@
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.yourorg.SystemOutToLombokLog4jRecipe
+displayName: Convert System.out to Lombok @Log4j2
+description: >
+  Converts System.out.println/printf calls to Lombok @Log4j2 logging.
+  This recipe adds the necessary Lombok and Log4j2 dependencies, adds the @Log4j2 annotation
+  to classes with System.out calls, and converts those calls to parameterized log statements.
+
+recipeList:
+  # Step 1: Add Lombok dependency
+  - org.openrewrite.java.dependencies.AddDependency:
+      groupId: org.projectlombok
+      artifactId: lombok
+      version: 1.18.x
+      onlyIfUsing: lombok.extern.log4j.Log4j2
+      scope: compileOnly
+      acceptTransitive: true
+
+  # Step 2: Add Log4j2 API dependency
+  - org.openrewrite.java.dependencies.AddDependency:
+      groupId: org.apache.logging.log4j
+      artifactId: log4j-api
+      version: 2.x
+      onlyIfUsing: org.apache.logging.log4j.Logger
+      scope: implementation
+
+  # Step 3: Add Log4j2 Core dependency
+  - org.openrewrite.java.dependencies.AddDependency:
+      groupId: org.apache.logging.log4j
+      artifactId: log4j-core
+      version: 2.x
+      onlyIfUsing: org.apache.logging.log4j.Logger
+      scope: implementation
+
+  # Step 4: Add @Log4j2 annotation to classes with System.out calls
+  - com.yourorg.recipes.AddLombokLog4j2Annotation
+
+  # Step 5: Convert System.out calls to log statements
+  - com.yourorg.recipes.SystemOutToLombokLog4j
+
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.yourorg.AddLombokLog4j2Dependencies
+displayName: Add Lombok and Log4j2 dependencies
+description: Adds Lombok and Log4j2 dependencies to the project
+
+recipeList:
+  - org.openrewrite.java.dependencies.AddDependency:
+      groupId: org.projectlombok
+      artifactId: lombok
+      version: 1.18.x
+      scope: compileOnly
+      acceptTransitive: true
+
+  - org.openrewrite.java.dependencies.AddDependency:
+      groupId: org.apache.logging.log4j
+      artifactId: log4j-api
+      version: 2.x
+      scope: implementation
+
+  - org.openrewrite.java.dependencies.AddDependency:
+      groupId: org.apache.logging.log4j
+      artifactId: log4j-core
+      version: 2.x
+      scope: implementation
