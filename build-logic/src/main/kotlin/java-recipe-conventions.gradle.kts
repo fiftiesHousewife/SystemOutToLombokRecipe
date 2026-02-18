@@ -22,21 +22,27 @@ tasks {
     }
 }
 
-dependencies {
-    implementation(platform("org.openrewrite.recipe:rewrite-recipe-bom:latest.release"))
-    implementation("org.openrewrite:rewrite-java")
+val libs = the<VersionCatalogsExtension>().named("libs")
 
-    compileOnly("org.jspecify:jspecify:1.0.0")
-    compileOnly("org.projectlombok:lombok:1.18.42")
+dependencies {
+    // Note: We use the type-unsafe API to access the version catalog in convention plugins.
+    // This is the official Gradle approach as type-safe accessors are not available in
+    // precompiled script plugins. See: https://github.com/gradle/gradle/issues/15383
+
+    implementation(platform("org.openrewrite.recipe:rewrite-recipe-bom:latest.release"))
+    implementation(libs.findLibrary("openrewrite-java").get())
+
+    compileOnly(libs.findLibrary("jspecify").get())
+    compileOnly(libs.findLibrary("lombok").get())
 
     testImplementation(platform("org.junit:junit-bom:6.0.3"))
-    testImplementation("org.junit.jupiter:junit-jupiter-api")
-    testImplementation("org.junit.jupiter:junit-jupiter-params")
-    testImplementation("org.assertj:assertj-core:3.27.6")
-    testImplementation("org.openrewrite:rewrite-test")
-    testImplementation("org.apache.logging.log4j:log4j-api:2.25.3")
-    testImplementation("org.apache.logging.log4j:log4j-core:2.25.3")
+    testImplementation(libs.findLibrary("junit-jupiter-api").get())
+    testImplementation(libs.findLibrary("junit-jupiter-params").get())
+    testImplementation(libs.findLibrary("assertj-core").get())
+    testImplementation(libs.findLibrary("openrewrite-test").get())
+    testImplementation(libs.findLibrary("log4j-api").get())
+    testImplementation(libs.findLibrary("log4j-core").get())
 
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testRuntimeOnly(libs.findLibrary("junit-jupiter-engine").get())
+    testRuntimeOnly(libs.findLibrary("junit-platform-launcher").get())
 }

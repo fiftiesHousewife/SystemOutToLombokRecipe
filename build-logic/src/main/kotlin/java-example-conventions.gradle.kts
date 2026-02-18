@@ -18,10 +18,16 @@ tasks {
     }
 }
 
-dependencies {
-    compileOnly("org.projectlombok:lombok:1.18.42")
-    annotationProcessor("org.projectlombok:lombok:1.18.42")
+val libs = the<VersionCatalogsExtension>().named("libs")
 
-    implementation("org.apache.logging.log4j:log4j-api:2.25.3")
-    runtimeOnly("org.apache.logging.log4j:log4j-core:2.25.3")
+dependencies {
+    // Note: We use the type-unsafe API to access the version catalog in convention plugins.
+    // This is the official Gradle approach as type-safe accessors are not available in
+    // precompiled script plugins. See: https://github.com/gradle/gradle/issues/15383
+
+    compileOnly(libs.findLibrary("lombok").get())
+    annotationProcessor(libs.findLibrary("lombok").get())
+
+    implementation(libs.findLibrary("log4j-api").get())
+    runtimeOnly(libs.findLibrary("log4j-core").get())
 }
