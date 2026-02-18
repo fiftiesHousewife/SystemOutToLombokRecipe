@@ -23,7 +23,6 @@ public class SystemOutToLombokLog4j extends Recipe {
     private static final MethodMatcher SYSTEM_OUT_PRINTLN = new MethodMatcher("java.io.PrintStream println(..)");
     private static final MethodMatcher SYSTEM_OUT_PRINT = new MethodMatcher("java.io.PrintStream print(..)");
     private static final MethodMatcher SYSTEM_OUT_PRINTF = new MethodMatcher("java.io.PrintStream printf(..)");
-    private static final MethodMatcher SYSTEM_ERR_PRINTLN = new MethodMatcher("java.io.PrintStream println(..)");
 
     @Override
     public String getDisplayName() {
@@ -181,7 +180,7 @@ public class SystemOutToLombokLog4j extends Recipe {
                     if (part instanceof J.Literal) {
                         J.Literal literal = (J.Literal) part;
                         if (literal.getValue() != null) {
-                            formatString.append(literal.getValue().toString());
+                            formatString.append(literal.getValue());
                         }
                     } else {
                         formatString.append("{}");

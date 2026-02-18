@@ -301,22 +301,43 @@ rewrite {
 
 ### Option 2: Testing with Example Module
 
-The `example` module contains a simple Java class with `System.out.println()` calls:
+The `example` module contains a simple Java class with `System.out.println()` calls and custom migration tasks:
 
 ```bash
-# View original code
+# 1. Publish the recipes to local Maven repository
+./gradlew :recipes:publishToMavenLocal
+
+# 2. Preview what changes would be made (dry-run)
+./gradlew :example:migrateDryRun
+
+# 3. Apply the migration to the example code
+./gradlew :example:migrate
+
+# 4. View the migrated code
 cat example/src/main/java/org/example/Main.java
 
-# Apply recipe (when configured)
-cd example
-./gradlew rewriteRun
-
-# View transformed code
-cat src/main/java/org/example/Main.java
-
-# Build and run
-./gradlew build run
+# 5. Verify changes compile
+./gradlew :example:build
 ```
+
+#### Custom Migration Tasks
+
+The example module provides convenient tasks for migration:
+
+- **`./gradlew :example:migrateDryRun`** - Preview changes without modifying files
+  - Shows a diff of what would change
+  - Safe to run multiple times
+  - No side effects
+
+- **`./gradlew :example:migrate`** - Apply the migration
+  - Modifies source files in place
+  - Adds `@Log4j2` annotation to classes
+  - Converts `System.out`/`System.err` to `log.info()`/`log.error()`
+  - Converts string concatenation to parameterized logging
+
+These tasks wrap the OpenRewrite plugin tasks (`rewriteDryRun` and `rewriteRun`) with helpful messages and automatically publish the recipes first.
+
+**Tip**: Always run `migrateDryRun` first to preview changes before applying them!
 
 ## Example Transformations
 
