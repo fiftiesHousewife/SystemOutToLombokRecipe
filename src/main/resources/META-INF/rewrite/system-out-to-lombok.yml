@@ -64,6 +64,9 @@ recipeList:
   # Step 7: Convert System.out calls to log statements
   - com.yourorg.recipes.SystemOutToLombokLog4j
 
+  # Step 8: Convert printStackTrace calls to log.error
+  - com.yourorg.recipes.PrintStackTraceToLog
+
 ---
 type: specs.openrewrite.org/v1beta/recipe
 name: com.yourorg.AddLombokLog4j2Dependencies

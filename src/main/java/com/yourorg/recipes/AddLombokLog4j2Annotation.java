@@ -6,12 +6,13 @@ import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaTemplate;
+import org.openrewrite.java.MethodMatcher;
 import org.openrewrite.java.tree.J;
 
 import java.util.Comparator;
 
 /**
- * Adds the Lombok @Log4j2 annotation to classes that use System.out print statements.
+ * Adds the Lombok @Log4j2 annotation to classes that use System.out print statements or printStackTrace calls.
  * This recipe should be applied to classes before converting System.out to log statements.
  */
 @NullMarked
@@ -112,10 +113,8 @@ public class AddLombokLog4j2Annotation extends Recipe {
         };
     }
 
-    /**
-     * Helper visitor to detect if a class contains System.out method calls
-     */
     private static class HasSystemOutVisitor extends JavaIsoVisitor<Boolean> {
+        private static final MethodMatcher PRINT_STACK_TRACE = new MethodMatcher("java.lang.Throwable printStackTrace(..)");
         private boolean foundSystemOut = false;
 
         @Override
@@ -126,6 +125,11 @@ public class AddLombokLog4j2Annotation extends Recipe {
                     foundSystemOut = true;
                 }
             }
+
+            if (PRINT_STACK_TRACE.matches(method)) {
+                foundSystemOut = true;
+            }
+
             return super.visitMethodInvocation(method, ctx);
         }
 

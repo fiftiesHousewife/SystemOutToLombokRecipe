@@ -1,30 +1,22 @@
 [versions]
 openrewrite = "7.26.0"
-lombok = "1.18.42"
-log4j = "2.25.3"
-junit = "6.0.3"
-assertj = "3.27.6"
+openrewrite-bom = "3.6.0"
+junit = "6.1.0-M1"
+assertj = "4.0.0-M1"
 jspecify = "1.0.0"
+versions = "0.53.0"
 
 [libraries]
 # OpenRewrite
+openrewrite-recipe-bom = { module = "org.openrewrite.recipe:rewrite-recipe-bom", version.ref = "openrewrite-bom" }
 openrewrite-java = { module = "org.openrewrite:rewrite-java" }
-openrewrite-java17 = { module = "org.openrewrite:rewrite-java-17" }
 openrewrite-java21 = { module = "org.openrewrite:rewrite-java-21" }
+openrewrite-gradle = { module = "org.openrewrite:rewrite-gradle" }
 openrewrite-test = { module = "org.openrewrite:rewrite-test" }
 
-# Lombok
-lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
-
-# Log4j2
-log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
-log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
-
 # Testing
-junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api" }
-junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params" }
-junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine" }
-junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit" }
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 
 # JSpecify for nullability annotations
@@ -32,3 +24,4 @@ jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 
 [plugins]
 openrewrite = { id = "org.openrewrite.rewrite", version.ref = "openrewrite" }
+versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }

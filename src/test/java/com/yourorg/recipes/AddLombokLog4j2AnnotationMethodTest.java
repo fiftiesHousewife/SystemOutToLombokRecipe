@@ -217,7 +217,7 @@ class AddLombokLog4j2AnnotationMethodTest {
         boolean hasExplicitLogger = false;
         boolean hasSystemOut = false;
 
-        AddLombokLog4j2Annotation recipe = new AddLombokLog4j2Annotation();
+        final AddLombokLog4j2Annotation recipe = new AddLombokLog4j2Annotation();
 
         @Override
         @SuppressWarnings("unchecked")

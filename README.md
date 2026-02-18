@@ -1,16 +1,17 @@
 # System.out to Lombok @Log4j2
 
-OpenRewrite recipe that automatically converts `System.out.println()` and `System.out.printf()` calls to Lombok `@Log4j2` logging with parameterized statements.
+OpenRewrite recipe that automatically converts `System.out.println()`, `System.out.printf()`, and `printStackTrace()` calls to Lombok `@Log4j2` logging with parameterized statements.
 
 ## What It Does
 
 Automatically transforms your code to:
 1. Add Lombok and Log4j2 dependencies to your project
 2. Create a log4j2.xml configuration file
-3. Add `@Log4j2` annotation to classes using `System.out`
+3. Add `@Log4j2` annotation to classes using `System.out` or `printStackTrace()`
 4. Convert `System.out.println()` → `log.info()`
 5. Convert `System.err.println()` → `log.error()`
-6. Convert string concatenation to parameterized logging: `"x = " + x` → `"x = {}", x`
+6. Convert `exception.printStackTrace()` → `log.error("Exception occurred", exception)`
+7. Convert string concatenation to parameterized logging: `"x = " + x` → `"x = {}", x`
 
 ## Prerequisites
 
@@ -154,6 +155,37 @@ import lombok.extern.log4j.Log4j2;
 public class Formatter {
     public void displayData(String name, int age) {
         log.info("Name: %s, Age: %d%n", name, age);
+    }
+}
+```
+
+### Exception printStackTrace
+
+**Before**:
+```java
+public class ErrorHandler {
+    public void handleError() {
+        try {
+            riskyOperation();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+**After**:
+```java
+import lombok.extern.log4j.Log4j2;
+
+@Log4j2
+public class ErrorHandler {
+    public void handleError() {
+        try {
+            riskyOperation();
+        } catch (Exception e) {
+            log.error("Exception occurred", e);
+        }
     }
 }
 ```

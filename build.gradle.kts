@@ -2,6 +2,7 @@ plugins {
     java
     application
     alias(libs.plugins.openrewrite)
+    alias(libs.plugins.versions)
     `maven-publish`
 }
 
@@ -19,26 +20,19 @@ repositories {
 }
 
 dependencies {
-    //Openrewrite recipe
     implementation(platform("org.openrewrite.recipe:rewrite-recipe-bom:latest.release"))
     implementation(libs.openrewrite.java)
     runtimeOnly(libs.openrewrite.java21)
 
-    // JSpecify for nullability annotations
     compileOnly(libs.jspecify)
 
-    // Test dependencies
-    testImplementation(platform("org.junit:junit-bom:6.0.3"))
-    testImplementation(libs.junit.jupiter.api)
-    testImplementation(libs.junit.jupiter.params)
-    testRuntimeOnly(libs.junit.jupiter.engine)
+    testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.assertj.core)
     testImplementation(libs.openrewrite.test)
 
-    // OpenRewrite recipe dependencies
-    rewrite(platform("org.openrewrite.recipe:rewrite-recipe-bom:3.6.0"))
-    rewrite("org.openrewrite:rewrite-gradle")
+    rewrite(platform(libs.openrewrite.recipe.bom))
+    rewrite(libs.openrewrite.gradle)
     rewrite(project)
 }
 
