@@ -32,12 +32,20 @@ This project demonstrates how to write custom OpenRewrite recipes to perform aut
 
 ## Project Structure
 
-This is a Gradle multi-module project:
+This is a Gradle 8 multi-module project using modern build conventions:
 
 ```
 system-out-to-lombok-log4j/
 ├── build.gradle.kts              # Root build configuration
-├── settings.gradle.kts           # Multi-module settings
+├── settings.gradle.kts           # Multi-module settings with dependencyResolutionManagement
+├── gradle/
+│   └── libs.versions.toml        # Version catalog for dependency management
+├── build-logic/                  # Convention plugins for build configuration
+│   ├── settings.gradle.kts
+│   ├── build.gradle.kts
+│   └── src/main/kotlin/
+│       ├── java-recipe-conventions.gradle.kts    # Common config for recipes module
+│       └── java-example-conventions.gradle.kts   # Common config for example module
 ├── README.md                     # This file
 ├── recipes/                      # Recipe implementation module
 │   ├── build.gradle.kts
@@ -54,6 +62,15 @@ system-out-to-lombok-log4j/
     └── src/main/java/org/example/
         └── Main.java             # Sample code with System.out.println
 ```
+
+### Build Structure
+
+This project follows Gradle 8 best practices:
+
+- **Convention Plugins**: Shared build logic in `build-logic/` instead of `allprojects`/`subprojects` blocks
+- **Dependency Resolution Management**: Centralized repository configuration in `settings.gradle.kts`
+- **Version Catalog**: All dependency versions managed in `gradle/libs.versions.toml`
+- **Java Toolchains**: Proper toolchain configuration instead of `sourceCompatibility`/`targetCompatibility`
 
 ## How It Works
 
