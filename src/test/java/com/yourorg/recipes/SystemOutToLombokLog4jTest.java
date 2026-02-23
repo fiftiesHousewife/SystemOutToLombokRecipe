@@ -237,7 +237,7 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         @Log4j2
                         public class MyClass {
                             public void doSomething() {
-                                log.info();
+                                log.info("");
                             }
                         }
                         """

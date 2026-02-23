@@ -20,7 +20,7 @@ repositories {
 }
 
 dependencies {
-    implementation(platform("org.openrewrite.recipe:rewrite-recipe-bom:latest.release"))
+    implementation(platform(libs.openrewrite.recipe.bom))
     implementation(libs.openrewrite.java)
     runtimeOnly(libs.openrewrite.java21)
 
@@ -38,6 +38,16 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+tasks.named<JavaCompile>("compileJava") {
+    options.compilerArgs.add("-parameters")
+    options.release.set(8)
+}
+
+tasks.named<JavaCompile>("compileTestJava") {
+    options.compilerArgs.add("-parameters")
+    options.release.set(21)
 }
 
 tasks.named("rewriteDryRun") {

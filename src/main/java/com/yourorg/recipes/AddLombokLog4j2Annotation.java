@@ -99,7 +99,7 @@ public class AddLombokLog4j2Annotation extends Recipe {
                                 || "LOGGER".equals(var.getSimpleName()));
             }
 
-            private J.ClassDeclaration addLog4j2Annotation(J.ClassDeclaration classDecl) {
+            J.ClassDeclaration addLog4j2Annotation(J.ClassDeclaration classDecl) {
                 maybeAddImport("lombok.extern.log4j.Log4j2", null, false);
 
                 return JavaTemplate.builder("@Log4j2")

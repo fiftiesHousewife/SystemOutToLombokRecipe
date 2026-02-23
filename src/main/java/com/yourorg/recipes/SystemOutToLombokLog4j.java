@@ -81,7 +81,7 @@ public class SystemOutToLombokLog4j extends Recipe {
             J.MethodInvocation replacePrintln(J.MethodInvocation method, boolean isError) {
                 List<Expression> args = method.getArguments();
 
-                if (args.isEmpty()) {
+                if (args.isEmpty() || (args.size() == 1 && args.get(0) instanceof J.Empty)) {
                     return createEmptyLogStatement(method, isError);
                 }
 
