@@ -16,39 +16,38 @@ Automatically transforms your code to:
 
 ## Prerequisites
 
-- JDK 21
+- JDK 21 (Java 25 LTS is not yet supported by OpenRewrite)
 - Gradle 9.x (wrapper included)
 
 ## Quick Start
 
 ```bash
-# Build and test
 ./gradlew build
-
-# Publish to Maven Local so other projects can use it
-./gradlew publishToMavenLocal
 ```
 
 ## Using in Your Project
 
-1. **Publish recipe locally**:
-```bash
-./gradlew publishToMavenLocal
+1. **Add versions to `gradle/libs.versions.toml`**:
+```toml
+[versions]
+openrewrite = "7.26.0"
+fifties-recipes = "0.1"
+
+[libraries]
+fifties-systemout = { module = "org.fifties.housewife:system-out-to-lombok-log4j", version.ref = "fifties-recipes" }
+
+[plugins]
+openrewrite = { id = "org.openrewrite.rewrite", version.ref = "openrewrite" }
 ```
 
-2. **Add to your project's `build.gradle.kts`**:
+2. **Add to your `build.gradle.kts`**:
 ```kotlin
 plugins {
-    id("org.openrewrite.rewrite") version "7.26.0"
-}
-
-repositories {
-    mavenLocal()
-    mavenCentral()
+    alias(libs.plugins.openrewrite)
 }
 
 dependencies {
-    rewrite("org.fifties.housewife:system-out-to-lombok-log4j:0.1")
+    rewrite(libs.fifties.systemout)
 }
 
 rewrite {
@@ -193,7 +192,7 @@ public class ErrorHandler {
 
 ## Troubleshooting
 
-**Recipe not found**: Ensure you've run `./gradlew publishToMavenLocal` and the dependency is correctly specified.
+**Recipe not found**: Ensure the dependency coordinates and version in your TOML match exactly.
 
 **Build fails after transformation**: Verify dependencies and `log4j2.xml` were added correctly.
 
