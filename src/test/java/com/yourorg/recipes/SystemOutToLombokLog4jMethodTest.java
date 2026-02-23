@@ -274,6 +274,152 @@ class SystemOutToLombokLog4jMethodTest {
         assertThat(invokeConvertPrintfToLog4jFormat(visitor, "Hello%n")).isEqualTo("Hello");
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void skipArgumentIndex_consumesIndexAndDollar() {
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
+        assertThat(invokeSkipInt(visitor, "skipArgumentIndex", "1$s", 0)).isEqualTo(2);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void skipArgumentIndex_consumesMultiDigitIndex() {
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
+        assertThat(invokeSkipInt(visitor, "skipArgumentIndex", "12$s", 0)).isEqualTo(3);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void skipArgumentIndex_doesNotConsumeWhenNoDollar() {
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
+        assertThat(invokeSkipInt(visitor, "skipArgumentIndex", "s", 0)).isEqualTo(0);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void skipFlags_consumesFlags() {
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
+        assertThat(invokeSkipInt(visitor, "skipFlags", "-+s", 0)).isEqualTo(2);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void skipFlags_doesNotConsumeNonFlags() {
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
+        assertThat(invokeSkipInt(visitor, "skipFlags", "s", 0)).isEqualTo(0);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void skipWidth_consumesDigits() {
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
+        assertThat(invokeSkipInt(visitor, "skipWidth", "10s", 0)).isEqualTo(2);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void skipWidth_doesNotConsumeNonDigits() {
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
+        assertThat(invokeSkipInt(visitor, "skipWidth", "s", 0)).isEqualTo(0);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void skipPrecision_consumesDotAndDigits() {
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
+        assertThat(invokeSkipInt(visitor, "skipPrecision", ".5f", 0)).isEqualTo(2);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void skipPrecision_doesNotConsumeWhenNoDot() {
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
+        assertThat(invokeSkipInt(visitor, "skipPrecision", "f", 0)).isEqualTo(0);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void skipConversionChar_consumesSingleChar() {
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
+        assertThat(invokeSkipInt(visitor, "skipConversionChar", "s", 0)).isEqualTo(1);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void skipConversionChar_consumesTwoCharsForDateTime() {
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
+        assertThat(invokeSkipInt(visitor, "skipConversionChar", "tH", 0)).isEqualTo(2);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void skipConversionChar_handlesEmptyInput() {
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
+        assertThat(invokeSkipInt(visitor, "skipConversionChar", "", 0)).isEqualTo(0);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void isDateTimeConversion_trueForLowercaseT() {
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
+        assertThat(invokeIsDateTimeConversion(visitor, 't')).isTrue();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void isDateTimeConversion_trueForUppercaseT() {
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
+        assertThat(invokeIsDateTimeConversion(visitor, 'T')).isTrue();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void isDateTimeConversion_falseForOtherChar() {
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
+        assertThat(invokeIsDateTimeConversion(visitor, 's')).isFalse();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void skipSpecifier_simpleConversion() {
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
+        assertThat(invokeSkipInt(visitor, "skipSpecifier", "s", 0)).isEqualTo(1);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void skipSpecifier_withWidthAndPrecision() {
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
+        assertThat(invokeSkipInt(visitor, "skipSpecifier", "10.5s", 0)).isEqualTo(5);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void skipSpecifier_withAllParts() {
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
+        assertThat(invokeSkipInt(visitor, "skipSpecifier", "1$-10.5s", 0)).isEqualTo(8);
+    }
+
+    private int invokeSkipInt(JavaIsoVisitor<ExecutionContext> visitor, String methodName, String format, int i) {
+        try {
+            var method = visitor.getClass().getDeclaredMethod(methodName, String.class, int.class);
+            method.setAccessible(true);
+            return (int) method.invoke(visitor, format, i);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private boolean invokeIsDateTimeConversion(JavaIsoVisitor<ExecutionContext> visitor, char conv) {
+        try {
+            var method = visitor.getClass().getDeclaredMethod("isDateTimeConversion", char.class);
+            method.setAccessible(true);
+            return (boolean) method.invoke(visitor, conv);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private String invokeConvertPrintfToLog4jFormat(JavaIsoVisitor<ExecutionContext> visitor, String input) {
         try {
             var method = visitor.getClass().getDeclaredMethod("convertPrintfToLog4jFormat", String.class);
