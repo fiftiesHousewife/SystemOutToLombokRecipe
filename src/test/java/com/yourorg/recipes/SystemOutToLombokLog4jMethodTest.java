@@ -229,6 +229,61 @@ class SystemOutToLombokLog4jMethodTest {
         assertThat(result.getFirst()).isEqualTo(nonLiteral);
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void convertPrintfToLog4jFormat_singleSpecifier() {
+        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
+
+        assertThat(invokeConvertPrintfToLog4jFormat(visitor, "Value: %d%n")).isEqualTo("Value: {}");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void convertPrintfToLog4jFormat_multipleSpecifiers() {
+        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
+
+        assertThat(invokeConvertPrintfToLog4jFormat(visitor, "Name: %s, Age: %d%n")).isEqualTo("Name: {}, Age: {}");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void convertPrintfToLog4jFormat_escapedPercent() {
+        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
+
+        assertThat(invokeConvertPrintfToLog4jFormat(visitor, "100%%")).isEqualTo("100%");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void convertPrintfToLog4jFormat_noSpecifiers() {
+        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
+
+        assertThat(invokeConvertPrintfToLog4jFormat(visitor, "Simple message")).isEqualTo("Simple message");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void convertPrintfToLog4jFormat_newlineOnly() {
+        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
+        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
+
+        assertThat(invokeConvertPrintfToLog4jFormat(visitor, "Hello%n")).isEqualTo("Hello");
+    }
+
+    private String invokeConvertPrintfToLog4jFormat(JavaIsoVisitor<ExecutionContext> visitor, String input) {
+        try {
+            var method = visitor.getClass().getDeclaredMethod("convertPrintfToLog4jFormat", String.class);
+            method.setAccessible(true);
+            return (String) method.invoke(visitor, input);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private String invokeGetLogLevel(JavaIsoVisitor<ExecutionContext> visitor, boolean isError) {
         try {
             var method = visitor.getClass().getDeclaredMethod("getLogLevel", boolean.class);

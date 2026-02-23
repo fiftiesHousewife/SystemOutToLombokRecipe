@@ -169,7 +169,39 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         @Log4j2
                         public class MyClass {
                             public void doSomething(int value) {
-                                log.info("Value: %d%n", value);
+                                log.info("Value: {}", value);
+                            }
+                        }
+                        """
+                )
+        );
+    }
+
+    @Test
+    void convertsPrintfWithMultipleSpecifiers() {
+        rewriteRun(
+                java(
+                        """
+                        package com.example;
+
+                        import lombok.extern.log4j.Log4j2;
+
+                        @Log4j2
+                        public class MyClass {
+                            public void doSomething(String name, int age) {
+                                System.out.printf("Name: %s, Age: %d%n", name, age);
+                            }
+                        }
+                        """,
+                        """
+                        package com.example;
+
+                        import lombok.extern.log4j.Log4j2;
+
+                        @Log4j2
+                        public class MyClass {
+                            public void doSomething(String name, int age) {
+                                log.info("Name: {}, Age: {}", name, age);
                             }
                         }
                         """

@@ -12,6 +12,7 @@ Automatically transforms your code to:
 5. Convert `System.err.println()` → `log.error()`
 6. Convert `exception.printStackTrace()` → `log.error("Exception occurred", exception)`
 7. Convert string concatenation to parameterized logging: `"x = " + x` → `"x = {}", x`
+8. Convert `System.out.printf()` format strings to parameterized logging: `"Name: %s, Age: %d%n"` → `"Name: {}, Age: {}"`
 
 ## Prerequisites
 
@@ -154,7 +155,7 @@ import lombok.extern.log4j.Log4j2;
 @Log4j2
 public class Formatter {
     public void displayData(String name, int age) {
-        log.info("Name: %s, Age: %d%n", name, age);
+        log.info("Name: {}, Age: {}", name, age);
     }
 }
 ```

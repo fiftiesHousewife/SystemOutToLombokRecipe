@@ -105,14 +105,112 @@ public class SystemOutToLombokLog4j extends Recipe {
             J.MethodInvocation replacePrintf(J.MethodInvocation method, boolean isError) {
                 List<Expression> args = method.getArguments();
 
-                if (args.isEmpty()) {
+                if (args.isEmpty() || (args.size() == 1 && args.get(0) instanceof J.Empty)) {
                     return method;
+                }
+
+                if (args.get(0) instanceof J.Literal) {
+                    J.Literal formatLiteral = (J.Literal) args.get(0);
+                    if (formatLiteral.getValue() instanceof String) {
+                        String log4jFormat = convertPrintfToLog4jFormat((String) formatLiteral.getValue());
+                        List<Expression> remainingArgs = args.subList(1, args.size());
+                        String template = buildParameterizedLogTemplate(log4jFormat, remainingArgs.size(), isError);
+                        return JavaTemplate.builder(template)
+                                .build()
+                                .apply(getCursor(), method.getCoordinates().replace(), remainingArgs.toArray());
+                    }
                 }
 
                 String template = buildLogCallTemplate(args.size(), isError);
                 return JavaTemplate.builder(template)
                         .build()
                         .apply(getCursor(), method.getCoordinates().replace(), args.toArray());
+            }
+
+            String convertPrintfToLog4jFormat(String printfFormat) {
+                StringBuilder result = new StringBuilder();
+                int i = 0;
+                while (i < printfFormat.length()) {
+                    if (printfFormat.charAt(i) != '%') {
+                        result.append(printfFormat.charAt(i++));
+                        continue;
+                    }
+                    i++;
+                    if (i >= printfFormat.length()) {
+                        result.append('%');
+                        break;
+                    }
+                    char specifier = printfFormat.charAt(i);
+                    if (specifier == 'n') {
+                        i++;
+                    } else if (specifier == '%') {
+                        result.append('%');
+                        i++;
+                    } else {
+                        i = skipSpecifier(printfFormat, i);
+                        result.append("{}");
+                    }
+                }
+                return result.toString();
+            }
+
+            int skipSpecifier(String format, int i) {
+                i = skipArgumentIndex(format, i);
+                i = skipFlags(format, i);
+                i = skipWidth(format, i);
+                i = skipPrecision(format, i);
+                return skipConversionChar(format, i);
+            }
+
+            int skipArgumentIndex(String format, int i) {
+                int mark = i;
+                while (i < format.length() && Character.isDigit(format.charAt(i))) {
+                    i++;
+                }
+                if (i < format.length() && format.charAt(i) == '$') {
+                    return i + 1;
+                }
+                return mark;
+            }
+
+            int skipFlags(String format, int i) {
+                while (i < format.length() && "+-0 #,(".indexOf(format.charAt(i)) >= 0) {
+                    i++;
+                }
+                return i;
+            }
+
+            int skipWidth(String format, int i) {
+                while (i < format.length() && Character.isDigit(format.charAt(i))) {
+                    i++;
+                }
+                return i;
+            }
+
+            int skipPrecision(String format, int i) {
+                if (i >= format.length() || format.charAt(i) != '.') {
+                    return i;
+                }
+                i++;
+                while (i < format.length() && Character.isDigit(format.charAt(i))) {
+                    i++;
+                }
+                return i;
+            }
+
+            int skipConversionChar(String format, int i) {
+                if (i >= format.length()) {
+                    return i;
+                }
+                char conv = format.charAt(i++);
+                if (isDateTimeConversion(conv) && i < format.length()) {
+                    i++;
+                }
+                return i;
+            }
+
+            boolean isDateTimeConversion(char conv) {
+                return conv == 't' || conv == 'T';
             }
 
             String getLogLevel(boolean isError) {
