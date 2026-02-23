@@ -278,84 +278,84 @@ class SystemOutToLombokLog4jMethodTest {
     @SuppressWarnings("unchecked")
     void skipArgumentIndex_consumesIndexAndDollar() {
         JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipArgumentIndex", "1$s", 0)).isEqualTo(2);
+        assertThat(invokeSkipInt(visitor, "skipArgumentIndex", "1$s")).isEqualTo(2);
     }
 
     @Test
     @SuppressWarnings("unchecked")
     void skipArgumentIndex_consumesMultiDigitIndex() {
         JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipArgumentIndex", "12$s", 0)).isEqualTo(3);
+        assertThat(invokeSkipInt(visitor, "skipArgumentIndex", "12$s")).isEqualTo(3);
     }
 
     @Test
     @SuppressWarnings("unchecked")
     void skipArgumentIndex_doesNotConsumeWhenNoDollar() {
         JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipArgumentIndex", "s", 0)).isEqualTo(0);
+        assertThat(invokeSkipInt(visitor, "\1", "\2")).isEqualTo(0);
     }
 
     @Test
     @SuppressWarnings("unchecked")
     void skipFlags_consumesFlags() {
         JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipFlags", "-+s", 0)).isEqualTo(2);
+        assertThat(invokeSkipInt(visitor, "\1", "\2")).isEqualTo(2);
     }
 
     @Test
     @SuppressWarnings("unchecked")
     void skipFlags_doesNotConsumeNonFlags() {
         JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipFlags", "s", 0)).isEqualTo(0);
+        assertThat(invokeSkipInt(visitor, "\1", "\2")).isEqualTo(0);
     }
 
     @Test
     @SuppressWarnings("unchecked")
     void skipWidth_consumesDigits() {
         JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipWidth", "10s", 0)).isEqualTo(2);
+        assertThat(invokeSkipInt(visitor, "\1", "\2")).isEqualTo(2);
     }
 
     @Test
     @SuppressWarnings("unchecked")
     void skipWidth_doesNotConsumeNonDigits() {
         JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipWidth", "s", 0)).isEqualTo(0);
+        assertThat(invokeSkipInt(visitor, "\1", "\2")).isEqualTo(0);
     }
 
     @Test
     @SuppressWarnings("unchecked")
     void skipPrecision_consumesDotAndDigits() {
         JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipPrecision", ".5f", 0)).isEqualTo(2);
+        assertThat(invokeSkipInt(visitor, "\1", "\2")).isEqualTo(2);
     }
 
     @Test
     @SuppressWarnings("unchecked")
     void skipPrecision_doesNotConsumeWhenNoDot() {
         JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipPrecision", "f", 0)).isEqualTo(0);
+        assertThat(invokeSkipInt(visitor, "\1", "\2")).isEqualTo(0);
     }
 
     @Test
     @SuppressWarnings("unchecked")
     void skipConversionChar_consumesSingleChar() {
         JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipConversionChar", "s", 0)).isEqualTo(1);
+        assertThat(invokeSkipInt(visitor, "\1", "\2")).isEqualTo(1);
     }
 
     @Test
     @SuppressWarnings("unchecked")
     void skipConversionChar_consumesTwoCharsForDateTime() {
         JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipConversionChar", "tH", 0)).isEqualTo(2);
+        assertThat(invokeSkipInt(visitor, "\1", "\2")).isEqualTo(2);
     }
 
     @Test
     @SuppressWarnings("unchecked")
     void skipConversionChar_handlesEmptyInput() {
         JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipConversionChar", "", 0)).isEqualTo(0);
+        assertThat(invokeSkipInt(visitor, "\1", "\2")).isEqualTo(0);
     }
 
     @Test
@@ -383,28 +383,28 @@ class SystemOutToLombokLog4jMethodTest {
     @SuppressWarnings("unchecked")
     void skipSpecifier_simpleConversion() {
         JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipSpecifier", "s", 0)).isEqualTo(1);
+        assertThat(invokeSkipInt(visitor, "\1", "\2")).isEqualTo(1);
     }
 
     @Test
     @SuppressWarnings("unchecked")
     void skipSpecifier_withWidthAndPrecision() {
         JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipSpecifier", "10.5s", 0)).isEqualTo(5);
+        assertThat(invokeSkipInt(visitor, "\1", "\2")).isEqualTo(5);
     }
 
     @Test
     @SuppressWarnings("unchecked")
     void skipSpecifier_withAllParts() {
         JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipSpecifier", "1$-10.5s", 0)).isEqualTo(8);
+        assertThat(invokeSkipInt(visitor, "\1", "\2")).isEqualTo(8);
     }
 
-    private int invokeSkipInt(JavaIsoVisitor<ExecutionContext> visitor, String methodName, String format, int i) {
+    private int invokeSkipInt(JavaIsoVisitor<ExecutionContext> visitor, String methodName, String format) {
         try {
             var method = visitor.getClass().getDeclaredMethod(methodName, String.class, int.class);
             method.setAccessible(true);
-            return (int) method.invoke(visitor, format, i);
+            return (int) method.invoke(visitor, format, 0);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
