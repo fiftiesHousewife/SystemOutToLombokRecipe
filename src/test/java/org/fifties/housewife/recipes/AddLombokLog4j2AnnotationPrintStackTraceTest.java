@@ -1,4 +1,4 @@
-package com.yourorg.recipes;
+package org.fifties.housewife.recipes;
 
 import org.junit.jupiter.api.Test;
 import org.openrewrite.test.RecipeSpec;

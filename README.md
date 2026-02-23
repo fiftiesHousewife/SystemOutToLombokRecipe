@@ -25,11 +25,8 @@ Automatically transforms your code to:
 # Build and test
 ./gradlew build
 
-# Preview changes (dry run)
-./gradlew rewriteDryRun
-
-# Apply changes
-./gradlew rewriteRun
+# Publish to Maven Local so other projects can use it
+./gradlew publishToMavenLocal
 ```
 
 ## Using in Your Project
@@ -42,17 +39,20 @@ Automatically transforms your code to:
 2. **Add to your project's `build.gradle.kts`**:
 ```kotlin
 plugins {
-    id("org.openrewrite.rewrite") version "6.25.0"
+    id("org.openrewrite.rewrite") version "7.26.0"
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
 }
 
 dependencies {
-    rewrite("com.yourorg:system-out-to-lombok-log4j:1.0-SNAPSHOT")
-    rewrite(platform("org.openrewrite.recipe:rewrite-recipe-bom:3.6.0"))
-    rewrite("org.openrewrite:rewrite-gradle")
+    rewrite("org.fifties.housewife:system-out-to-lombok-log4j:0.1")
 }
 
 rewrite {
-    activeRecipe("com.yourorg.SystemOutToLombokLog4jRecipe")
+    activeRecipe("org.fifties.housewife.SystemOutToLombokLog4jRecipe")
 }
 ```
 

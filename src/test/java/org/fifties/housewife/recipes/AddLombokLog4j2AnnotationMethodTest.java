@@ -1,4 +1,4 @@
-package com.yourorg.recipes;
+package org.fifties.housewife.recipes;
 
 import org.jspecify.annotations.NullMarked;
 import org.junit.jupiter.api.Test;

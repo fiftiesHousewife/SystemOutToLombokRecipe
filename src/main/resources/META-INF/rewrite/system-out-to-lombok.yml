@@ -1,6 +1,6 @@
 ---
 type: specs.openrewrite.org/v1beta/recipe
-name: com.yourorg.SystemOutToLombokLog4jRecipe
+name: org.fifties.housewife.SystemOutToLombokLog4jRecipe
 displayName: Convert System.out to Lombok @Log4j2
 description: >
   Converts System.out.println/printf calls to Lombok @Log4j2 logging.
@@ -59,17 +59,17 @@ recipeList:
       overwriteExisting: false
 
   # Step 6: Add @Log4j2 annotation to classes with System.out calls
-  - com.yourorg.recipes.AddLombokLog4j2Annotation
+  - org.fifties.housewife.recipes.AddLombokLog4j2Annotation
 
   # Step 7: Convert System.out calls to log statements
-  - com.yourorg.recipes.SystemOutToLombokLog4j
+  - org.fifties.housewife.recipes.SystemOutToLombokLog4j
 
   # Step 8: Convert printStackTrace calls to log.error
-  - com.yourorg.recipes.PrintStackTraceToLog
+  - org.fifties.housewife.recipes.PrintStackTraceToLog
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
-name: com.yourorg.AddLombokLog4j2Dependencies
+name: org.fifties.housewife.AddLombokLog4j2Dependencies
 displayName: Add Lombok and Log4j2 dependencies
 description: Adds Lombok and Log4j2 dependencies to the project
 

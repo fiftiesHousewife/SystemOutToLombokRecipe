@@ -1,13 +1,12 @@
 plugins {
     java
-    application
     alias(libs.plugins.openrewrite)
     alias(libs.plugins.versions)
     `maven-publish`
 }
 
-group = "com.yourorg"
-version = "1.0-SNAPSHOT"
+group = "org.fifties.housewife"
+version = "0.1"
 
 java {
     toolchain {
@@ -28,12 +27,8 @@ dependencies {
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
-    testImplementation(libs.assertj.core)
+    testImplementation( libs.assertj.core)
     testImplementation(libs.openrewrite.test)
-
-    rewrite(platform(libs.openrewrite.recipe.bom))
-    rewrite(libs.openrewrite.gradle)
-    rewrite(project)
 }
 
 tasks.withType<Test> {
@@ -48,22 +43,6 @@ tasks.named<JavaCompile>("compileJava") {
 tasks.named<JavaCompile>("compileTestJava") {
     options.compilerArgs.add("-parameters")
     options.release.set(21)
-}
-
-tasks.named("rewriteDryRun") {
-    dependsOn("compileJava")
-}
-
-tasks.named("rewriteRun") {
-    dependsOn("compileJava")
-}
-
-rewrite {
-    activeRecipe("com.yourorg.SystemOutToLombokLog4jRecipe")
-}
-
-application {
-    mainClass.set("org.example.Main")
 }
 
 publishing {
