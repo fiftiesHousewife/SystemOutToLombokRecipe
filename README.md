@@ -230,6 +230,45 @@ public class Formatter {
 }
 ```
 
+### java.util.logging
+
+**Before**:
+```java
+import java.util.logging.Logger;
+
+public class Service {
+    private static final Logger logger = Logger.getLogger(Service.class.getName());
+
+    public void run() {
+        logger.info("starting");
+        logger.severe("boom");
+        logger.fine("verbose");
+    }
+}
+```
+
+**After**:
+```java
+import lombok.extern.log4j.Log4j2;
+
+import java.util.logging.Logger;
+
+@Log4j2
+public class Service {
+    private static final Logger logger = Logger.getLogger(Service.class.getName());
+
+    public void run() {
+        log.info("starting");
+        log.error("boom");
+        log.debug("verbose");
+    }
+}
+```
+
+Level mapping: `severe` → `error`, `warning` → `warn`, `info` → `info`, `config`/`fine` → `debug`, `finer`/`finest` → `trace`.
+
+The old `Logger logger = Logger.getLogger(...)` field and its `java.util.logging.Logger` import are left in place — remove them yourself once you've confirmed the conversion. (The `ConvertManualLog4j2ToLombokRecipe` family removes hand-rolled Log4j2 fields, but not JUL fields.)
+
 ### Exception printStackTrace
 
 **Before**:
