@@ -18,6 +18,7 @@ dependencies {
     implementation(platform(libs.openrewrite.recipe.bom))
     implementation(libs.openrewrite.java)
     implementation(libs.openrewrite.toml)
+    implementation(libs.openrewrite.gradle)
     runtimeOnly(libs.openrewrite.java8)
     runtimeOnly(libs.openrewrite.java11)
     runtimeOnly(libs.openrewrite.java17)

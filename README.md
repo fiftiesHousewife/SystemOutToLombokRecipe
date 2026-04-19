@@ -1,18 +1,23 @@
 # System.out to Lombok @Log4j2
 
-OpenRewrite recipe that automatically converts `System.out.println()`, `System.out.printf()`, and `printStackTrace()` calls to Lombok `@Log4j2` logging with parameterized statements.
+OpenRewrite recipes that migrate Java codebases onto Lombok `@Log4j2` logging. Converts ad-hoc `System.out` / `System.err` / `printStackTrace()` calls, `java.util.logging` (JUL) calls, and hand-rolled Log4j2 `Logger` fields into idiomatic `@Log4j2` + `log.xxx(...)` calls — with parameterized messages and proper stdout/stderr routing.
 
 ## What It Does
 
-Automatically transforms your code to:
-1. Add Lombok and Log4j2 dependencies to your project
-2. Create a log4j2.xml configuration file
-3. Add `@Log4j2` annotation to classes using `System.out` or `printStackTrace()`
-4. Convert `System.out.println()` → `log.info()`
-5. Convert `System.err.println()` → `log.error()`
-6. Convert `exception.printStackTrace()` → `log.error("Exception occurred", exception)`
-7. Convert string concatenation to parameterized logging: `"x = " + x` → `"x = {}", x`
-8. Convert `System.out.printf()` format strings to parameterized logging: `"Name: %s, Age: %d%n"` → `"Name: {}, Age: {}"`
+The default recipe transforms a Java project to:
+
+1. Add Lombok and Log4j2 dependencies to your build (inline, catalog, or not at all — pick a variant below).
+2. Create production-ready `src/main/resources/log4j2.xml` (console + rolling file appender, gzip daily rollover, 10 MB size trigger, keeps 10 files) and a console-only `src/test/resources/log4j2-test.xml` that log4j2 auto-selects when tests run.
+3. Add `@Log4j2` to classes that use `System.out`/`System.err`, `printStackTrace()`, or `java.util.logging.Logger`.
+4. Convert call sites:
+   - `System.out.println(...)` → `log.info(...)`
+   - `System.err.println(...)` → `log.error(...)`
+   - `exception.printStackTrace()` → `log.error("Exception occurred", exception)`
+   - String concatenation → parameterized: `"x = " + x` → `log.info("x = {}", x)`
+   - `System.out.printf("Name: %s, Age: %d%n", ...)` → `log.info("Name: {}, Age: {}", ...)`
+   - `logger.severe/warning/info/config/fine/finer/finest(...)` (JUL) → `log.error/warn/info/debug/debug/trace/trace(...)`
+
+A separate recipe family (`ConvertManualLog4j2ToLombokRecipe*`) migrates projects that already use Log4j2 with hand-rolled `Logger` fields onto `@Log4j2` — see "Migrating existing Log4j2 code" below.
 
 ## Prerequisites
 
@@ -33,7 +38,7 @@ Supports transforming source code written in Java 8 through Java 25.
 ```toml
 [versions]
 openrewrite = "7.30.0"
-fifties-recipes = "0.3"
+fifties-recipes = "0.4"
 
 [libraries]
 fifties-systemout = { module = "io.github.fiftieshousewife:system-out-to-lombok-log4j", version.ref = "fifties-recipes" }
@@ -63,13 +68,23 @@ rewrite {
 ./gradlew rewriteRun     # Apply
 ```
 
-## Version Catalog Projects
+## Variants
 
-If your project uses a Gradle version catalog (`gradle/libs.versions.toml`), there are two purpose-built variants. Pick one:
+Three compositions cover the common dependency-management setups:
 
-### `SystemOutToLombokLog4jRecipeCatalog` (recommended for catalogs)
+### `SystemOutToLombokLog4jRecipe` (default)
 
-Auto-populates your version catalog with Lombok and Log4j2 entries, runs the Java transforms, and creates `log4j2.xml`. After running, you add four lines to your `build.gradle.kts` dependencies block (automating this is on the 0.4 roadmap).
+Adds Lombok and Log4j2 dependencies inline in your `build.gradle.kts` (`compileOnly("org.projectlombok:lombok:1.18.44")` etc.). Runs the Java transforms and creates the log4j2 configs.
+
+### `SystemOutToLombokLog4jRecipeCatalog` (version catalog)
+
+If your project uses a Gradle version catalog, this variant:
+
+1. Adds `lombok`, `log4jApi`, and `log4jCore` entries to `gradle/libs.versions.toml`.
+2. Adds dependency declarations to `build.gradle.kts` and rewrites them to `libs.xxx` catalog references automatically.
+3. Runs the Java transforms and creates the log4j2 configs.
+
+You don't need to edit `build.gradle.kts` yourself — the recipe fills in `compileOnly(libs.lombok)`, `annotationProcessor(libs.lombok)`, `implementation(libs.log4jApi)`, and `runtimeOnly(libs.log4jCore)` for you.
 
 ```kotlin
 rewrite {
@@ -77,40 +92,45 @@ rewrite {
 }
 ```
 
-After running, your `libs.versions.toml` will contain:
-
-```toml
-[versions]
-lombok = "1.18.44"
-log4jApi = "2.25.4"
-log4jCore = "2.25.4"
-
-[libraries]
-lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
-log4jApi = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4jApi" }
-log4jCore = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4jCore" }
-```
-
-Add to your `build.gradle.kts` dependencies block:
-
-```kotlin
-dependencies {
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
-    implementation(libs.log4jApi)
-    runtimeOnly(libs.log4jCore)
-}
-```
-
 ### `SystemOutToLombokLog4jRecipeNoDeps`
 
-For cases where you want full manual control — runs all Java transforms and creates `log4j2.xml` but touches neither the catalog nor `build.gradle.kts`. You add everything yourself.
+Runs all Java transforms and creates the log4j2 configs but touches neither the catalog nor `build.gradle.kts`. Use this in multi-module projects where dependencies live at a parent level, or anywhere you want full manual control.
 
 ```kotlin
 rewrite {
     activeRecipe("io.github.fiftieshousewife.SystemOutToLombokLog4jRecipeNoDeps")
 }
 ```
+
+## Migrating existing Log4j2 code
+
+If your codebase already uses Log4j2 but declares `Logger` fields by hand (`private static final Logger log = LogManager.getLogger(X.class);`), the `ConvertManualLog4j2ToLombokRecipe*` family removes that boilerplate:
+
+- Adds `@Log4j2` to each affected class.
+- Deletes the manual field.
+- Renames any references to the old field (`logger.info(...)`, `LOG.error(...)`) to `log.xxx(...)`.
+- Drops now-unused `org.apache.logging.log4j.Logger` / `LogManager` imports.
+
+Three variants, matching the family above:
+
+- `io.github.fiftieshousewife.ConvertManualLog4j2ToLombokRecipe` — adds Lombok inline in `build.gradle.kts`.
+- `io.github.fiftieshousewife.ConvertManualLog4j2ToLombokRecipeCatalog` — adds Lombok to the version catalog.
+- `io.github.fiftieshousewife.ConvertManualLog4j2ToLombokRecipeNoDeps` — doesn't touch dependencies.
+
+```kotlin
+rewrite {
+    activeRecipe("io.github.fiftieshousewife.ConvertManualLog4j2ToLombokRecipeCatalog")
+}
+```
+
+## Logging configuration
+
+The recipes create two files:
+
+- **`src/main/resources/log4j2.xml`** — production config. Non-error levels go to stdout, errors go to stderr (respecting the `System.out` vs `System.err` split), plus a `RollingFile` appender under `./logs/` with daily + 10 MB rollover, gzip compression, and a 10-file retention.
+- **`src/test/resources/log4j2-test.xml`** — console-only. Log4j2 automatically prefers this file when tests run, so unit tests don't write to `./logs/` or create rollover files.
+
+Both files are written with `overwriteExisting: false`, so existing configs are left alone.
 
 ## Examples
 

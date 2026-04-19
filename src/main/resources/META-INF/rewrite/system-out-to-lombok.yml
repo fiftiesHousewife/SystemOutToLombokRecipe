@@ -1,12 +1,18 @@
 ---
 type: specs.openrewrite.org/v1beta/recipe
 name: io.github.fiftieshousewife.CreateLog4j2Config
-displayName: Create log4j2.xml configuration
+displayName: Create log4j2 main + test configurations
 description: >
-  Creates src/main/resources/log4j2.xml with a sensible console configuration:
-  INFO/WARN routed to stdout, ERROR routed to stderr (respecting the
-  System.out → log.info / System.err → log.error split). Does nothing when
-  the file already exists.
+  Creates two log4j2 configurations:
+
+  - `src/main/resources/log4j2.xml`: production-ready — non-error levels to
+    stdout, errors to stderr, plus a rolling file appender under ./logs/ with
+    daily + 10 MB rollover and gzip compression (keeps the 10 most recent).
+  - `src/test/resources/log4j2-test.xml`: console only (no file rollover in
+    tests). Log4j2 auto-discovers `log4j2-test.xml` on the test classpath and
+    uses it in preference to the main config when tests run.
+
+  Does nothing for files that already exist.
 
 recipeList:
   - org.openrewrite.text.CreateTextFile:
@@ -14,13 +20,56 @@ recipeList:
       fileContents: |
         <?xml version="1.0" encoding="UTF-8"?>
         <Configuration status="WARN">
+            <Properties>
+                <Property name="logPath">logs</Property>
+                <Property name="logFile">app</Property>
+                <Property name="pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n</Property>
+            </Properties>
             <Appenders>
                 <Console name="StdOut" target="SYSTEM_OUT">
-                    <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+                    <PatternLayout pattern="${pattern}"/>
                     <ThresholdFilter level="ERROR" onMatch="DENY" onMismatch="ACCEPT"/>
                 </Console>
                 <Console name="StdErr" target="SYSTEM_ERR">
-                    <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+                    <PatternLayout pattern="${pattern}"/>
+                    <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
+                </Console>
+                <RollingFile name="RollingFile"
+                             fileName="${logPath}/${logFile}.log"
+                             filePattern="${logPath}/${logFile}-%d{yyyy-MM-dd}-%i.log.gz">
+                    <PatternLayout pattern="${pattern}"/>
+                    <Policies>
+                        <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                        <SizeBasedTriggeringPolicy size="10 MB"/>
+                    </Policies>
+                    <DefaultRolloverStrategy max="10"/>
+                </RollingFile>
+            </Appenders>
+            <Loggers>
+                <Root level="info">
+                    <AppenderRef ref="StdOut"/>
+                    <AppenderRef ref="StdErr"/>
+                    <AppenderRef ref="RollingFile"/>
+                </Root>
+            </Loggers>
+        </Configuration>
+      overwriteExisting: false
+
+  - org.openrewrite.text.CreateTextFile:
+      relativeFileName: src/test/resources/log4j2-test.xml
+      fileContents: |
+        <?xml version="1.0" encoding="UTF-8"?>
+        <Configuration status="WARN">
+            <Properties>
+                <Property name="pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n</Property>
+            </Properties>
+            <Appenders>
+                <Console name="StdOut" target="SYSTEM_OUT">
+                    <PatternLayout pattern="${pattern}"/>
+                    <ThresholdFilter level="ERROR" onMatch="DENY" onMismatch="ACCEPT"/>
+                </Console>
+                <Console name="StdErr" target="SYSTEM_ERR">
+                    <PatternLayout pattern="${pattern}"/>
                     <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
                 </Console>
             </Appenders>
@@ -176,11 +225,11 @@ name: io.github.fiftieshousewife.SystemOutToLombokLog4jRecipeCatalog
 displayName: Convert System.out to Lombok @Log4j2 (version catalog)
 description: >
   Same Java transforms as SystemOutToLombokLog4jRecipe. Adds Lombok and Log4j2
-  entries to gradle/libs.versions.toml so you can reference them as libs.lombok,
-  libs.log4jApi, libs.log4jCore from your build. You still need to add the
-  corresponding `configuration(libs.xxx)` lines to your build.gradle.kts
-  dependencies block (see the README). Use this when your project is on, or
-  moving to, a Gradle version catalog.
+  entries to gradle/libs.versions.toml, inserts the corresponding
+  `configuration(libs.xxx)` lines in build.gradle.kts by adding inline
+  dependencies and then rewriting them to catalog references, and creates
+  log4j2.xml. Use this when your project is on, or moving to, a Gradle
+  version catalog.
 
 recipeList:
   - io.github.fiftieshousewife.recipes.AddVersionCatalogEntry:
@@ -200,6 +249,44 @@ recipeList:
       versionValue: 2.25.4
       libraryAlias: log4jCore
       module: org.apache.logging.log4j:log4j-core
+
+  - org.openrewrite.gradle.AddDependency:
+      groupId: org.projectlombok
+      artifactId: lombok
+      version: 1.18.x
+      configuration: compileOnly
+      acceptTransitive: true
+
+  - org.openrewrite.gradle.AddDependency:
+      groupId: org.projectlombok
+      artifactId: lombok
+      version: 1.18.x
+      configuration: annotationProcessor
+      acceptTransitive: true
+
+  - org.openrewrite.gradle.AddDependency:
+      groupId: org.apache.logging.log4j
+      artifactId: log4j-api
+      version: 2.x
+      configuration: implementation
+
+  - org.openrewrite.gradle.AddDependency:
+      groupId: org.apache.logging.log4j
+      artifactId: log4j-core
+      version: 2.x
+      configuration: runtimeOnly
+
+  - io.github.fiftieshousewife.recipes.UseCatalogReferenceForDependency:
+      module: org.projectlombok:lombok
+      catalogReference: libs.lombok
+
+  - io.github.fiftieshousewife.recipes.UseCatalogReferenceForDependency:
+      module: org.apache.logging.log4j:log4j-api
+      catalogReference: libs.log4jApi
+
+  - io.github.fiftieshousewife.recipes.UseCatalogReferenceForDependency:
+      module: org.apache.logging.log4j:log4j-core
+      catalogReference: libs.log4jCore
 
   - io.github.fiftieshousewife.CreateLog4j2Config
   - io.github.fiftieshousewife.JavaTransforms
