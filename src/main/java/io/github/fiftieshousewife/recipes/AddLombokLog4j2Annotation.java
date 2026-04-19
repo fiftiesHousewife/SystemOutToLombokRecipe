@@ -1,4 +1,4 @@
-package org.fifties.housewife.recipes;
+package io.github.fiftieshousewife.recipes;
 
 import org.jspecify.annotations.NullMarked;
 import org.openrewrite.ExecutionContext;

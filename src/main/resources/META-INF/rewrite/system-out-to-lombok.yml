@@ -1,6 +1,6 @@
 ---
 type: specs.openrewrite.org/v1beta/recipe
-name: org.fifties.housewife.SystemOutToLombokLog4jRecipe
+name: io.github.fiftieshousewife.SystemOutToLombokLog4jRecipe
 displayName: Convert System.out to Lombok @Log4j2
 description: >
   Converts System.out.println/printf calls to Lombok @Log4j2 logging.
@@ -59,17 +59,17 @@ recipeList:
       overwriteExisting: false
 
   # Step 6: Add @Log4j2 annotation to classes with System.out calls
-  - org.fifties.housewife.recipes.AddLombokLog4j2Annotation
+  - io.github.fiftieshousewife.recipes.AddLombokLog4j2Annotation
 
   # Step 7: Convert System.out calls to log statements
-  - org.fifties.housewife.recipes.SystemOutToLombokLog4j
+  - io.github.fiftieshousewife.recipes.SystemOutToLombokLog4j
 
   # Step 8: Convert printStackTrace calls to log.error
-  - org.fifties.housewife.recipes.PrintStackTraceToLog
+  - io.github.fiftieshousewife.recipes.PrintStackTraceToLog
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
-name: org.fifties.housewife.SystemOutToLombokLog4jRecipeNoDeps
+name: io.github.fiftieshousewife.SystemOutToLombokLog4jRecipeNoDeps
 displayName: Convert System.out to Lombok @Log4j2 (no dependency management)
 description: >
   Same Java transforms as SystemOutToLombokLog4jRecipe, but does NOT add Lombok or Log4j2
@@ -97,13 +97,13 @@ recipeList:
         </Configuration>
       overwriteExisting: false
 
-  - org.fifties.housewife.recipes.AddLombokLog4j2Annotation
-  - org.fifties.housewife.recipes.SystemOutToLombokLog4j
-  - org.fifties.housewife.recipes.PrintStackTraceToLog
+  - io.github.fiftieshousewife.recipes.AddLombokLog4j2Annotation
+  - io.github.fiftieshousewife.recipes.SystemOutToLombokLog4j
+  - io.github.fiftieshousewife.recipes.PrintStackTraceToLog
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
-name: org.fifties.housewife.AddLombokLog4j2Dependencies
+name: io.github.fiftieshousewife.AddLombokLog4j2Dependencies
 displayName: Add Lombok and Log4j2 dependencies
 description: Adds Lombok and Log4j2 dependencies to the project
 

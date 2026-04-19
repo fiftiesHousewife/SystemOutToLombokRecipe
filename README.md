@@ -53,7 +53,7 @@ dependencies {
 }
 
 rewrite {
-    activeRecipe("org.fifties.housewife.SystemOutToLombokLog4jRecipe")
+    activeRecipe("io.github.fiftieshousewife.SystemOutToLombokLog4jRecipe")
 }
 ```
 
@@ -71,7 +71,7 @@ The default recipe `SystemOutToLombokLog4jRecipe` adds Lombok and Log4j2 depende
 
 ```kotlin
 rewrite {
-    activeRecipe("org.fifties.housewife.SystemOutToLombokLog4jRecipeNoDeps")
+    activeRecipe("io.github.fiftieshousewife.SystemOutToLombokLog4jRecipeNoDeps")
 }
 ```
 

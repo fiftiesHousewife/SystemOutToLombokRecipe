@@ -1,4 +1,4 @@
-package org.fifties.housewife.recipes;
+package io.github.fiftieshousewife.recipes;
 
 import org.junit.jupiter.api.Test;
 import org.openrewrite.ExecutionContext;
@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.fifties.housewife.recipes.SystemOutToLombokLog4j.*;
+import static io.github.fiftieshousewife.recipes.SystemOutToLombokLog4j.*;
 
 class SystemOutToLombokLog4jMethodTest {
 

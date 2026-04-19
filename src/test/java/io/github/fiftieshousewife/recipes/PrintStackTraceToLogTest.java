@@ -1,4 +1,4 @@
-package org.fifties.housewife.recipes;
+package io.github.fiftieshousewife.recipes;
 
 import org.junit.jupiter.api.Test;
 import org.openrewrite.java.JavaParser;
