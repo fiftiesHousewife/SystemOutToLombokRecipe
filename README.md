@@ -63,6 +63,42 @@ rewrite {
 ./gradlew rewriteRun     # Apply
 ```
 
+## Version Catalog Projects
+
+The default recipe `SystemOutToLombokLog4jRecipe` adds Lombok and Log4j2 dependencies inline in your `build.gradle(.kts)`. If your project uses a Gradle version catalog (`gradle/libs.versions.toml`), those inline additions will be stylistically inconsistent with the rest of your build.
+
+**Use the no-deps variant instead:**
+
+```kotlin
+rewrite {
+    activeRecipe("org.fifties.housewife.SystemOutToLombokLog4jRecipeNoDeps")
+}
+```
+
+This runs all the Java transforms (annotations, System.out conversions, printStackTrace conversions) and creates `log4j2.xml`, but **skips dependency management**. Add the following to your catalog yourself:
+
+```toml
+[versions]
+lombok = "1.18.44"
+log4j = "2.x"
+
+[libraries]
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
+log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
+```
+
+```kotlin
+dependencies {
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)
+    implementation(libs.log4j.api)
+    runtimeOnly(libs.log4j.core)
+}
+```
+
+A future version may detect the catalog automatically and add entries to `libs.versions.toml` for you.
+
 ## Examples
 
 ### Simple println
