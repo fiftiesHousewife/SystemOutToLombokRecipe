@@ -1,12 +1,13 @@
 # Backlog
 
-## 0.3 — In progress
+## 0.3 — Shipped
 
-- **Catalog-aware dependency addition**: detect `gradle/libs.versions.toml` and write dependencies there instead of inline in `build.gradle.kts`. Fall back to inline when no catalog exists.
-  - ✅ `AddVersionCatalogEntry` recipe — adds `[versions]` + `[libraries]` rows to `gradle/libs.versions.toml`. Uses `rewrite-toml` LST. End-to-end tested against a real sample project.
-  - ⏳ Conditional application: skip when no catalog is present so the recipe is safe to include unconditionally in compositions.
-  - ⏳ `build.gradle.kts` side: add `configuration(libs.xxx)` references instead of inline `"group:artifact:version"`.
-  - ⏳ Compose into `SystemOutToLombokLog4jRecipeCatalog` — full catalog-aware flow.
+- **Catalog entries populated automatically**: `AddVersionCatalogEntry` recipe using `rewrite-toml` LST adds entries to `[versions]` and `[libraries]` when they aren't already present.
+- **`SystemOutToLombokLog4jRecipeCatalog` composition**: runs the catalog entries + Java transforms + `log4j2.xml` creation in one shot. Verified end-to-end against a sample Gradle catalog project.
+
+## 0.4 — Roadmap
+
+- **Auto-wire `build.gradle.kts`**: after populating the catalog, also insert `compileOnly(libs.lombok)` / `annotationProcessor(libs.lombok)` / `implementation(libs.log4jApi)` / `runtimeOnly(libs.log4jCore)` into the `dependencies { ... }` block. Requires a Kotlin DSL-aware visitor (the Gradle plugin parses `build.gradle.kts` as `K.CompilationUnit`, not PlainText). OpenRewrite's `MigrateDependenciesToVersionCatalog` exists but doesn't compose cleanly after `AddDependency` in a scanning context — needs investigation or a custom `KotlinIsoVisitor` recipe.
 
 ## Future
 

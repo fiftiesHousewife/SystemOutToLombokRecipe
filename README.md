@@ -69,7 +69,7 @@ If your project uses a Gradle version catalog (`gradle/libs.versions.toml`), the
 
 ### `SystemOutToLombokLog4jRecipeCatalog` (recommended for catalogs)
 
-Auto-populates your version catalog with Lombok and Log4j2 entries, runs the Java transforms, and creates `log4j2.xml`. You still need to wire the new aliases into your `build.gradle.kts` dependencies block yourself.
+Auto-populates your version catalog with Lombok and Log4j2 entries, runs the Java transforms, and creates `log4j2.xml`. After running, you add four lines to your `build.gradle.kts` dependencies block (automating this is on the 0.4 roadmap).
 
 ```kotlin
 rewrite {
@@ -77,27 +77,28 @@ rewrite {
 }
 ```
 
-After running, your `libs.versions.toml` will contain entries like:
+After running, your `libs.versions.toml` will contain:
 
 ```toml
 [versions]
 lombok = "1.18.44"
-log4j = "2.25.4"
+log4jApi = "2.25.4"
+log4jCore = "2.25.4"
 
 [libraries]
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
-log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
-log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
+log4jApi = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4jApi" }
+log4jCore = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4jCore" }
 ```
 
-Then add to your `build.gradle.kts` dependencies block:
+Add to your `build.gradle.kts` dependencies block:
 
 ```kotlin
 dependencies {
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
-    implementation(libs.log4j.api)
-    runtimeOnly(libs.log4j.core)
+    implementation(libs.log4jApi)
+    runtimeOnly(libs.log4jCore)
 }
 ```
 
