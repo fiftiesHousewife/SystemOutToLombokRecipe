@@ -1,18 +1,25 @@
 [versions]
-openrewrite = "7.26.0"
-openrewrite-bom = "3.6.0"
+openrewrite = "7.30.0"
+openrewrite-bom = "3.28.0"
+openrewrite-core = "8.79.5"
 junit = "6.1.0-M1"
 assertj = "4.0.0-M1"
 jspecify = "1.0.0"
 versions = "0.53.0"
+maven-publish = "0.36.0"
+spotbugs = "6.5.1"
 
 [libraries]
 # OpenRewrite
 openrewrite-recipe-bom = { module = "org.openrewrite.recipe:rewrite-recipe-bom", version.ref = "openrewrite-bom" }
-openrewrite-java = { module = "org.openrewrite:rewrite-java" }
-openrewrite-java21 = { module = "org.openrewrite:rewrite-java-21" }
-openrewrite-gradle = { module = "org.openrewrite:rewrite-gradle" }
-openrewrite-test = { module = "org.openrewrite:rewrite-test" }
+openrewrite-java = { module = "org.openrewrite:rewrite-java", version.ref = "openrewrite-core" }
+openrewrite-java8 = { module = "org.openrewrite:rewrite-java-8", version.ref = "openrewrite-core" }
+openrewrite-java11 = { module = "org.openrewrite:rewrite-java-11", version.ref = "openrewrite-core" }
+openrewrite-java17 = { module = "org.openrewrite:rewrite-java-17", version.ref = "openrewrite-core" }
+openrewrite-java21 = { module = "org.openrewrite:rewrite-java-21", version.ref = "openrewrite-core" }
+openrewrite-java25 = { module = "org.openrewrite:rewrite-java-25", version.ref = "openrewrite-core" }
+openrewrite-gradle = { module = "org.openrewrite:rewrite-gradle", version.ref = "openrewrite-core" }
+openrewrite-test = { module = "org.openrewrite:rewrite-test", version.ref = "openrewrite-core" }
 
 # Testing
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
@@ -25,3 +32,5 @@ jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 [plugins]
 openrewrite = { id = "org.openrewrite.rewrite", version.ref = "openrewrite" }
 versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }
+maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
+spotbugs = { id = "com.github.spotbugs", version.ref = "spotbugs" }

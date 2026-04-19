@@ -270,16 +270,17 @@ dependencies {
     rewrite(project)  // Important: test your own recipes
 }
 
-// Compile recipes with Java 8 target for compatibility
+// Compile recipes at Java 17 — OpenRewrite 8.x requires JDK 17+ at runtime,
+// so targeting 8 doesn't buy real compatibility and just generates obsolete-target warnings.
 tasks.named<JavaCompile>("compileJava") {
     options.compilerArgs.add("-parameters")
-    options.release.set(8)
+    options.release.set(17)
 }
 
-// Test with Java 21 features
+// Compile tests at the toolchain version so tests can use the newest language features.
 tasks.named<JavaCompile>("compileTestJava") {
     options.compilerArgs.add("-parameters")
-    options.release.set(21)
+    options.release.set(25)
 }
 ```
 

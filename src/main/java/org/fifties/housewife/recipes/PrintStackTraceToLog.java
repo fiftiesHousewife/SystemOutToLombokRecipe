@@ -9,6 +9,11 @@ import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.MethodMatcher;
 import org.openrewrite.java.tree.J;
 
+/**
+ * Replaces {@code exception.printStackTrace()} calls with {@code log.error(...)} statements.
+ * Assumes the class has been annotated with {@code @Log4j2} (apply
+ * {@link AddLombokLog4j2Annotation} first).
+ */
 @NullMarked
 public class PrintStackTraceToLog extends Recipe {
 
@@ -27,20 +32,13 @@ public class PrintStackTraceToLog extends Recipe {
 
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
-        return new JavaIsoVisitor<ExecutionContext>() {
-
+        return new JavaIsoVisitor<>() {
             @Override
             public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
                 J.MethodInvocation mi = super.visitMethodInvocation(method, ctx);
-
-                if (!PRINT_STACK_TRACE.matches(mi)) {
+                if (!PRINT_STACK_TRACE.matches(mi) || mi.getSelect() == null) {
                     return mi;
                 }
-
-                if (mi.getSelect() == null) {
-                    return mi;
-                }
-
                 return JavaTemplate.builder("log.error(\"Exception occurred\", #{any()})")
                         .build()
                         .apply(getCursor(), mi.getCoordinates().replace(), mi.getSelect());

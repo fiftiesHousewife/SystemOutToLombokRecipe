@@ -16,8 +16,10 @@ Automatically transforms your code to:
 
 ## Prerequisites
 
-- JDK 21 (Java 25 LTS is not yet supported by OpenRewrite)
+- JDK 17 or later (JDK 25 recommended — enables the newest parser)
 - Gradle 9.x (wrapper included)
+
+Supports transforming source code written in Java 8 through Java 25.
 
 ## Quick Start
 
@@ -30,11 +32,11 @@ Automatically transforms your code to:
 1. **Add versions to `gradle/libs.versions.toml`**:
 ```toml
 [versions]
-openrewrite = "7.26.0"
+openrewrite = "7.30.0"
 fifties-recipes = "0.1"
 
 [libraries]
-fifties-systemout = { module = "org.fifties.housewife:system-out-to-lombok-log4j", version.ref = "fifties-recipes" }
+fifties-systemout = { module = "io.github.fiftieshousewife:system-out-to-lombok-log4j", version.ref = "fifties-recipes" }
 
 [plugins]
 openrewrite = { id = "org.openrewrite.rewrite", version.ref = "openrewrite" }

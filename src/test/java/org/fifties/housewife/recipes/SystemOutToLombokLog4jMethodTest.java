@@ -1,12 +1,11 @@
 package org.fifties.housewife.recipes;
 
-import org.jspecify.annotations.NullMarked;
 import org.junit.jupiter.api.Test;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.InMemoryExecutionContext;
+import org.openrewrite.SourceFile;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaParser;
-import org.openrewrite.SourceFile;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
 
@@ -14,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.fifties.housewife.recipes.SystemOutToLombokLog4j.*;
 
 class SystemOutToLombokLog4jMethodTest {
 
@@ -21,113 +21,59 @@ class SystemOutToLombokLog4jMethodTest {
     private final ExecutionContext ctx = new InMemoryExecutionContext();
 
     @Test
-    @SuppressWarnings("unchecked")
     void getLogLevel_returnsInfoForNonError() {
-        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
-
-        String level = invokeGetLogLevel(visitor, false);
-        assertThat(level).isEqualTo("info");
+        assertThat(getLogLevel(false)).isEqualTo("info");
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void getLogLevel_returnsErrorForError() {
-        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
-
-        String level = invokeGetLogLevel(visitor, true);
-        assertThat(level).isEqualTo("error");
+        assertThat(getLogLevel(true)).isEqualTo("error");
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void escapeFormatString_escapesBackslashes() {
-        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
-
-        String result = invokeEscapeFormatString(visitor, "C:\\path\\to\\file");
-        assertThat(result).isEqualTo("C:\\\\path\\\\to\\\\file");
+        assertThat(escapeFormatString("C:\\path\\to\\file")).isEqualTo("C:\\\\path\\\\to\\\\file");
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void escapeFormatString_escapesQuotes() {
-        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
-
-        String result = invokeEscapeFormatString(visitor, "Say \"hello\"");
-        assertThat(result).isEqualTo("Say \\\"hello\\\"");
+        assertThat(escapeFormatString("Say \"hello\"")).isEqualTo("Say \\\"hello\\\"");
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void escapeFormatString_escapesBoth() {
-        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
-
-        String result = invokeEscapeFormatString(visitor, "Path: \"C:\\test\"");
-        assertThat(result).isEqualTo("Path: \\\"C:\\\\test\\\"");
+        assertThat(escapeFormatString("Path: \"C:\\test\"")).isEqualTo("Path: \\\"C:\\\\test\\\"");
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void buildLogCallTemplate_singleArg() {
-        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
-
-        String template = invokeBuildLogCallTemplate(visitor, 1, false);
-        assertThat(template).isEqualTo("log.info(#{any()})");
+        assertThat(buildLogCallTemplate(1, false)).isEqualTo("log.info(#{any()})");
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void buildLogCallTemplate_multipleArgs() {
-        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
-
-        String template = invokeBuildLogCallTemplate(visitor, 3, false);
-        assertThat(template).isEqualTo("log.info(#{any()}, #{any()}, #{any()})");
+        assertThat(buildLogCallTemplate(3, false)).isEqualTo("log.info(#{any()}, #{any()}, #{any()})");
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void buildLogCallTemplate_errorLevel() {
-        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
-
-        String template = invokeBuildLogCallTemplate(visitor, 2, true);
-        assertThat(template).isEqualTo("log.error(#{any()}, #{any()})");
+        assertThat(buildLogCallTemplate(2, true)).isEqualTo("log.error(#{any()}, #{any()})");
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void buildParameterizedLogTemplate_noArgs() {
-        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
-
-        String template = invokeBuildParameterizedLogTemplate(visitor, "Message", 0, false);
-        assertThat(template).isEqualTo("log.info(\"Message\")");
+        assertThat(buildParameterizedLogTemplate("Message", 0, false)).isEqualTo("log.info(\"Message\")");
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void buildParameterizedLogTemplate_withArgs() {
-        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
-
-        String template = invokeBuildParameterizedLogTemplate(visitor, "Value: {}", 1, false);
-        assertThat(template).isEqualTo("log.info(\"Value: {}\", #{any()})");
+        assertThat(buildParameterizedLogTemplate("Value: {}", 1, false)).isEqualTo("log.info(\"Value: {}\", #{any()})");
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void buildParameterizedLogTemplate_errorWithMultipleArgs() {
-        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
-
-        String template = invokeBuildParameterizedLogTemplate(visitor, "x={}, y={}", 2, true);
-        assertThat(template).isEqualTo("log.error(\"x={}, y={}\", #{any()}, #{any()})");
+        assertThat(buildParameterizedLogTemplate("x={}, y={}", 2, true))
+                .isEqualTo("log.error(\"x={}, y={}\", #{any()}, #{any()})");
     }
 
     @Test
@@ -140,11 +86,9 @@ class SystemOutToLombokLog4jMethodTest {
                     }
                 }
                 """;
-
         SourceFile cu = javaParser.parse(code).findFirst().orElseThrow();
         MethodInvocationFinder finder = new MethodInvocationFinder();
         finder.visit(cu, ctx);
-
         assertThat(finder.foundSystemOut).isTrue();
     }
 
@@ -158,369 +102,173 @@ class SystemOutToLombokLog4jMethodTest {
                     }
                 }
                 """;
-
         SourceFile cu = javaParser.parse(code).findFirst().orElseThrow();
         MethodInvocationFinder finder = new MethodInvocationFinder();
         finder.visit(cu, ctx);
-
         assertThat(finder.foundSystemErr).isTrue();
     }
 
-    @Test
-    void isStringConcatenation_detectsConcatenation() {
-        String code = """
-                package com.example;
-                public class Test {
-                    void method() {
-                        String x = "a" + "b";
-                    }
-                }
-                """;
-
-        SourceFile cu = javaParser.parse(code).findFirst().orElseThrow();
-        ConcatenationFinder finder = new ConcatenationFinder();
-        finder.visit(cu, ctx);
-
-        assertThat(finder.foundConcatenation).isTrue();
-    }
-
-    @Test
-    @SuppressWarnings({"unchecked", "DataFlowIssue"})
+@Test
+    @SuppressWarnings("DataFlowIssue")
     void buildFormatString_handlesLiterals() {
-        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
-
         List<Expression> parts = new ArrayList<>();
         parts.add(new J.Literal(null, null, null, "Hello ", "\"Hello \"", null, null));
-
-        String result = invokeBuildFormatString(visitor, parts);
-        assertThat(result).isEqualTo("Hello ");
+        assertThat(buildFormatString(parts)).isEqualTo("Hello ");
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "DataFlowIssue"})
+    @SuppressWarnings("DataFlowIssue")
     void buildFormatString_handlesPlaceholders() {
-        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
-
         List<Expression> parts = new ArrayList<>();
         parts.add(new J.Literal(null, null, null, "Value: ", "\"Value: \"", null, null));
         parts.add(new J.Identifier(null, null, null, null, "x", null, null));
-
-        String result = invokeBuildFormatString(visitor, parts);
-        assertThat(result).isEqualTo("Value: {}");
+        assertThat(buildFormatString(parts)).isEqualTo("Value: {}");
     }
 
     @Test
-    @SuppressWarnings({"unchecked", "DataFlowIssue"})
+    @SuppressWarnings("DataFlowIssue")
     void extractNonLiteralArguments_filtersLiterals() {
-        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
-
         List<Expression> parts = new ArrayList<>();
         J.Literal literal = new J.Literal(null, null, null, "text", "\"text\"", null, null);
         J.Identifier nonLiteral = new J.Identifier(null, null, null, null, "x", null, null);
-
         parts.add(literal);
         parts.add(nonLiteral);
 
-        List<Expression> result = invokeExtractNonLiteralArguments(visitor, parts);
+        List<Expression> result = extractNonLiteralArguments(parts);
         assertThat(result).hasSize(1);
         assertThat(result.getFirst()).isEqualTo(nonLiteral);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void convertPrintfToLog4jFormat_singleSpecifier() {
-        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
-
-        assertThat(invokeConvertPrintfToLog4jFormat(visitor, "Value: %d%n")).isEqualTo("Value: {}");
+        assertThat(convertPrintfToLog4jFormat("Value: %d%n")).isEqualTo("Value: {}");
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void convertPrintfToLog4jFormat_multipleSpecifiers() {
-        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
-
-        assertThat(invokeConvertPrintfToLog4jFormat(visitor, "Name: %s, Age: %d%n")).isEqualTo("Name: {}, Age: {}");
+        assertThat(convertPrintfToLog4jFormat("Name: %s, Age: %d%n")).isEqualTo("Name: {}, Age: {}");
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void convertPrintfToLog4jFormat_escapedPercent() {
-        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
-
-        assertThat(invokeConvertPrintfToLog4jFormat(visitor, "100%%")).isEqualTo("100%");
+        assertThat(convertPrintfToLog4jFormat("100%%")).isEqualTo("100%");
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void convertPrintfToLog4jFormat_noSpecifiers() {
-        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
-
-        assertThat(invokeConvertPrintfToLog4jFormat(visitor, "Simple message")).isEqualTo("Simple message");
+        assertThat(convertPrintfToLog4jFormat("Simple message")).isEqualTo("Simple message");
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void convertPrintfToLog4jFormat_newlineOnly() {
-        SystemOutToLombokLog4j recipe = new SystemOutToLombokLog4j();
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) recipe.getVisitor();
-
-        assertThat(invokeConvertPrintfToLog4jFormat(visitor, "Hello%n")).isEqualTo("Hello");
+        assertThat(convertPrintfToLog4jFormat("Hello%n")).isEqualTo("Hello");
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void skipArgumentIndex_consumesIndexAndDollar() {
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipArgumentIndex", "1$s")).isEqualTo(2);
+        assertThat(skipArgumentIndex("1$s", 0)).isEqualTo(2);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void skipArgumentIndex_consumesMultiDigitIndex() {
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipArgumentIndex", "12$s")).isEqualTo(3);
+        assertThat(skipArgumentIndex("12$s", 0)).isEqualTo(3);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void skipArgumentIndex_doesNotConsumeWhenNoDollar() {
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipArgumentIndex", "s")).isEqualTo(0);
+        assertThat(skipArgumentIndex("s", 0)).isEqualTo(0);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void skipFlags_consumesFlags() {
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipFlags", "-+s")).isEqualTo(2);
+        assertThat(skipFlags("-+s", 0)).isEqualTo(2);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void skipFlags_doesNotConsumeNonFlags() {
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipFlags", "s")).isEqualTo(0);
+        assertThat(skipFlags("s", 0)).isEqualTo(0);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void skipWidth_consumesDigits() {
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipWidth", "10s")).isEqualTo(2);
+        assertThat(skipWidth("10s", 0)).isEqualTo(2);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void skipWidth_doesNotConsumeNonDigits() {
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipWidth", "s")).isEqualTo(0);
+        assertThat(skipWidth("s", 0)).isEqualTo(0);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void skipPrecision_consumesDotAndDigits() {
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipPrecision", ".5f")).isEqualTo(2);
+        assertThat(skipPrecision(".5f", 0)).isEqualTo(2);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void skipPrecision_doesNotConsumeWhenNoDot() {
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipPrecision", "f")).isEqualTo(0);
+        assertThat(skipPrecision("f", 0)).isEqualTo(0);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void skipConversionChar_consumesSingleChar() {
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipConversionChar", "s")).isEqualTo(1);
+        assertThat(skipConversionChar("s", 0)).isEqualTo(1);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void skipConversionChar_consumesTwoCharsForDateTime() {
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipConversionChar", "tH")).isEqualTo(2);
+        assertThat(skipConversionChar("tH", 0)).isEqualTo(2);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void skipConversionChar_handlesEmptyInput() {
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipConversionChar", "")).isEqualTo(0);
+        assertThat(skipConversionChar("", 0)).isEqualTo(0);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void isDateTimeConversion_trueForLowercaseT() {
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeIsDateTimeConversion(visitor, 't')).isTrue();
+        assertThat(isDateTimeConversion('t')).isTrue();
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void isDateTimeConversion_trueForUppercaseT() {
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeIsDateTimeConversion(visitor, 'T')).isTrue();
+        assertThat(isDateTimeConversion('T')).isTrue();
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void isDateTimeConversion_falseForOtherChar() {
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeIsDateTimeConversion(visitor, 's')).isFalse();
+        assertThat(isDateTimeConversion('s')).isFalse();
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void skipSpecifier_simpleConversion() {
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipSpecifier", "s")).isEqualTo(1);
+        assertThat(skipSpecifier("s", 0)).isEqualTo(1);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void skipSpecifier_withWidthAndPrecision() {
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipSpecifier", "10.5s")).isEqualTo(5);
+        assertThat(skipSpecifier("10.5s", 0)).isEqualTo(5);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void skipSpecifier_withAllParts() {
-        JavaIsoVisitor<ExecutionContext> visitor = (JavaIsoVisitor<ExecutionContext>) new SystemOutToLombokLog4j().getVisitor();
-        assertThat(invokeSkipInt(visitor, "skipSpecifier", "1$-10.5s")).isEqualTo(8);
-    }
-
-    private int invokeSkipInt(JavaIsoVisitor<ExecutionContext> visitor, String methodName, String format) {
-        try {
-            var method = visitor.getClass().getDeclaredMethod(methodName, String.class, int.class);
-            method.setAccessible(true);
-            return (int) method.invoke(visitor, format, 0);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private boolean invokeIsDateTimeConversion(JavaIsoVisitor<ExecutionContext> visitor, char conv) {
-        try {
-            var method = visitor.getClass().getDeclaredMethod("isDateTimeConversion", char.class);
-            method.setAccessible(true);
-            return (boolean) method.invoke(visitor, conv);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private String invokeConvertPrintfToLog4jFormat(JavaIsoVisitor<ExecutionContext> visitor, String input) {
-        try {
-            var method = visitor.getClass().getDeclaredMethod("convertPrintfToLog4jFormat", String.class);
-            method.setAccessible(true);
-            return (String) method.invoke(visitor, input);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private String invokeGetLogLevel(JavaIsoVisitor<ExecutionContext> visitor, boolean isError) {
-        try {
-            var method = visitor.getClass().getDeclaredMethod("getLogLevel", boolean.class);
-            method.setAccessible(true);
-            return (String) method.invoke(visitor, isError);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private String invokeEscapeFormatString(JavaIsoVisitor<ExecutionContext> visitor, String input) {
-        try {
-            var method = visitor.getClass().getDeclaredMethod("escapeFormatString", String.class);
-            method.setAccessible(true);
-            return (String) method.invoke(visitor, input);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private String invokeBuildLogCallTemplate(JavaIsoVisitor<ExecutionContext> visitor, int argCount, boolean isError) {
-        try {
-            var method = visitor.getClass().getDeclaredMethod("buildLogCallTemplate", int.class, boolean.class);
-            method.setAccessible(true);
-            return (String) method.invoke(visitor, argCount, isError);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private String invokeBuildParameterizedLogTemplate(JavaIsoVisitor<ExecutionContext> visitor, String format, int argCount, boolean isError) {
-        try {
-            var method = visitor.getClass().getDeclaredMethod("buildParameterizedLogTemplate", String.class, int.class, boolean.class);
-            method.setAccessible(true);
-            return (String) method.invoke(visitor, format, argCount, isError);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private String invokeBuildFormatString(JavaIsoVisitor<ExecutionContext> visitor, List<Expression> parts) {
-        try {
-            var method = visitor.getClass().getDeclaredMethod("buildFormatString", List.class);
-            method.setAccessible(true);
-            return (String) method.invoke(visitor, parts);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private List<Expression> invokeExtractNonLiteralArguments(JavaIsoVisitor<ExecutionContext> visitor, List<Expression> parts) {
-        try {
-            var method = visitor.getClass().getDeclaredMethod("extractNonLiteralArguments", List.class);
-            method.setAccessible(true);
-            return (List<Expression>) method.invoke(visitor, parts);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        assertThat(skipSpecifier("1$-10.5s", 0)).isEqualTo(8);
     }
 
     private static class MethodInvocationFinder extends JavaIsoVisitor<ExecutionContext> {
-        boolean foundSystemOut = false;
-        boolean foundSystemErr = false;
+        boolean foundSystemOut;
+        boolean foundSystemErr;
 
         @Override
-        @NullMarked
         public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
-            if (method.getSelect() != null) {
-                String select = method.getSelect().toString();
-                if (select.equals("System.out")) {
-                    foundSystemOut = true;
-                }
-                if (select.equals("System.err")) {
+            if (isSystemOutOrErr(method)) {
+                if (isSystemErr(method)) {
                     foundSystemErr = true;
+                } else {
+                    foundSystemOut = true;
                 }
             }
             return super.visitMethodInvocation(method, ctx);
         }
     }
 
-    private static class ConcatenationFinder extends JavaIsoVisitor<ExecutionContext> {
-        boolean foundConcatenation = false;
-
-        @Override
-        @NullMarked
-        public J.Binary visitBinary(J.Binary binary, ExecutionContext ctx) {
-            if (binary.getOperator() == J.Binary.Type.Addition) {
-                foundConcatenation = true;
-            }
-            return super.visitBinary(binary, ctx);
-        }
-    }
 }

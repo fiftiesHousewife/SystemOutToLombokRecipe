@@ -1,18 +1,14 @@
 plugins {
     java
+    jacoco
     alias(libs.plugins.openrewrite)
     alias(libs.plugins.versions)
-    `maven-publish`
+    alias(libs.plugins.maven.publish)
+    alias(libs.plugins.spotbugs)
 }
 
-group = "org.fifties.housewife"
+group = "io.github.fiftieshousewife"
 version = "0.1"
-
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
-    }
-}
 
 repositories {
     mavenCentral()
@@ -21,34 +17,93 @@ repositories {
 dependencies {
     implementation(platform(libs.openrewrite.recipe.bom))
     implementation(libs.openrewrite.java)
+    runtimeOnly(libs.openrewrite.java8)
+    runtimeOnly(libs.openrewrite.java11)
+    runtimeOnly(libs.openrewrite.java17)
     runtimeOnly(libs.openrewrite.java21)
+    runtimeOnly(libs.openrewrite.java25)
 
     compileOnly(libs.jspecify)
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
-    testImplementation( libs.assertj.core)
+    testImplementation(libs.assertj.core)
     testImplementation(libs.openrewrite.test)
 }
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
+
+tasks.withType<Javadoc> {
+    (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:all,-missing", "-quiet")
 }
 
 tasks.named<JavaCompile>("compileJava") {
     options.compilerArgs.add("-parameters")
-    options.release.set(8)
+    options.release.set(17)
 }
 
 tasks.named<JavaCompile>("compileTestJava") {
     options.compilerArgs.add("-parameters")
-    options.release.set(21)
+    options.release.set(25)
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(25))
+    }
+}
+
+mavenPublishing {
+    publishToMavenCentral(automaticRelease = true)
+    signAllPublications()
+
+    coordinates(group.toString(), "system-out-to-lombok-log4j", version.toString())
+
+    pom {
+        name.set("System.out to Lombok Log4j")
+        description.set("OpenRewrite recipes to convert System.out/err calls to Lombok @Log4j2 logging")
+        url.set("https://github.com/fiftiesHousewife/SystemOutToLombokRecipe")
+        licenses {
+            license {
+                name.set("The Apache License, Version 2.0")
+                url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+            }
+        }
+        developers {
+            developer {
+                id.set("fiftiesHousewife")
+                name.set("Pippa Newbold")
+                email.set("pippa.newbold@gmail.com")
+            }
+        }
+        scm {
+            connection.set("scm:git:git://github.com/fiftiesHousewife/SystemOutToLombokRecipe.git")
+            developerConnection.set("scm:git:ssh://github.com/fiftiesHousewife/SystemOutToLombokRecipe.git")
+            url.set("https://github.com/fiftiesHousewife/SystemOutToLombokRecipe")
+        }
+    }
 }
 
 publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            from(components["java"])
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/fiftiesHousewife/SystemOutToLombokRecipe")
+            credentials {
+                username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR")
+                password = project.findProperty("gpr.token") as String? ?: System.getenv("GITHUB_TOKEN")
+            }
         }
     }
 }

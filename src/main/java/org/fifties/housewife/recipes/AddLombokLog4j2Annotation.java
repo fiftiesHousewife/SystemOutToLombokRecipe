@@ -10,13 +10,32 @@ import org.openrewrite.java.MethodMatcher;
 import org.openrewrite.java.tree.J;
 
 import java.util.Comparator;
+import java.util.Set;
 
 /**
- * Adds the Lombok @Log4j2 annotation to classes that use System.out print statements or printStackTrace calls.
- * This recipe should be applied to classes before converting System.out to log statements.
+ * Adds the Lombok {@code @Log4j2} annotation to classes that use {@code System.out}
+ * or {@code printStackTrace()}. Apply this recipe before the transforms that actually
+ * rewrite those calls to log statements.
  */
 @NullMarked
 public class AddLombokLog4j2Annotation extends Recipe {
+
+    private static final MethodMatcher PRINT_STACK_TRACE = new MethodMatcher("java.lang.Throwable printStackTrace(..)");
+
+    private static final Set<String> LOMBOK_LOGGING_SIMPLE_NAMES = Set.of(
+            "Slf4j", "Log4j", "Log4j2", "Log", "CommonsLog", "Flogger", "JBossLog", "CustomLog");
+
+    private static final Set<String> LOMBOK_LOGGING_TYPE_FRAGMENTS = Set.of(
+            "lombok.extern.slf4j.Slf4j",
+            "lombok.extern.log4j.Log4j",
+            "lombok.extern.log4j.Log4j2",
+            "lombok.extern.java.Log",
+            "lombok.extern.apachecommons.CommonsLog",
+            "lombok.extern.flogger.Flogger",
+            "lombok.extern.jbosslog.JBossLog",
+            "lombok.CustomLog");
+
+    private static final Set<String> LOGGER_FIELD_NAMES = Set.of("log", "logger", "LOG", "LOGGER");
 
     @Override
     public String getDisplayName() {
@@ -31,110 +50,79 @@ public class AddLombokLog4j2Annotation extends Recipe {
 
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
-        return new JavaIsoVisitor<ExecutionContext>() {
-
-            @Override
-            public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext ctx) {
-                if (!containsSystemOutCalls(classDecl)) {
-                    return classDecl;
-                }
-
-                if (hasLombokLoggingAnnotation(classDecl)) {
-                    return classDecl;
-                }
-
-                if (hasExplicitLoggerField(classDecl)) {
-                    return classDecl;
-                }
-
-                return addLog4j2Annotation(classDecl);
-            }
-
-            boolean containsSystemOutCalls(J.ClassDeclaration classDecl) {
-                HasSystemOutVisitor visitor = new HasSystemOutVisitor();
-                visitor.visit(classDecl, false);
-                return visitor.hasSystemOut();
-            }
-
-            boolean hasLombokLoggingAnnotation(J.ClassDeclaration classDecl) {
-                return classDecl.getLeadingAnnotations().stream()
-                        .anyMatch(this::isLombokLoggingAnnotation);
-            }
-
-            boolean isLombokLoggingAnnotation(J.Annotation annotation) {
-                String simpleName = annotation.getSimpleName();
-                if (simpleName.equals("Slf4j") || simpleName.equals("Log4j") ||
-                    simpleName.equals("Log4j2") || simpleName.equals("Log") ||
-                    simpleName.equals("CommonsLog") || simpleName.equals("Flogger") ||
-                    simpleName.equals("JBossLog") || simpleName.equals("CustomLog")) {
-                    return true;
-                }
-
-                if (annotation.getType() == null) {
-                    return false;
-                }
-                String typeName = annotation.getType().toString();
-                return typeName.contains("lombok.extern.slf4j.Slf4j")
-                        || typeName.contains("lombok.extern.log4j.Log4j")
-                        || typeName.contains("lombok.extern.log4j.Log4j2")
-                        || typeName.contains("lombok.extern.java.Log")
-                        || typeName.contains("lombok.extern.apachecommons.CommonsLog")
-                        || typeName.contains("lombok.extern.flogger.Flogger")
-                        || typeName.contains("lombok.extern.jbosslog.JBossLog")
-                        || typeName.contains("lombok.CustomLog");
-            }
-
-            boolean hasExplicitLoggerField(J.ClassDeclaration classDecl) {
-                return classDecl.getBody().getStatements().stream()
-                        .filter(J.VariableDeclarations.class::isInstance)
-                        .map(J.VariableDeclarations.class::cast)
-                        .anyMatch(this::isLoggerVariable);
-            }
-
-            boolean isLoggerVariable(J.VariableDeclarations variableDeclarations) {
-                return variableDeclarations.getVariables().stream()
-                        .anyMatch(var -> "log".equals(var.getSimpleName())
-                                || "logger".equals(var.getSimpleName())
-                                || "LOG".equals(var.getSimpleName())
-                                || "LOGGER".equals(var.getSimpleName()));
-            }
-
-            J.ClassDeclaration addLog4j2Annotation(J.ClassDeclaration classDecl) {
-                maybeAddImport("lombok.extern.log4j.Log4j2", null, false);
-
-                return JavaTemplate.builder("@Log4j2")
-                        .imports("lombok.extern.log4j.Log4j2")
-                        .build()
-                        .apply(
-                                getCursor(),
-                                classDecl.getCoordinates().addAnnotation(Comparator.comparing(J.Annotation::getSimpleName))
-                        );
-            }
-        };
+        return new AddAnnotationVisitor();
     }
 
-    private static class HasSystemOutVisitor extends JavaIsoVisitor<Boolean> {
-        private static final MethodMatcher PRINT_STACK_TRACE = new MethodMatcher("java.lang.Throwable printStackTrace(..)");
-        private boolean foundSystemOut = false;
+    static class AddAnnotationVisitor extends JavaIsoVisitor<ExecutionContext> {
+
+        @Override
+        public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext ctx) {
+            if (!containsSystemOutCalls(classDecl)
+                    || hasLombokLoggingAnnotation(classDecl)
+                    || hasExplicitLoggerField(classDecl)) {
+                return classDecl;
+            }
+            return addLog4j2Annotation(classDecl);
+        }
+
+        J.ClassDeclaration addLog4j2Annotation(J.ClassDeclaration classDecl) {
+            maybeAddImport("lombok.extern.log4j.Log4j2", null, false);
+            return JavaTemplate.builder("@Log4j2")
+                    .imports("lombok.extern.log4j.Log4j2")
+                    .build()
+                    .apply(getCursor(),
+                            classDecl.getCoordinates().addAnnotation(Comparator.comparing(J.Annotation::getSimpleName)));
+        }
+    }
+
+    static boolean containsSystemOutCalls(J.ClassDeclaration classDecl) {
+        SystemOutDetector detector = new SystemOutDetector();
+        detector.visit(classDecl, false);
+        return detector.found;
+    }
+
+    static boolean hasLombokLoggingAnnotation(J.ClassDeclaration classDecl) {
+        return classDecl.getLeadingAnnotations().stream().anyMatch(AddLombokLog4j2Annotation::isLombokLoggingAnnotation);
+    }
+
+    static boolean isLombokLoggingAnnotation(J.Annotation annotation) {
+        if (LOMBOK_LOGGING_SIMPLE_NAMES.contains(annotation.getSimpleName())) {
+            return true;
+        }
+        if (annotation.getType() == null) {
+            return false;
+        }
+        String typeName = annotation.getType().toString();
+        return LOMBOK_LOGGING_TYPE_FRAGMENTS.stream().anyMatch(typeName::contains);
+    }
+
+    static boolean hasExplicitLoggerField(J.ClassDeclaration classDecl) {
+        return classDecl.getBody().getStatements().stream()
+                .filter(J.VariableDeclarations.class::isInstance)
+                .map(J.VariableDeclarations.class::cast)
+                .anyMatch(AddLombokLog4j2Annotation::isLoggerVariable);
+    }
+
+    static boolean isLoggerVariable(J.VariableDeclarations variableDeclarations) {
+        return variableDeclarations.getVariables().stream()
+                .anyMatch(v -> LOGGER_FIELD_NAMES.contains(v.getSimpleName()));
+    }
+
+    private static final class SystemOutDetector extends JavaIsoVisitor<Boolean> {
+        boolean found;
 
         @Override
         public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, Boolean ctx) {
             if (method.getSelect() != null) {
-                String selectStr = method.getSelect().toString();
-                if (selectStr.equals("System.out") || selectStr.equals("System.err")) {
-                    foundSystemOut = true;
+                String select = method.getSelect().toString();
+                if ("System.out".equals(select) || "System.err".equals(select)) {
+                    found = true;
                 }
             }
-
             if (PRINT_STACK_TRACE.matches(method)) {
-                foundSystemOut = true;
+                found = true;
             }
-
             return super.visitMethodInvocation(method, ctx);
-        }
-
-        public boolean hasSystemOut() {
-            return foundSystemOut;
         }
     }
 }
