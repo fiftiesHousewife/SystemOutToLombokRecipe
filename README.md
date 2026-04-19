@@ -65,28 +65,32 @@ rewrite {
 
 ## Version Catalog Projects
 
-The default recipe `SystemOutToLombokLog4jRecipe` adds Lombok and Log4j2 dependencies inline in your `build.gradle(.kts)`. If your project uses a Gradle version catalog (`gradle/libs.versions.toml`), those inline additions will be stylistically inconsistent with the rest of your build.
+If your project uses a Gradle version catalog (`gradle/libs.versions.toml`), there are two purpose-built variants. Pick one:
 
-**Use the no-deps variant instead:**
+### `SystemOutToLombokLog4jRecipeCatalog` (recommended for catalogs)
+
+Auto-populates your version catalog with Lombok and Log4j2 entries, runs the Java transforms, and creates `log4j2.xml`. You still need to wire the new aliases into your `build.gradle.kts` dependencies block yourself.
 
 ```kotlin
 rewrite {
-    activeRecipe("io.github.fiftieshousewife.SystemOutToLombokLog4jRecipeNoDeps")
+    activeRecipe("io.github.fiftieshousewife.SystemOutToLombokLog4jRecipeCatalog")
 }
 ```
 
-This runs all the Java transforms (annotations, System.out conversions, printStackTrace conversions) and creates `log4j2.xml`, but **skips dependency management**. Add the following to your catalog yourself:
+After running, your `libs.versions.toml` will contain entries like:
 
 ```toml
 [versions]
 lombok = "1.18.44"
-log4j = "2.x"
+log4j = "2.25.4"
 
 [libraries]
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
 log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
 ```
+
+Then add to your `build.gradle.kts` dependencies block:
 
 ```kotlin
 dependencies {
@@ -97,7 +101,17 @@ dependencies {
 }
 ```
 
-A future version may detect the catalog automatically and add entries to `libs.versions.toml` for you.
+### `SystemOutToLombokLog4jRecipeNoDeps`
+
+For cases where you want full manual control — runs all Java transforms and creates `log4j2.xml` but touches neither the catalog nor `build.gradle.kts`. You add everything yourself.
+
+```kotlin
+rewrite {
+    activeRecipe("io.github.fiftieshousewife.SystemOutToLombokLog4jRecipeNoDeps")
+}
+```
+
+A future version may auto-detect the catalog and also write the `libs.xxx` references into `build.gradle.kts` for you.
 
 ## Examples
 

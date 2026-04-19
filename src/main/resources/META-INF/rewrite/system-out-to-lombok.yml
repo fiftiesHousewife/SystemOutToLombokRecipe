@@ -103,6 +103,59 @@ recipeList:
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
+name: io.github.fiftieshousewife.SystemOutToLombokLog4jRecipeCatalog
+displayName: Convert System.out to Lombok @Log4j2 (version catalog)
+description: >
+  Same Java transforms as SystemOutToLombokLog4jRecipe. Adds Lombok and Log4j2
+  entries to gradle/libs.versions.toml (a Gradle version catalog) rather than
+  adding inline dependencies to build.gradle.kts. You still need to reference
+  the new catalog aliases in your build.gradle.kts dependencies block:
+  compileOnly(libs.lombok), annotationProcessor(libs.lombok),
+  implementation(libs.log4j.api), runtimeOnly(libs.log4j.core).
+
+recipeList:
+  - io.github.fiftieshousewife.recipes.AddVersionCatalogEntry:
+      versionAlias: lombok
+      versionValue: 1.18.44
+      libraryAlias: lombok
+      module: org.projectlombok:lombok
+
+  - io.github.fiftieshousewife.recipes.AddVersionCatalogEntry:
+      versionAlias: log4j
+      versionValue: 2.25.4
+      libraryAlias: log4j-api
+      module: org.apache.logging.log4j:log4j-api
+
+  - io.github.fiftieshousewife.recipes.AddVersionCatalogEntry:
+      versionAlias: log4j
+      versionValue: 2.25.4
+      libraryAlias: log4j-core
+      module: org.apache.logging.log4j:log4j-core
+
+  - org.openrewrite.text.CreateTextFile:
+      relativeFileName: src/main/resources/log4j2.xml
+      fileContents: |
+        <?xml version="1.0" encoding="UTF-8"?>
+        <Configuration status="WARN">
+            <Appenders>
+                <Console name="Console" target="SYSTEM_OUT">
+                    <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+                </Console>
+            </Appenders>
+            <Loggers>
+                <Root level="info">
+                    <AppenderRef ref="Console"/>
+                </Root>
+            </Loggers>
+        </Configuration>
+      overwriteExisting: false
+
+  - io.github.fiftieshousewife.recipes.AddLombokLog4j2Annotation
+  - io.github.fiftieshousewife.recipes.SystemOutToLombokLog4j
+  - io.github.fiftieshousewife.recipes.PrintStackTraceToLog
+
+---
+type: specs.openrewrite.org/v1beta/recipe
 name: io.github.fiftieshousewife.AddLombokLog4j2Dependencies
 displayName: Add Lombok and Log4j2 dependencies
 description: Adds Lombok and Log4j2 dependencies to the project
