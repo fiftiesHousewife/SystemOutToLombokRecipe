@@ -33,7 +33,7 @@ Supports transforming source code written in Java 8 through Java 25.
 ```toml
 [versions]
 openrewrite = "7.30.0"
-fifties-recipes = "0.1"
+fifties-recipes = "0.3"
 
 [libraries]
 fifties-systemout = { module = "io.github.fiftieshousewife:system-out-to-lombok-log4j", version.ref = "fifties-recipes" }
@@ -111,8 +111,6 @@ rewrite {
     activeRecipe("io.github.fiftieshousewife.SystemOutToLombokLog4jRecipeNoDeps")
 }
 ```
-
-A future version may auto-detect the catalog and also write the `libs.xxx` references into `build.gradle.kts` for you.
 
 ## Examples
 
