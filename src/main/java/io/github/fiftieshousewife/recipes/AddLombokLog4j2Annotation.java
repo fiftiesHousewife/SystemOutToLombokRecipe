@@ -13,14 +13,18 @@ import java.util.Comparator;
 import java.util.Set;
 
 /**
- * Adds the Lombok {@code @Log4j2} annotation to classes that use {@code System.out}
- * or {@code printStackTrace()}. Apply this recipe before the transforms that actually
- * rewrite those calls to log statements.
+ * Adds the Lombok {@code @Log4j2} annotation to classes that use
+ * {@code System.out}, {@code printStackTrace()}, or {@code java.util.logging.Logger}.
+ * Apply this recipe before the transforms that actually rewrite those calls to
+ * log statements.
  */
 @NullMarked
 public class AddLombokLog4j2Annotation extends Recipe {
 
     private static final MethodMatcher PRINT_STACK_TRACE = new MethodMatcher("java.lang.Throwable printStackTrace(..)");
+
+    private static final Set<String> JUL_LEVEL_METHODS = Set.of(
+            "severe", "warning", "info", "config", "fine", "finer", "finest");
 
     private static final Set<String> LOMBOK_LOGGING_SIMPLE_NAMES = Set.of(
             "Slf4j", "Log4j", "Log4j2", "Log", "CommonsLog", "Flogger", "JBossLog", "CustomLog");
@@ -57,9 +61,15 @@ public class AddLombokLog4j2Annotation extends Recipe {
 
         @Override
         public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext ctx) {
-            if (!containsSystemOutCalls(classDecl)
-                    || hasLombokLoggingAnnotation(classDecl)
-                    || hasExplicitLoggerField(classDecl)) {
+            boolean hasSop = containsSystemOutCalls(classDecl);
+            boolean hasJul = containsJulCalls(classDecl);
+            if (!hasSop && !hasJul) {
+                return classDecl;
+            }
+            if (hasLombokLoggingAnnotation(classDecl)) {
+                return classDecl;
+            }
+            if (hasExplicitLoggerField(classDecl) && !hasJul) {
                 return classDecl;
             }
             return addLog4j2Annotation(classDecl);
@@ -77,6 +87,12 @@ public class AddLombokLog4j2Annotation extends Recipe {
 
     static boolean containsSystemOutCalls(J.ClassDeclaration classDecl) {
         SystemOutDetector detector = new SystemOutDetector();
+        detector.visit(classDecl, false);
+        return detector.found;
+    }
+
+    static boolean containsJulCalls(J.ClassDeclaration classDecl) {
+        JulCallDetector detector = new JulCallDetector();
         detector.visit(classDecl, false);
         return detector.found;
     }
@@ -120,6 +136,19 @@ public class AddLombokLog4j2Annotation extends Recipe {
                 }
             }
             if (PRINT_STACK_TRACE.matches(method)) {
+                found = true;
+            }
+            return super.visitMethodInvocation(method, ctx);
+        }
+    }
+
+    private static final class JulCallDetector extends JavaIsoVisitor<Boolean> {
+        boolean found;
+
+        @Override
+        public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, Boolean ctx) {
+            if (JUL_LEVEL_METHODS.contains(method.getSimpleName())
+                    && JulToLombokLog4j.julLevelOf(method) != null) {
                 found = true;
             }
             return super.visitMethodInvocation(method, ctx);

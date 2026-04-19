@@ -1,15 +1,68 @@
 ---
 type: specs.openrewrite.org/v1beta/recipe
+name: io.github.fiftieshousewife.CreateLog4j2Config
+displayName: Create log4j2.xml configuration
+description: >
+  Creates src/main/resources/log4j2.xml with a sensible console configuration:
+  INFO/WARN routed to stdout, ERROR routed to stderr (respecting the
+  System.out → log.info / System.err → log.error split). Does nothing when
+  the file already exists.
+
+recipeList:
+  - org.openrewrite.text.CreateTextFile:
+      relativeFileName: src/main/resources/log4j2.xml
+      fileContents: |
+        <?xml version="1.0" encoding="UTF-8"?>
+        <Configuration status="WARN">
+            <Appenders>
+                <Console name="StdOut" target="SYSTEM_OUT">
+                    <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+                    <ThresholdFilter level="ERROR" onMatch="DENY" onMismatch="ACCEPT"/>
+                </Console>
+                <Console name="StdErr" target="SYSTEM_ERR">
+                    <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+                    <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
+                </Console>
+            </Appenders>
+            <Loggers>
+                <Root level="info">
+                    <AppenderRef ref="StdOut"/>
+                    <AppenderRef ref="StdErr"/>
+                </Root>
+            </Loggers>
+        </Configuration>
+      overwriteExisting: false
+
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.github.fiftieshousewife.JavaTransforms
+displayName: Apply @Log4j2 annotation and convert System.out / printStackTrace / JUL calls
+description: >
+  The Java-side transforms shared by the Lombok-based recipes: add @Log4j2
+  to classes that use System.out, printStackTrace, or java.util.logging;
+  convert System.out/err calls to log.info/log.error with parameterized
+  formatting; convert printStackTrace to log.error; convert JUL level-named
+  method calls (severe/warning/info/config/fine/finer/finest) to the
+  equivalent log.xxx method.
+
+recipeList:
+  - io.github.fiftieshousewife.recipes.AddLombokLog4j2Annotation
+  - io.github.fiftieshousewife.recipes.SystemOutToLombokLog4j
+  - io.github.fiftieshousewife.recipes.PrintStackTraceToLog
+  - io.github.fiftieshousewife.recipes.JulToLombokLog4j
+
+---
+type: specs.openrewrite.org/v1beta/recipe
 name: io.github.fiftieshousewife.SystemOutToLombokLog4jRecipe
 displayName: Convert System.out to Lombok @Log4j2
 description: >
   Converts System.out.println/printf calls to Lombok @Log4j2 logging.
-  This recipe adds the necessary Lombok and Log4j2 dependencies, adds the @Log4j2 annotation
-  to classes with System.out calls, converts those calls to parameterized log statements,
-  and creates a log4j2.xml configuration file.
+  Adds the Lombok and Log4j2 dependencies inline in build.gradle.kts,
+  adds the @Log4j2 annotation to classes with System.out calls,
+  converts those calls to parameterized log statements, and creates a
+  log4j2.xml configuration file.
 
 recipeList:
-  # Step 1: Add Lombok dependency (unconditionally)
   - org.openrewrite.gradle.AddDependency:
       groupId: org.projectlombok
       artifactId: lombok
@@ -17,7 +70,6 @@ recipeList:
       configuration: compileOnly
       acceptTransitive: true
 
-  # Step 2: Add Lombok annotation processor (unconditionally)
   - org.openrewrite.gradle.AddDependency:
       groupId: org.projectlombok
       artifactId: lombok
@@ -25,81 +77,98 @@ recipeList:
       configuration: annotationProcessor
       acceptTransitive: true
 
-  # Step 3: Add Log4j2 API dependency (unconditionally)
   - org.openrewrite.gradle.AddDependency:
       groupId: org.apache.logging.log4j
       artifactId: log4j-api
       version: 2.x
       configuration: implementation
 
-  # Step 4: Add Log4j2 Core dependency (unconditionally)
   - org.openrewrite.gradle.AddDependency:
       groupId: org.apache.logging.log4j
       artifactId: log4j-core
       version: 2.x
       configuration: runtimeOnly
 
-  # Step 5: Create log4j2.xml configuration file
-  - org.openrewrite.text.CreateTextFile:
-      relativeFileName: src/main/resources/log4j2.xml
-      fileContents: |
-        <?xml version="1.0" encoding="UTF-8"?>
-        <Configuration status="WARN">
-            <Appenders>
-                <Console name="Console" target="SYSTEM_OUT">
-                    <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
-                </Console>
-            </Appenders>
-            <Loggers>
-                <Root level="info">
-                    <AppenderRef ref="Console"/>
-                </Root>
-            </Loggers>
-        </Configuration>
-      overwriteExisting: false
-
-  # Step 6: Add @Log4j2 annotation to classes with System.out calls
-  - io.github.fiftieshousewife.recipes.AddLombokLog4j2Annotation
-
-  # Step 7: Convert System.out calls to log statements
-  - io.github.fiftieshousewife.recipes.SystemOutToLombokLog4j
-
-  # Step 8: Convert printStackTrace calls to log.error
-  - io.github.fiftieshousewife.recipes.PrintStackTraceToLog
+  - io.github.fiftieshousewife.CreateLog4j2Config
+  - io.github.fiftieshousewife.JavaTransforms
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
 name: io.github.fiftieshousewife.SystemOutToLombokLog4jRecipeNoDeps
 displayName: Convert System.out to Lombok @Log4j2 (no dependency management)
 description: >
-  Same Java transforms as SystemOutToLombokLog4jRecipe, but does NOT add Lombok or Log4j2
-  dependencies to the build. Use this variant when you manage dependencies yourself — for
-  example in a project that uses a Gradle version catalog (gradle/libs.versions.toml).
-  You are responsible for adding Lombok (compileOnly + annotationProcessor) and
-  log4j-api/log4j-core to your build before running this recipe.
+  Same Java transforms and log4j2.xml creation as SystemOutToLombokLog4jRecipe,
+  but does NOT add any dependencies to your build. Use this variant when you
+  manage dependencies yourself. You are responsible for adding Lombok
+  (compileOnly + annotationProcessor) and log4j-api/log4j-core to your build
+  before running this recipe.
 
 recipeList:
-  - org.openrewrite.text.CreateTextFile:
-      relativeFileName: src/main/resources/log4j2.xml
-      fileContents: |
-        <?xml version="1.0" encoding="UTF-8"?>
-        <Configuration status="WARN">
-            <Appenders>
-                <Console name="Console" target="SYSTEM_OUT">
-                    <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
-                </Console>
-            </Appenders>
-            <Loggers>
-                <Root level="info">
-                    <AppenderRef ref="Console"/>
-                </Root>
-            </Loggers>
-        </Configuration>
-      overwriteExisting: false
+  - io.github.fiftieshousewife.CreateLog4j2Config
+  - io.github.fiftieshousewife.JavaTransforms
 
-  - io.github.fiftieshousewife.recipes.AddLombokLog4j2Annotation
-  - io.github.fiftieshousewife.recipes.SystemOutToLombokLog4j
-  - io.github.fiftieshousewife.recipes.PrintStackTraceToLog
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.github.fiftieshousewife.ConvertManualLog4j2ToLombokRecipe
+displayName: Convert manual Log4j2 loggers to Lombok @Log4j2
+description: >
+  For codebases that already use Log4j2 but declare Logger fields manually
+  (`private static final Logger log = LogManager.getLogger(X.class);`):
+  adds the Lombok compileOnly + annotationProcessor dependencies inline in
+  build.gradle.kts, replaces each manual field with Lombok's @Log4j2
+  annotation, and renames references (logger/LOG/LOGGER → log) so the code
+  uses the Lombok-generated `log` field. Log4j2 API/core dependencies are
+  expected to already be present.
+
+recipeList:
+  - org.openrewrite.gradle.AddDependency:
+      groupId: org.projectlombok
+      artifactId: lombok
+      version: 1.18.x
+      configuration: compileOnly
+      acceptTransitive: true
+
+  - org.openrewrite.gradle.AddDependency:
+      groupId: org.projectlombok
+      artifactId: lombok
+      version: 1.18.x
+      configuration: annotationProcessor
+      acceptTransitive: true
+
+  - io.github.fiftieshousewife.recipes.ConvertManualLog4j2ToLombok
+
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.github.fiftieshousewife.ConvertManualLog4j2ToLombokRecipeNoDeps
+displayName: Convert manual Log4j2 loggers to Lombok @Log4j2 (no dependency management)
+description: >
+  Same transformation as ConvertManualLog4j2ToLombokRecipe but without
+  adding Lombok dependencies to the build. Use when you manage dependencies
+  yourself (e.g. in a multi-module project where Lombok is already declared
+  at a parent level).
+
+recipeList:
+  - io.github.fiftieshousewife.recipes.ConvertManualLog4j2ToLombok
+
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.github.fiftieshousewife.ConvertManualLog4j2ToLombokRecipeCatalog
+displayName: Convert manual Log4j2 loggers to Lombok @Log4j2 (version catalog)
+description: >
+  Same transformation as ConvertManualLog4j2ToLombokRecipe, but adds
+  Lombok to gradle/libs.versions.toml (alias "lombok") instead of adding
+  inline dependencies. You still need to add `compileOnly(libs.lombok)`
+  and `annotationProcessor(libs.lombok)` to your build.gradle.kts
+  dependencies block.
+
+recipeList:
+  - io.github.fiftieshousewife.recipes.AddVersionCatalogEntry:
+      versionAlias: lombok
+      versionValue: 1.18.44
+      libraryAlias: lombok
+      module: org.projectlombok:lombok
+
+  - io.github.fiftieshousewife.recipes.ConvertManualLog4j2ToLombok
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
@@ -132,50 +201,5 @@ recipeList:
       libraryAlias: log4jCore
       module: org.apache.logging.log4j:log4j-core
 
-  - org.openrewrite.text.CreateTextFile:
-      relativeFileName: src/main/resources/log4j2.xml
-      fileContents: |
-        <?xml version="1.0" encoding="UTF-8"?>
-        <Configuration status="WARN">
-            <Appenders>
-                <Console name="Console" target="SYSTEM_OUT">
-                    <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
-                </Console>
-            </Appenders>
-            <Loggers>
-                <Root level="info">
-                    <AppenderRef ref="Console"/>
-                </Root>
-            </Loggers>
-        </Configuration>
-      overwriteExisting: false
-
-  - io.github.fiftieshousewife.recipes.AddLombokLog4j2Annotation
-  - io.github.fiftieshousewife.recipes.SystemOutToLombokLog4j
-  - io.github.fiftieshousewife.recipes.PrintStackTraceToLog
-
----
-type: specs.openrewrite.org/v1beta/recipe
-name: io.github.fiftieshousewife.AddLombokLog4j2Dependencies
-displayName: Add Lombok and Log4j2 dependencies
-description: Adds Lombok and Log4j2 dependencies to the project
-
-recipeList:
-  - org.openrewrite.java.dependencies.AddDependency:
-      groupId: org.projectlombok
-      artifactId: lombok
-      version: 1.18.x
-      configuration: compileOnly
-      acceptTransitive: true
-
-  - org.openrewrite.java.dependencies.AddDependency:
-      groupId: org.apache.logging.log4j
-      artifactId: log4j-api
-      version: 2.x
-      configuration: implementation
-
-  - org.openrewrite.java.dependencies.AddDependency:
-      groupId: org.apache.logging.log4j
-      artifactId: log4j-core
-      version: 2.x
-      configuration: implementation
+  - io.github.fiftieshousewife.CreateLog4j2Config
+  - io.github.fiftieshousewife.JavaTransforms
