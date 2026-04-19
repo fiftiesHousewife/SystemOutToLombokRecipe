@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "io.github.fiftieshousewife"
-version = "0.2"
+version = "0.3-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -17,6 +17,7 @@ repositories {
 dependencies {
     implementation(platform(libs.openrewrite.recipe.bom))
     implementation(libs.openrewrite.java)
+    implementation(libs.openrewrite.toml)
     runtimeOnly(libs.openrewrite.java8)
     runtimeOnly(libs.openrewrite.java11)
     runtimeOnly(libs.openrewrite.java17)
