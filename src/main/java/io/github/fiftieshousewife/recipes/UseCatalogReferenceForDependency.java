@@ -36,13 +36,13 @@ public final class UseCatalogReferenceForDependency extends Recipe {
             example = "libs.lombok")
     private final String catalogReference;
 
-    public UseCatalogReferenceForDependency(String module, String catalogReference) {
+    public UseCatalogReferenceForDependency(final String module, final String catalogReference) {
         this.module = module;
         this.catalogReference = catalogReference;
     }
 
-    public String getModule() { return module; }
-    public String getCatalogReference() { return catalogReference; }
+    @SuppressWarnings("unused") public String getModule() { return module; }
+    @SuppressWarnings("unused") public String getCatalogReference() { return catalogReference; }
 
     @Override
     public String getDisplayName() {
@@ -56,7 +56,7 @@ public final class UseCatalogReferenceForDependency extends Recipe {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(final Object o) {
         if (this == o) return true;
         if (!(o instanceof UseCatalogReferenceForDependency other)) return false;
         return module.equals(other.module) && catalogReference.equals(other.catalogReference);
@@ -69,31 +69,32 @@ public final class UseCatalogReferenceForDependency extends Recipe {
 
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
-        return new JavaIsoVisitor<ExecutionContext>() {
+        return new JavaIsoVisitor<>() {
             @Override
-            public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
-                J.MethodInvocation mi = super.visitMethodInvocation(method, ctx);
-                List<Expression> args = mi.getArguments();
+            public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method,
+                                                            final ExecutionContext ctx) {
+                final J.MethodInvocation visited = super.visitMethodInvocation(method, ctx);
+                final List<Expression> args = visited.getArguments();
                 if (args.size() != 1) {
-                    return mi;
+                    return visited;
                 }
                 if (!(args.get(0) instanceof J.Literal literal)) {
-                    return mi;
+                    return visited;
                 }
-                if (!(literal.getValue() instanceof String str)) {
-                    return mi;
+                if (!(literal.getValue() instanceof String coordinates)) {
+                    return visited;
                 }
-                if (!matchesModule(str, module)) {
-                    return mi;
+                if (!matchesModule(coordinates, module)) {
+                    return visited;
                 }
                 return JavaTemplate.builder("#{}(" + catalogReference + ")")
                         .build()
-                        .apply(getCursor(), mi.getCoordinates().replace(), mi.getSimpleName());
+                        .apply(getCursor(), visited.getCoordinates().replace(), visited.getSimpleName());
             }
         };
     }
 
-    static boolean matchesModule(String literal, String module) {
+    static boolean matchesModule(final String literal, final String module) {
         return literal.equals(module)
                 || literal.startsWith(module + ":")
                 || literal.startsWith(module + "@");

@@ -12,6 +12,7 @@ import org.openrewrite.java.tree.J;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Converts {@code java.util.logging.Logger} level-named method calls to the
@@ -54,7 +55,7 @@ public class JulToLombokLog4j extends Recipe {
             "finer", "trace",
             "finest", "trace");
 
-    private static MethodMatcher matcher(String methodName) {
+    private static MethodMatcher matcher(final String methodName) {
         return new MethodMatcher("java.util.logging.Logger " + methodName + "(..)");
     }
 
@@ -72,32 +73,31 @@ public class JulToLombokLog4j extends Recipe {
 
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
-        return new JavaIsoVisitor<ExecutionContext>() {
+        return new JavaIsoVisitor<>() {
             @Override
-            public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
-                J.MethodInvocation mi = super.visitMethodInvocation(method, ctx);
-                String level = julLevelOf(mi);
-                if (level == null) {
-                    return mi;
+            public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method,
+                                                            final ExecutionContext ctx) {
+                final J.MethodInvocation visited = super.visitMethodInvocation(method, ctx);
+                final Optional<String> level = julLevelOf(visited);
+                if (level.isEmpty()) {
+                    return visited;
                 }
-                List<Expression> args = mi.getArguments();
+                final List<Expression> args = visited.getArguments();
                 if (args.size() != 1) {
-                    return mi;
+                    return visited;
                 }
-                String targetMethod = JUL_TO_LOG4J.get(level);
+                final String targetMethod = JUL_TO_LOG4J.get(level.get());
                 return JavaTemplate.builder("log." + targetMethod + "(#{any()})")
                         .build()
-                        .apply(getCursor(), mi.getCoordinates().replace(), args.get(0));
+                        .apply(getCursor(), visited.getCoordinates().replace(), args.get(0));
             }
         };
     }
 
-    static String julLevelOf(J.MethodInvocation method) {
-        for (Map.Entry<String, MethodMatcher> e : MATCHERS.entrySet()) {
-            if (e.getValue().matches(method)) {
-                return e.getKey();
-            }
-        }
-        return null;
+    static Optional<String> julLevelOf(final J.MethodInvocation method) {
+        return MATCHERS.entrySet().stream()
+                .filter(entry -> entry.getValue().matches(method))
+                .map(Map.Entry::getKey)
+                .findFirst();
     }
 }

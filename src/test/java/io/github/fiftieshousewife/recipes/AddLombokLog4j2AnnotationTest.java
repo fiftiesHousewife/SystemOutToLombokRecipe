@@ -148,6 +148,82 @@ class AddLombokLog4j2AnnotationTest implements RewriteTest {
     }
 
     @Test
+    void addsLog4j2AnnotationForJulUsage() {
+        rewriteRun(
+                java(
+                        """
+                        package com.example;
+
+                        import java.util.logging.Logger;
+
+                        public class MyClass {
+                            private static final Logger logger = Logger.getLogger(MyClass.class.getName());
+
+                            public void doSomething() {
+                                logger.info("hello");
+                            }
+                        }
+                        """,
+                        """
+                        package com.example;
+
+                        import lombok.extern.log4j.Log4j2;
+
+                        import java.util.logging.Logger;
+
+                        @Log4j2
+                        public class MyClass {
+                            private static final Logger logger = Logger.getLogger(MyClass.class.getName());
+
+                            public void doSomething() {
+                                logger.info("hello");
+                            }
+                        }
+                        """
+                )
+        );
+    }
+
+    @Test
+    void doesNotAddAnnotationIfAlreadyHasSlf4j() {
+        rewriteRun(
+                java(
+                        """
+                        package com.example;
+
+                        import lombok.extern.slf4j.Slf4j;
+
+                        @Slf4j
+                        public class MyClass {
+                            public void doSomething() {
+                                System.out.println("already annotated");
+                            }
+                        }
+                        """
+                )
+        );
+    }
+
+    @Test
+    void doesNotAddAnnotationIfClassHasExistingLogFieldButNoJul() {
+        rewriteRun(
+                java(
+                        """
+                        package com.example;
+
+                        public class MyClass {
+                            private static final String log = "custom";
+
+                            public void doSomething() {
+                                System.out.println("skip me");
+                            }
+                        }
+                        """
+                )
+        );
+    }
+
+    @Test
     void addsLog4j2AnnotationForSystemOutPrintf() {
         rewriteRun(
                 java(

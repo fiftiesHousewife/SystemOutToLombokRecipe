@@ -44,17 +44,20 @@ public final class AddVersionCatalogEntry extends Recipe {
             example = "org.projectlombok:lombok")
     private final String module;
 
-    public AddVersionCatalogEntry(String versionAlias, String versionValue, String libraryAlias, String module) {
+    public AddVersionCatalogEntry(final String versionAlias,
+                                  final String versionValue,
+                                  final String libraryAlias,
+                                  final String module) {
         this.versionAlias = versionAlias;
         this.versionValue = versionValue;
         this.libraryAlias = libraryAlias;
         this.module = module;
     }
 
-    public String getVersionAlias() { return versionAlias; }
-    public String getVersionValue() { return versionValue; }
-    public String getLibraryAlias() { return libraryAlias; }
-    public String getModule() { return module; }
+    @SuppressWarnings("unused") public String getVersionAlias() { return versionAlias; }
+    @SuppressWarnings("unused") public String getVersionValue() { return versionValue; }
+    @SuppressWarnings("unused") public String getLibraryAlias() { return libraryAlias; }
+    @SuppressWarnings("unused") public String getModule() { return module; }
 
     @Override
     public String getDisplayName() {
@@ -67,7 +70,7 @@ public final class AddVersionCatalogEntry extends Recipe {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(final Object o) {
         if (this == o) return true;
         if (!(o instanceof AddVersionCatalogEntry other)) return false;
         return versionAlias.equals(other.versionAlias)
@@ -83,11 +86,10 @@ public final class AddVersionCatalogEntry extends Recipe {
 
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
-        return new TomlIsoVisitor<ExecutionContext>() {
+        return new TomlIsoVisitor<>() {
             @Override
-            public Toml.Document visitDocument(Toml.Document document, ExecutionContext ctx) {
-                if (document.getSourcePath() == null
-                        || !document.getSourcePath().toString().endsWith("libs.versions.toml")) {
+            public Toml.Document visitDocument(final Toml.Document document, final ExecutionContext ctx) {
+                if (!document.getSourcePath().toString().endsWith("libs.versions.toml")) {
                     return document;
                 }
                 return updateDocument(document, versionAlias, versionValue, libraryAlias, module);
@@ -95,78 +97,86 @@ public final class AddVersionCatalogEntry extends Recipe {
         };
     }
 
-    static Toml.Document updateDocument(Toml.Document document, String versionAlias, String versionValue,
-                                        String libraryAlias, String module) {
-        boolean hasVersion = tableHasKey(document, "versions", versionAlias);
-        boolean hasLibrary = tableHasKey(document, "libraries", libraryAlias);
+    static Toml.Document updateDocument(final Toml.Document document,
+                                        final String versionAlias,
+                                        final String versionValue,
+                                        final String libraryAlias,
+                                        final String module) {
+        final boolean hasVersion = tableHasKey(document, "versions", versionAlias);
+        final boolean hasLibrary = tableHasKey(document, "libraries", libraryAlias);
         if (hasVersion && hasLibrary) {
             return document;
         }
-
         List<TomlValue> values = new ArrayList<>(document.getValues());
         if (!hasVersion) {
-            values = addRow(values, "versions",
-                    versionAlias + " = \"" + versionValue + "\"");
+            values = addRow(values, "versions", versionAlias + " = \"" + versionValue + "\"");
         }
         if (!hasLibrary) {
-            String row = libraryAlias
+            final String row = libraryAlias
                     + " = { module = \"" + module + "\", version.ref = \"" + versionAlias + "\" }";
             values = addRow(values, "libraries", row);
         }
         return document.withValues(values);
     }
 
-    static boolean tableHasKey(Toml.Document doc, String tableName, String key) {
-        for (TomlValue value : doc.getValues()) {
-            if (value instanceof Toml.Table table && tableNameMatches(table, tableName)) {
-                for (Toml child : table.getValues()) {
-                    if (child instanceof Toml.KeyValue kv
-                            && kv.getKey() instanceof Toml.Identifier id
-                            && id.getName().equals(key)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
+    static boolean tableHasKey(final Toml.Document doc, final String tableName, final String key) {
+        return doc.getValues().stream()
+                .filter(Toml.Table.class::isInstance)
+                .map(Toml.Table.class::cast)
+                .filter(table -> tableNameMatches(table, tableName))
+                .flatMap(table -> table.getValues().stream())
+                .filter(Toml.KeyValue.class::isInstance)
+                .map(Toml.KeyValue.class::cast)
+                .anyMatch(kv -> kv.getKey() instanceof Toml.Identifier id && id.getName().equals(key));
     }
 
-    private static boolean tableNameMatches(Toml.Table table, String name) {
-        return name.equals(table.getName().getName());
+    private static boolean tableNameMatches(final Toml.Table table, final String name) {
+        final Toml.Identifier tableName = table.getName();
+        return tableName != null && name.equals(tableName.getName());
     }
 
-    private static List<TomlValue> addRow(List<TomlValue> values, String tableName, String rowSource) {
-        List<TomlValue> result = new ArrayList<>(values.size());
-        boolean tableFound = false;
-        for (TomlValue value : values) {
-            if (value instanceof Toml.Table table && tableNameMatches(table, tableName)) {
-                tableFound = true;
-                List<Toml> children = new ArrayList<>(table.getValues());
-                children.add(parseKeyValue(rowSource).withPrefix(leadingNewline()));
-                result.add(table.withValues(children));
-            } else {
-                result.add(value);
-            }
+    private static List<TomlValue> addRow(final List<TomlValue> values,
+                                          final String tableName,
+                                          final String rowSource) {
+        final List<TomlValue> mapped = values.stream()
+                .map(value -> appendRowIfMatchingTable(value, tableName, rowSource))
+                .toList();
+        if (containsTableNamed(values, tableName)) {
+            return mapped;
         }
-        if (!tableFound) {
-            Toml.Table newTable = parseTable("[" + tableName + "]\n" + rowSource + "\n");
-            result.add(newTable.withPrefix(leadingNewline()));
+        final List<TomlValue> withNewTable = new ArrayList<>(mapped);
+        withNewTable.add(parseTable("[" + tableName + "]\n" + rowSource + "\n").withPrefix(leadingNewline()));
+        return withNewTable;
+    }
+
+    private static boolean containsTableNamed(final List<TomlValue> values, final String tableName) {
+        return values.stream()
+                .anyMatch(value -> value instanceof Toml.Table table && tableNameMatches(table, tableName));
+    }
+
+    private static TomlValue appendRowIfMatchingTable(final TomlValue value,
+                                                      final String tableName,
+                                                      final String rowSource) {
+        if (!(value instanceof Toml.Table table) || !tableNameMatches(table, tableName)) {
+            return value;
         }
-        return result;
+        final List<Toml> children = new ArrayList<>(table.getValues());
+        children.add(parseKeyValue(rowSource).withPrefix(leadingNewline()));
+        return table.withValues(children);
     }
 
     private static Space leadingNewline() {
         return Space.build("\n", Collections.emptyList());
     }
 
-    private static Toml.KeyValue parseKeyValue(String source) {
-        Toml.Document doc = (Toml.Document) TomlParser.builder().build()
+    private static Toml.KeyValue parseKeyValue(final String source) {
+        final Toml.Document doc = (Toml.Document) TomlParser.builder().build()
                 .parse(source).findFirst().orElseThrow();
         return (Toml.KeyValue) doc.getValues().get(0);
     }
 
-    private static Toml.Table parseTable(String source) {
-        Toml.Document doc = (Toml.Document) TomlParser.builder().build()
+    private static Toml.Table parseTable(final String source) {
+        final Toml.Document doc = (Toml.Document) TomlParser.builder().build()
                 .parse(source).findFirst().orElseThrow();
         return (Toml.Table) doc.getValues().get(0);
     }

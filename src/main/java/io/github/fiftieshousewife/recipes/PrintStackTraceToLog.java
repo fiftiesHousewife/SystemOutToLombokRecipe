@@ -34,14 +34,15 @@ public class PrintStackTraceToLog extends Recipe {
     public TreeVisitor<?, ExecutionContext> getVisitor() {
         return new JavaIsoVisitor<>() {
             @Override
-            public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
-                J.MethodInvocation mi = super.visitMethodInvocation(method, ctx);
-                if (!PRINT_STACK_TRACE.matches(mi) || mi.getSelect() == null) {
-                    return mi;
+            public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method,
+                                                            final ExecutionContext ctx) {
+                final J.MethodInvocation visited = super.visitMethodInvocation(method, ctx);
+                if (!PRINT_STACK_TRACE.matches(visited) || visited.getSelect() == null) {
+                    return visited;
                 }
                 return JavaTemplate.builder("log.error(\"Exception occurred\", #{any()})")
                         .build()
-                        .apply(getCursor(), mi.getCoordinates().replace(), mi.getSelect());
+                        .apply(getCursor(), visited.getCoordinates().replace(), visited.getSelect());
             }
         };
     }
