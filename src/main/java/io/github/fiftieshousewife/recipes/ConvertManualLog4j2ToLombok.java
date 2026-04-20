@@ -1,6 +1,7 @@
 package io.github.fiftieshousewife.recipes;
 
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Recipe;
 import org.openrewrite.Tree;
@@ -12,7 +13,6 @@ import org.openrewrite.java.tree.JavaType;
 import org.openrewrite.java.tree.Statement;
 import org.openrewrite.java.tree.TypeTree;
 import org.openrewrite.java.tree.TypeUtils;
-import org.jspecify.annotations.Nullable;
 
 import java.util.Comparator;
 import java.util.List;
@@ -40,7 +40,6 @@ import java.util.Optional;
  */
 @NullMarked
 public class ConvertManualLog4j2ToLombok extends Recipe {
-
 
     @Override
     public String getDisplayName() {

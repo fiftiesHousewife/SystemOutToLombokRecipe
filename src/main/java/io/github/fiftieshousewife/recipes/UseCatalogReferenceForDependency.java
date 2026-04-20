@@ -86,7 +86,7 @@ public final class UseCatalogReferenceForDependency
 
     @Override
     public TreeVisitor<?, ExecutionContext> getScanner(final Accumulator acc) {
-        return new TreeVisitor<Tree, ExecutionContext>() {
+        return new TreeVisitor<>() {
             @Override
             public Tree preVisit(final Tree tree, final ExecutionContext ctx) {
                 if (tree instanceof SourceFile sourceFile
@@ -135,7 +135,7 @@ public final class UseCatalogReferenceForDependency
                 || literal.startsWith(module + "@");
     }
 
-    static final class Accumulator {
+    public static final class Accumulator {
         boolean catalogFound;
     }
 }

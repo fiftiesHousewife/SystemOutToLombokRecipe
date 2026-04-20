@@ -4,20 +4,37 @@ OpenRewrite recipes that migrate Java codebases onto Lombok `@Log4j2` logging. C
 
 ## What It Does
 
-The default recipe transforms a Java project to:
+The default recipe, `SystemOutToLombokLog4jRecipe`, takes a project that's using some mix of `System.out`/`System.err`, `printStackTrace()`, and/or `java.util.logging` and moves it onto Lombok `@Log4j2` logging. On any given class it will:
 
-1. Add Lombok and Log4j2 dependencies to your build (inline, catalog, or not at all — pick a variant below).
-2. Create production-ready `src/main/resources/log4j2.xml` (console + rolling file appender, gzip daily rollover, 10 MB size trigger, keeps 10 files) and a console-only `src/test/resources/log4j2-test.xml` that log4j2 auto-selects when tests run.
-3. Add `@Log4j2` to classes that use `System.out`/`System.err`, `printStackTrace()`, or `java.util.logging.Logger`.
-4. Convert call sites:
+1. **Add the right dependencies to your build.**
+   Lombok (`compileOnly` + `annotationProcessor`) and Log4j2 (`log4j-api` + `log4j-core`). It auto-detects whether the project uses a Gradle version catalog: if `gradle/libs.versions.toml` exists, entries land in the catalog and your `build.gradle.kts` gets `libs.lombok`/`libs.log4jApi`/`libs.log4jCore`; otherwise inline `"group:artifact:version"` declarations are added.
+
+2. **Create the Log4j2 configs.**
+   `src/main/resources/log4j2.xml` — production-ready: non-error levels to stdout, errors to stderr (respecting the `System.out` vs `System.err` split), plus a rolling file appender under `./logs/` (daily + 10 MB gzip rollover, keeps 10 files).
+   `src/test/resources/log4j2-test.xml` — console only, so unit tests don't spam `./logs/`.
+
+3. **Add `@Log4j2`** to every class that needs a logger — whether it has `System.out`/`System.err` calls, `printStackTrace()` calls, or a `java.util.logging.Logger` field.
+
+4. **Rewrite the call sites:**
+
+   **`System.out` / `System.err`** — stops the "poor man's logging" anti-pattern of writing straight to the console:
    - `System.out.println(...)` → `log.info(...)`
    - `System.err.println(...)` → `log.error(...)`
-   - `exception.printStackTrace()` → `log.error("Exception occurred", exception)`
-   - String concatenation → parameterized: `"x = " + x` → `log.info("x = {}", x)`
-   - `System.out.printf("Name: %s, Age: %d%n", ...)` → `log.info("Name: {}, Age: {}", ...)`
-   - `logger.severe/warning/info/config/fine/finer/finest(...)` (JUL) → `log.error/warn/info/debug/debug/trace/trace(...)`
+   - `System.out.printf("Name: %s, Age: %d%n", ...)` → `log.info("Name: {}, Age: {}", ...)` — printf specifiers become parameterized `{}` placeholders so the log framework can do structured formatting (and skip it when the level is disabled).
+   - `System.out.println("x = " + x)` → `log.info("x = {}", x)` — string-concatenated messages are decomposed into a format string plus args, so the logger isn't paying for string-building on disabled levels.
 
-A separate recipe family (`ConvertManualLog4j2ToLombokRecipe*`) migrates projects that already use Log4j2 with hand-rolled `Logger` fields onto `@Log4j2` — see "Migrating existing Log4j2 code" below.
+   **`Throwable.printStackTrace()`** — the other popular "logging by accident" pattern. Replaced with `log.error("Exception occurred", exception)` so the trace goes through the configured appenders, with the exception properly attached rather than dumped to stderr.
+
+   **`java.util.logging.Logger` (JUL)** — the JDK's built-in logging framework is awkward (static `Level` values, no parameterized messages, minimal out-of-the-box config). Migrating to Log4j2 gives you the same features as the rest of the code base. The recipe maps JUL levels to the closest Log4j2 equivalent:
+   - `severe` → `error`
+   - `warning` → `warn`
+   - `info` → `info`
+   - `config` / `fine` → `debug`
+   - `finer` / `finest` → `trace`
+
+   After the call conversion, the hand-rolled `Logger logger = Logger.getLogger(...)` field and the `java.util.logging.Logger` import are removed if nothing else in the class still references them.
+
+A companion recipe, `ConvertManualLog4j2ToLombokRecipe`, handles the separate case of codebases that are **already on Log4j2** but declare their `Logger` fields by hand (`private static final Logger log = LogManager.getLogger(X.class);`). It replaces that boilerplate with `@Log4j2`, renames references (`logger`/`LOG`/`LOGGER` → `log`), and cleans up the now-unused `org.apache.logging.log4j.Logger`/`LogManager` imports. See "Migrating existing Log4j2 code" below.
 
 ## Prerequisites
 
@@ -67,6 +84,12 @@ rewrite {
 ./gradlew rewriteDryRun  # Preview
 ./gradlew rewriteRun     # Apply
 ```
+
+4. **Tidy up (optional)**. Run your IDE's formatter or `ktfmt`/`kotlinter` on `build.gradle.kts` — the underlying Gradle `AddDependency` recipe can leave mixed whitespace in the `dependencies { ... }` block when dependencies are inserted into a single-line block. The result compiles, it's only cosmetic.
+
+### Versions installed
+
+Lombok `1.18.44` and Log4j2 `2.25.4` at the time of this release. These are pinned so the transform is deterministic. To pick up later patch releases, add the Ben-Manes `versions` plugin to your project (`./gradlew dependencyUpdates`) and bump the catalog entries or inline strings by hand after the recipe runs.
 
 ## Recipes
 
