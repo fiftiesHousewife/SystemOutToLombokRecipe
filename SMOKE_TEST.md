@@ -110,6 +110,22 @@ Repeat the dry-run / apply / compile cycle for at least the default and catalog 
 
 If a new OpenRewrite patch is out, consider bumping before the release.
 
+### Refresh the pinned Lombok and log4j2 versions
+
+The recipe pins `Lombok` and `log4j2-api` / `log4j2-core` in `src/main/resources/META-INF/rewrite/system-out-to-lombok.yml`. These aren't build dependencies of this project, so `dependencyUpdates` won't flag them — check Maven Central by hand:
+
+```bash
+# Latest stable Lombok
+curl -s https://repo1.maven.org/maven2/org/projectlombok/lombok/maven-metadata.xml \
+  | grep -oE '<release>[^<]+</release>'
+
+# Latest stable log4j2 (filter out beta/rc)
+curl -s https://repo1.maven.org/maven2/org/apache/logging/log4j/log4j-api/maven-metadata.xml \
+  | grep -oE '<version>[0-9]+\.[0-9]+\.[0-9]+</version>' | tail -1
+```
+
+Update every `version:` line in the YAML and every `versionValue:` in the `AddVersionCatalogEntry` blocks to match. Re-run the smoke tests afterwards.
+
 ## 6. Only then
 
 - Bump `version` in `build.gradle.kts` from `x.y-SNAPSHOT` to `x.y`.

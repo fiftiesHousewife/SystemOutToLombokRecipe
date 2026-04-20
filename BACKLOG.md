@@ -15,6 +15,8 @@
 
 ## Future
 
+- **Dependabot for pinned recipe versions**: our recipe YAML hard-codes `1.18.44` (Lombok) and `2.25.4` (log4j2). Dependabot/Renovate doesn't watch string literals in YAML by default — a small custom manifest or a GitHub Action that queries Maven Central and opens a bump PR would keep us honest without a release-time ritual.
+
 - **Log-and-throw pattern**: detect `log.error(msg, e); throw ...;` and remove the log call so the exception isn't double-reported. Needs to consider exception swallowing and boundary handling — decide where the error is actually logged (boundary) vs. rethrown silently (internal).
 - **SLF4J path**: today we assume Log4j2 is the target. A parallel family of recipes for SLF4J + Logback (`@Slf4j` annotation, `logback.xml` instead of `log4j2.xml`) would cover the other common logging stack.
 - **Groovy DSL coverage**: `build.gradle` (Groovy) isn't tested. The Kotlin DSL path is verified; extending to `.gradle` would widen the audience.
