@@ -266,26 +266,3 @@ description: >
 recipeList:
   - io.github.fiftieshousewife.recipes.ConvertManualLog4j2ToLombok
 
----
-type: specs.openrewrite.org/v1beta/recipe
-name: io.github.fiftieshousewife.SystemOutToLombokLog4jRecipeCatalog
-displayName: "Deprecated: use SystemOutToLombokLog4jRecipe — that now auto-detects the catalog"
-description: >
-  Alias for `SystemOutToLombokLog4jRecipe`, which auto-detects a Gradle
-  version catalog and behaves identically. Kept for backwards compatibility
-  with 0.3/0.4 users. Will be removed in a future release.
-
-recipeList:
-  - io.github.fiftieshousewife.SystemOutToLombokLog4jRecipe
-
----
-type: specs.openrewrite.org/v1beta/recipe
-name: io.github.fiftieshousewife.ConvertManualLog4j2ToLombokRecipeCatalog
-displayName: "Deprecated: use ConvertManualLog4j2ToLombokRecipe — that now auto-detects the catalog"
-description: >
-  Alias for `ConvertManualLog4j2ToLombokRecipe`, which auto-detects a Gradle
-  version catalog and behaves identically. Kept for backwards compatibility
-  with 0.3/0.4 users. Will be removed in a future release.
-
-recipeList:
-  - io.github.fiftieshousewife.ConvertManualLog4j2ToLombokRecipe
