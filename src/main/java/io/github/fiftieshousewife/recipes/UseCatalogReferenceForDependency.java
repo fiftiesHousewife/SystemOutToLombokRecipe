@@ -3,7 +3,9 @@ package io.github.fiftieshousewife.recipes;
 import org.jspecify.annotations.NullMarked;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Option;
-import org.openrewrite.Recipe;
+import org.openrewrite.ScanningRecipe;
+import org.openrewrite.SourceFile;
+import org.openrewrite.Tree;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaTemplate;
@@ -16,15 +18,24 @@ import java.util.Objects;
 /**
  * Rewrites inline Gradle dependency string literals ({@code "group:artifact:version"})
  * into version-catalog references ({@code libs.alias}) inside a Gradle Kotlin DSL
- * dependencies block. Match is by module coordinates (group:artifact) — the version
- * segment of the literal is ignored.
+ * dependencies block — but only when the project actually has a version catalog.
+ * Match is by module coordinates (group:artifact); the version segment of the literal
+ * is ignored.
+ *
+ * <p>Two-phase (scanning) recipe:
+ * <ol>
+ *   <li>Scan: is there a {@code gradle/libs.versions.toml} in the source set?</li>
+ *   <li>Visit: if yes, rewrite matching inline declarations; if no, leave the project
+ *       alone so this recipe is safe to compose unconditionally.</li>
+ * </ol>
  *
  * <p>Intended to run after {@code org.openrewrite.gradle.AddDependency} in a
  * catalog-aware composition: AddDependency inserts the inline line, this recipe
- * converts it to the catalog reference.
+ * converts it to the catalog reference when a catalog exists.
  */
 @NullMarked
-public final class UseCatalogReferenceForDependency extends Recipe {
+public final class UseCatalogReferenceForDependency
+        extends ScanningRecipe<UseCatalogReferenceForDependency.Accumulator> {
 
     @Option(displayName = "Module coordinates",
             description = "The dependency module in group:artifact form.",
@@ -52,7 +63,8 @@ public final class UseCatalogReferenceForDependency extends Recipe {
     @Override
     public String getDescription() {
         return "Rewrites inline `configuration(\"group:artifact:version\")` calls into "
-                + "`configuration(libs.alias)` references inside a Gradle dependencies block.";
+                + "`configuration(libs.alias)` references inside a Gradle dependencies block. "
+                + "Only applies when the project has a gradle/libs.versions.toml catalog.";
     }
 
     @Override
@@ -68,7 +80,30 @@ public final class UseCatalogReferenceForDependency extends Recipe {
     }
 
     @Override
-    public TreeVisitor<?, ExecutionContext> getVisitor() {
+    public Accumulator getInitialValue(final ExecutionContext ctx) {
+        return new Accumulator();
+    }
+
+    @Override
+    public TreeVisitor<?, ExecutionContext> getScanner(final Accumulator acc) {
+        return new TreeVisitor<Tree, ExecutionContext>() {
+            @Override
+            public Tree preVisit(final Tree tree, final ExecutionContext ctx) {
+                if (tree instanceof SourceFile sourceFile
+                        && sourceFile.getSourcePath().toString().endsWith("libs.versions.toml")) {
+                    acc.catalogFound = true;
+                }
+                stopAfterPreVisit();
+                return tree;
+            }
+        };
+    }
+
+    @Override
+    public TreeVisitor<?, ExecutionContext> getVisitor(final Accumulator acc) {
+        if (!acc.catalogFound) {
+            return TreeVisitor.noop();
+        }
         return new JavaIsoVisitor<>() {
             @Override
             public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method,
@@ -98,5 +133,9 @@ public final class UseCatalogReferenceForDependency extends Recipe {
         return literal.equals(module)
                 || literal.startsWith(module + ":")
                 || literal.startsWith(module + "@");
+    }
+
+    static final class Accumulator {
+        boolean catalogFound;
     }
 }

@@ -18,7 +18,7 @@ class JulToLombokLog4jTest implements RewriteTest {
     }
 
     @Test
-    void infoIsConvertedToLogInfo() {
+    void infoIsConvertedAndJulFieldRemoved() {
         rewriteRun(
                 java(
                         """
@@ -33,10 +33,10 @@ class JulToLombokLog4jTest implements RewriteTest {
                                 }
                                 """,
                         """
-                                import java.util.logging.Logger;
+
+
 
                                 public class Service {
-                                    private static final Logger logger = Logger.getLogger(Service.class.getName());
 
                                     void run() {
                                         log.info("starting");
@@ -63,10 +63,10 @@ class JulToLombokLog4jTest implements RewriteTest {
                                 }
                                 """,
                         """
-                                import java.util.logging.Logger;
+
+
 
                                 public class Service {
-                                    private static final Logger logger = Logger.getLogger(Service.class.getName());
 
                                     void fail(Exception e) {
                                         log.error("boom");
@@ -93,10 +93,10 @@ class JulToLombokLog4jTest implements RewriteTest {
                                 }
                                 """,
                         """
-                                import java.util.logging.Logger;
+
+
 
                                 public class Service {
-                                    private static final Logger logger = Logger.getLogger(Service.class.getName());
 
                                     void soft() {
                                         log.warn("careful");
@@ -123,10 +123,10 @@ class JulToLombokLog4jTest implements RewriteTest {
                                 }
                                 """,
                         """
-                                import java.util.logging.Logger;
+
+
 
                                 public class Service {
-                                    private static final Logger logger = Logger.getLogger(Service.class.getName());
 
                                     void chatty() {
                                         log.debug("verbose");
@@ -153,13 +153,51 @@ class JulToLombokLog4jTest implements RewriteTest {
                                 }
                                 """,
                         """
+
+
+
+                                public class Service {
+
+                                    void trace() {
+                                        log.trace("deep");
+                                    }
+                                }
+                                """
+                )
+        );
+    }
+
+    @Test
+    void julFieldKeptWhenStillReferenced() {
+        rewriteRun(
+                java(
+                        """
+                                import java.util.logging.Level;
                                 import java.util.logging.Logger;
 
                                 public class Service {
                                     private static final Logger logger = Logger.getLogger(Service.class.getName());
 
-                                    void trace() {
-                                        log.trace("deep");
+                                    void run() {
+                                        logger.info("standard");
+                                        if (logger.isLoggable(Level.FINE)) {
+                                            logger.fine("expensive");
+                                        }
+                                    }
+                                }
+                                """,
+                        """
+                                import java.util.logging.Level;
+                                import java.util.logging.Logger;
+
+                                public class Service {
+                                    private static final Logger logger = Logger.getLogger(Service.class.getName());
+
+                                    void run() {
+                                        log.info("standard");
+                                        if (logger.isLoggable(Level.FINE)) {
+                                            log.debug("expensive");
+                                        }
                                     }
                                 }
                                 """

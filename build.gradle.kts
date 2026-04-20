@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "io.github.fiftieshousewife"
-version = "0.4"
+version = "0.5-SNAPSHOT"
 
 repositories {
     mavenCentral()

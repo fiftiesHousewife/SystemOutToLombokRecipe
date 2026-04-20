@@ -1,6 +1,7 @@
 package io.github.fiftieshousewife.recipes;
 
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
@@ -9,6 +10,10 @@ import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.MethodMatcher;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
+import org.openrewrite.java.tree.JavaType;
+import org.openrewrite.java.tree.Statement;
+import org.openrewrite.java.tree.TypeTree;
+import org.openrewrite.java.tree.TypeUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -16,9 +21,9 @@ import java.util.Optional;
 
 /**
  * Converts {@code java.util.logging.Logger} level-named method calls to the
- * {@code log.xxx(...)} methods exposed by Lombok's {@code @Log4j2} annotation.
- * Assumes the class has already been annotated with {@code @Log4j2} — run
- * {@link AddLombokLog4j2Annotation} first.
+ * {@code log.xxx(...)} methods exposed by Lombok's {@code @Log4j2} annotation,
+ * and cleans up the now-dead JUL plumbing. Assumes the class has already been
+ * annotated with {@code @Log4j2} — run {@link AddLombokLog4j2Annotation} first.
  *
  * <p>Level mappings:
  * <pre>
@@ -31,11 +36,15 @@ import java.util.Optional;
  *   logger.finest(msg)  → log.trace(msg)
  * </pre>
  *
- * <p>Leaves the original {@code Logger} field declaration in place — remove it
- * (plus the {@code java.util.logging.Logger} import) after running this recipe.
+ * <p>After the call conversion, if the class had a
+ * {@code private static final Logger logger = Logger.getLogger(...);} field
+ * and nothing else in the class still references it, the field and its
+ * {@code java.util.logging.Logger} import are removed.
  */
 @NullMarked
 public class JulToLombokLog4j extends Recipe {
+
+    private static final String JUL_LOGGER_FQN = "java.util.logging.Logger";
 
     private static final Map<String, MethodMatcher> MATCHERS = Map.of(
             "severe", matcher("severe"),
@@ -56,7 +65,7 @@ public class JulToLombokLog4j extends Recipe {
             "finest", "trace");
 
     private static MethodMatcher matcher(final String methodName) {
-        return new MethodMatcher("java.util.logging.Logger " + methodName + "(..)");
+        return new MethodMatcher(JUL_LOGGER_FQN + " " + methodName + "(..)");
     }
 
     @Override
@@ -68,12 +77,36 @@ public class JulToLombokLog4j extends Recipe {
     public String getDescription() {
         return "Converts java.util.logging.Logger level-named method calls "
                 + "(severe/warning/info/config/fine/finer/finest) to the equivalent "
-                + "Lombok @Log4j2 log methods (error/warn/info/debug/trace).";
+                + "Lombok @Log4j2 log methods (error/warn/info/debug/trace), then "
+                + "removes the JUL Logger field and its import when no other references remain.";
     }
 
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
         return new JavaIsoVisitor<>() {
+
+            @Override
+            public J.CompilationUnit visitCompilationUnit(final J.CompilationUnit compilationUnit,
+                                                          final ExecutionContext ctx) {
+                final J.CompilationUnit visited = super.visitCompilationUnit(compilationUnit, ctx);
+                if (!julLoggerTypeReferencedIn(visited)) {
+                    return visited.withImports(visited.getImports().stream()
+                            .filter(imp -> !JUL_LOGGER_FQN.equals(imp.getTypeName()))
+                            .toList());
+                }
+                return visited;
+            }
+
+            @Override
+            public J.ClassDeclaration visitClassDeclaration(final J.ClassDeclaration classDecl,
+                                                            final ExecutionContext ctx) {
+                final J.ClassDeclaration visited = super.visitClassDeclaration(classDecl, ctx);
+                return findJulLoggerField(visited)
+                        .filter(field -> !fieldReferenced(visited, field))
+                        .map(field -> removeField(visited, field))
+                        .orElse(visited);
+            }
+
             @Override
             public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method,
                                                             final ExecutionContext ctx) {
@@ -99,5 +132,88 @@ public class JulToLombokLog4j extends Recipe {
                 .filter(entry -> entry.getValue().matches(method))
                 .map(Map.Entry::getKey)
                 .findFirst();
+    }
+
+    private static Optional<J.VariableDeclarations> findJulLoggerField(final J.ClassDeclaration classDecl) {
+        return classDecl.getBody().getStatements().stream()
+                .filter(J.VariableDeclarations.class::isInstance)
+                .map(J.VariableDeclarations.class::cast)
+                .filter(varDecl -> isJulLoggerType(varDecl.getTypeExpression()))
+                .findFirst();
+    }
+
+    private static boolean isJulLoggerType(final @Nullable TypeTree typeExpression) {
+        if (typeExpression == null) {
+            return false;
+        }
+        final JavaType type = typeExpression.getType();
+        return TypeUtils.isOfClassType(type, JUL_LOGGER_FQN);
+    }
+
+    private static boolean fieldReferenced(final J.ClassDeclaration classDecl,
+                                           final J.VariableDeclarations field) {
+        final String fieldName = field.getVariables().get(0).getSimpleName();
+        final IdentifierUsageCounter counter = new IdentifierUsageCounter(fieldName, field);
+        counter.visit(classDecl, 0);
+        return counter.usages > 0;
+    }
+
+    private static J.ClassDeclaration removeField(final J.ClassDeclaration classDecl,
+                                                  final J.VariableDeclarations field) {
+        final List<Statement> keep = classDecl.getBody().getStatements().stream()
+                .filter(statement -> statement != field)
+                .toList();
+        return classDecl.withBody(classDecl.getBody().withStatements(keep));
+    }
+
+    private static boolean julLoggerTypeReferencedIn(final J.CompilationUnit cu) {
+        final JulLoggerTypeDetector detector = new JulLoggerTypeDetector();
+        detector.visit(cu, 0);
+        return detector.found;
+    }
+
+    private static final class IdentifierUsageCounter extends JavaIsoVisitor<Integer> {
+        private final String fieldName;
+        private final J.VariableDeclarations declaringField;
+        int usages;
+
+        IdentifierUsageCounter(final String fieldName, final J.VariableDeclarations declaringField) {
+            this.fieldName = fieldName;
+            this.declaringField = declaringField;
+        }
+
+        @Override
+        public J.VariableDeclarations visitVariableDeclarations(final J.VariableDeclarations varDecl,
+                                                                 final Integer p) {
+            if (varDecl == declaringField) {
+                return varDecl;
+            }
+            return super.visitVariableDeclarations(varDecl, p);
+        }
+
+        @Override
+        public J.Identifier visitIdentifier(final J.Identifier identifier, final Integer p) {
+            if (fieldName.equals(identifier.getSimpleName())) {
+                usages++;
+            }
+            return super.visitIdentifier(identifier, p);
+        }
+    }
+
+    private static final class JulLoggerTypeDetector extends JavaIsoVisitor<Integer> {
+        boolean found;
+
+        @Override
+        public J.Import visitImport(final J.Import imp, final Integer p) {
+            return imp;
+        }
+
+        @Override
+        public J.Identifier visitIdentifier(final J.Identifier identifier, final Integer p) {
+            if (!found && TypeUtils.isOfClassType(identifier.getType(), JUL_LOGGER_FQN)) {
+                found = true;
+            }
+            return super.visitIdentifier(identifier, p);
+        }
     }
 }

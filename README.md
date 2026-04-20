@@ -68,33 +68,26 @@ rewrite {
 ./gradlew rewriteRun     # Apply
 ```
 
-## Variants
+## Recipes
 
-Three compositions cover the common dependency-management setups:
+### `SystemOutToLombokLog4jRecipe` — the one you usually want
 
-### `SystemOutToLombokLog4jRecipe` (default)
+Runs all Java transforms, creates the log4j2 configs, and **auto-detects** your dependency setup:
 
-Adds Lombok and Log4j2 dependencies inline in your `build.gradle.kts` (`compileOnly("org.projectlombok:lombok:1.18.44")` etc.). Runs the Java transforms and creates the log4j2 configs.
+- If your project has a Gradle version catalog (`gradle/libs.versions.toml`), entries are added to it and `build.gradle.kts` uses `libs.lombok`, `libs.log4jApi`, `libs.log4jCore` references.
+- Otherwise inline `compileOnly("org.projectlombok:lombok:1.18.44")` etc. declarations are added to `build.gradle.kts`.
 
-### `SystemOutToLombokLog4jRecipeCatalog` (version catalog)
-
-If your project uses a Gradle version catalog, this variant:
-
-1. Adds `lombok`, `log4jApi`, and `log4jCore` entries to `gradle/libs.versions.toml`.
-2. Adds dependency declarations to `build.gradle.kts` and rewrites them to `libs.xxx` catalog references automatically.
-3. Runs the Java transforms and creates the log4j2 configs.
-
-You don't need to edit `build.gradle.kts` yourself — the recipe fills in `compileOnly(libs.lombok)`, `annotationProcessor(libs.lombok)`, `implementation(libs.log4jApi)`, and `runtimeOnly(libs.log4jCore)` for you.
+You don't pick a variant — the recipe figures it out.
 
 ```kotlin
 rewrite {
-    activeRecipe("io.github.fiftieshousewife.SystemOutToLombokLog4jRecipeCatalog")
+    activeRecipe("io.github.fiftieshousewife.SystemOutToLombokLog4jRecipe")
 }
 ```
 
 ### `SystemOutToLombokLog4jRecipeNoDeps`
 
-Runs all Java transforms and creates the log4j2 configs but touches neither the catalog nor `build.gradle.kts`. Use this in multi-module projects where dependencies live at a parent level, or anywhere you want full manual control.
+Runs all the Java transforms and creates the log4j2 configs but touches neither the catalog nor `build.gradle.kts`. Use this in multi-module projects where dependencies live at a parent level, or anywhere you want full manual control.
 
 ```kotlin
 rewrite {
@@ -104,24 +97,21 @@ rewrite {
 
 ## Migrating existing Log4j2 code
 
-If your codebase already uses Log4j2 but declares `Logger` fields by hand (`private static final Logger log = LogManager.getLogger(X.class);`), the `ConvertManualLog4j2ToLombokRecipe*` family removes that boilerplate:
+If your codebase already uses Log4j2 but declares `Logger` fields by hand (`private static final Logger log = LogManager.getLogger(X.class);`), `ConvertManualLog4j2ToLombokRecipe` removes that boilerplate:
 
 - Adds `@Log4j2` to each affected class.
 - Deletes the manual field.
 - Renames any references to the old field (`logger.info(...)`, `LOG.error(...)`) to `log.xxx(...)`.
 - Drops now-unused `org.apache.logging.log4j.Logger` / `LogManager` imports.
-
-Three variants, matching the family above:
-
-- `io.github.fiftieshousewife.ConvertManualLog4j2ToLombokRecipe` — adds Lombok inline in `build.gradle.kts`.
-- `io.github.fiftieshousewife.ConvertManualLog4j2ToLombokRecipeCatalog` — adds Lombok to the version catalog.
-- `io.github.fiftieshousewife.ConvertManualLog4j2ToLombokRecipeNoDeps` — doesn't touch dependencies.
+- Adds the Lombok dependency (catalog-aware — same auto-detect as above).
 
 ```kotlin
 rewrite {
-    activeRecipe("io.github.fiftieshousewife.ConvertManualLog4j2ToLombokRecipeCatalog")
+    activeRecipe("io.github.fiftieshousewife.ConvertManualLog4j2ToLombokRecipe")
 }
 ```
+
+A `NoDeps` variant (`ConvertManualLog4j2ToLombokRecipeNoDeps`) exists for projects that manage Lombok separately.
 
 ## Logging configuration
 
