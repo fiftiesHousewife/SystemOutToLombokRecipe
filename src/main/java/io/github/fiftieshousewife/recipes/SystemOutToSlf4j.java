@@ -15,10 +15,10 @@ import java.util.List;
 /**
  * Converts {@code System.out} and {@code System.err} print calls to Lombok
  * {@code log.xxx(...)} statements. Assumes the class has already been annotated
- * with {@code @Log4j2} (apply {@link AddLombokLog4j2Annotation} first).
+ * with {@code @Slf4j} (apply {@link AddLombokSlf4jAnnotation} first).
  */
 @NullMarked
-public class SystemOutToLombokLog4j extends Recipe {
+public class SystemOutToSlf4j extends Recipe {
 
     private static final String SYSTEM_OUT = "System.out";
     private static final String SYSTEM_ERR = "System.err";
@@ -91,7 +91,7 @@ public class SystemOutToLombokLog4j extends Recipe {
                 return method;
             }
             if (args.get(0) instanceof J.Literal literal && literal.getValue() instanceof String printfFormat) {
-                final String log4jFormat = PrintfToLog4jFormatConverter.convert(printfFormat);
+                final String log4jFormat = PrintfToSlf4jFormatConverter.convert(printfFormat);
                 final List<Expression> rest = args.subList(1, args.size());
                 return applyTemplate(method,
                         LogCallTemplate.parameterized(log4jFormat, rest.size(), isError),

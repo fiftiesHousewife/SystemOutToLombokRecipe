@@ -11,8 +11,8 @@ import org.openrewrite.java.tree.J;
 
 /**
  * Replaces {@code exception.printStackTrace()} calls with {@code log.error(...)} statements.
- * Assumes the class has been annotated with {@code @Log4j2} (apply
- * {@link AddLombokLog4j2Annotation} first).
+ * Assumes the class has been annotated with {@code @Slf4j} (apply
+ * {@link AddLombokSlf4jAnnotation} first).
  */
 @NullMarked
 public class PrintStackTraceToLog extends Recipe {
@@ -27,7 +27,7 @@ public class PrintStackTraceToLog extends Recipe {
     @Override
     public String getDescription() {
         return "Replaces exception.printStackTrace() calls with log.error() statements that properly log the exception. " +
-                "Assumes the class has been annotated with @Log4j2 by AddLombokLog4j2Annotation recipe.";
+                "Assumes the class has been annotated with @Slf4j by AddLombokSlf4jAnnotation recipe.";
     }
 
     @Override

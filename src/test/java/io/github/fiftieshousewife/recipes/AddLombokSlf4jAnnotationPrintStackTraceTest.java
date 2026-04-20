@@ -7,16 +7,16 @@ import org.openrewrite.test.TypeValidation;
 
 import static org.openrewrite.java.Assertions.java;
 
-class AddLombokLog4j2AnnotationPrintStackTraceTest implements RewriteTest {
+class AddLombokSlf4jAnnotationPrintStackTraceTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        spec.recipe(new AddLombokLog4j2Annotation())
+        spec.recipe(new AddLombokSlf4jAnnotation())
             .afterTypeValidationOptions(TypeValidation.none());
     }
 
     @Test
-    void addsLog4j2AnnotationToClassWithPrintStackTrace() {
+    void addsSlf4jAnnotationToClassWithPrintStackTrace() {
         rewriteRun(
                 java(
                         """
@@ -39,9 +39,9 @@ class AddLombokLog4j2AnnotationPrintStackTraceTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void handleError() {
                                 try {
@@ -61,7 +61,7 @@ class AddLombokLog4j2AnnotationPrintStackTraceTest implements RewriteTest {
     }
 
     @Test
-    void addsLog4j2AnnotationToClassWithMultiplePrintStackTraces() {
+    void addsSlf4jAnnotationToClassWithMultiplePrintStackTraces() {
         rewriteRun(
                 java(
                         """
@@ -92,9 +92,9 @@ class AddLombokLog4j2AnnotationPrintStackTraceTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void method1() {
                                 try {

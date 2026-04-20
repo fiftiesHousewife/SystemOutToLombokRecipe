@@ -21,9 +21,9 @@ import java.util.Optional;
 
 /**
  * Converts {@code java.util.logging.Logger} level-named method calls to the
- * {@code log.xxx(...)} methods exposed by Lombok's {@code @Log4j2} annotation,
+ * {@code log.xxx(...)} methods exposed by Lombok's {@code @Slf4j} annotation,
  * and cleans up the now-dead JUL plumbing. Assumes the class has already been
- * annotated with {@code @Log4j2} — run {@link AddLombokLog4j2Annotation} first.
+ * annotated with {@code @Slf4j} — run {@link AddLombokSlf4jAnnotation} first.
  *
  * <p>Level mappings:
  * <pre>
@@ -42,7 +42,7 @@ import java.util.Optional;
  * {@code java.util.logging.Logger} import are removed.
  */
 @NullMarked
-public class JulToLombokLog4j extends Recipe {
+public class JulToSlf4j extends Recipe {
 
     private static final String JUL_LOGGER_FQN = "java.util.logging.Logger";
 
@@ -77,7 +77,7 @@ public class JulToLombokLog4j extends Recipe {
     public String getDescription() {
         return "Converts java.util.logging.Logger level-named method calls "
                 + "(severe/warning/info/config/fine/finer/finest) to the equivalent "
-                + "Lombok @Log4j2 log methods (error/warn/info/debug/trace), then "
+                + "Lombok @Slf4j log methods (error/warn/info/debug/trace), then "
                 + "removes the JUL Logger field and its import when no other references remain.";
     }
 

@@ -13,13 +13,13 @@ import java.util.Comparator;
 import java.util.Set;
 
 /**
- * Adds the Lombok {@code @Log4j2} annotation to classes that use
+ * Adds the Lombok {@code @Slf4j} annotation to classes that use
  * {@code System.out}, {@code printStackTrace()}, or {@code java.util.logging.Logger}.
  * Apply this recipe before the transforms that actually rewrite those calls to
  * log statements.
  */
 @NullMarked
-public class AddLombokLog4j2Annotation extends Recipe {
+public class AddLombokSlf4jAnnotation extends Recipe {
 
     private static final MethodMatcher PRINT_STACK_TRACE = new MethodMatcher("java.lang.Throwable printStackTrace(..)");
 
@@ -30,9 +30,9 @@ public class AddLombokLog4j2Annotation extends Recipe {
             "Slf4j", "Log4j", "Log4j2", "Log", "CommonsLog", "Flogger", "JBossLog", "CustomLog");
 
     private static final Set<String> LOMBOK_LOGGING_TYPE_FRAGMENTS = Set.of(
-            "lombok.extern.slf4j.Slf4j",
+            LoggerNames.LOMBOK_SLF4J,
             "lombok.extern.log4j.Log4j",
-            Log4j2Names.LOMBOK_LOG4J2,
+            "lombok.extern.log4j.Log4j2",
             "lombok.extern.java.Log",
             "lombok.extern.apachecommons.CommonsLog",
             "lombok.extern.flogger.Flogger",
@@ -43,12 +43,12 @@ public class AddLombokLog4j2Annotation extends Recipe {
 
     @Override
     public String getDisplayName() {
-        return "Add Lombok @Log4j2 annotation to classes";
+        return "Add Lombok @Slf4j annotation to classes";
     }
 
     @Override
     public String getDescription() {
-        return "Adds the Lombok @Log4j2 annotation to classes that contain System.out print statements, " +
+        return "Adds the Lombok @Slf4j annotation to classes that contain System.out print statements, " +
                 "enabling the use of a 'log' field for logging.";
     }
 
@@ -72,13 +72,13 @@ public class AddLombokLog4j2Annotation extends Recipe {
             if (hasExplicitLoggerField(classDecl) && !hasJul) {
                 return classDecl;
             }
-            return addLog4j2Annotation(classDecl);
+            return addSlf4jAnnotation(classDecl);
         }
 
-        J.ClassDeclaration addLog4j2Annotation(final J.ClassDeclaration classDecl) {
-            maybeAddImport(Log4j2Names.LOMBOK_LOG4J2, null, false);
-            return JavaTemplate.builder("@Log4j2")
-                    .imports(Log4j2Names.LOMBOK_LOG4J2)
+        J.ClassDeclaration addSlf4jAnnotation(final J.ClassDeclaration classDecl) {
+            maybeAddImport(LoggerNames.LOMBOK_SLF4J, null, false);
+            return JavaTemplate.builder("@Slf4j")
+                    .imports(LoggerNames.LOMBOK_SLF4J)
                     .build()
                     .apply(getCursor(),
                             classDecl.getCoordinates().addAnnotation(Comparator.comparing(J.Annotation::getSimpleName)));
@@ -98,7 +98,7 @@ public class AddLombokLog4j2Annotation extends Recipe {
     }
 
     static boolean hasLombokLoggingAnnotation(final J.ClassDeclaration classDecl) {
-        return classDecl.getLeadingAnnotations().stream().anyMatch(AddLombokLog4j2Annotation::isLombokLoggingAnnotation);
+        return classDecl.getLeadingAnnotations().stream().anyMatch(AddLombokSlf4jAnnotation::isLombokLoggingAnnotation);
     }
 
     static boolean isLombokLoggingAnnotation(final J.Annotation annotation) {
@@ -116,7 +116,7 @@ public class AddLombokLog4j2Annotation extends Recipe {
         return classDecl.getBody().getStatements().stream()
                 .filter(J.VariableDeclarations.class::isInstance)
                 .map(J.VariableDeclarations.class::cast)
-                .anyMatch(AddLombokLog4j2Annotation::isLoggerVariable);
+                .anyMatch(AddLombokSlf4jAnnotation::isLoggerVariable);
     }
 
     static boolean isLoggerVariable(final J.VariableDeclarations variableDeclarations) {
@@ -129,7 +129,7 @@ public class AddLombokLog4j2Annotation extends Recipe {
 
         @Override
         public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method, final Boolean ctx) {
-            if (SystemOutToLombokLog4j.isSystemOutOrErr(method) || PRINT_STACK_TRACE.matches(method)) {
+            if (SystemOutToSlf4j.isSystemOutOrErr(method) || PRINT_STACK_TRACE.matches(method)) {
                 found = true;
             }
             return super.visitMethodInvocation(method, ctx);
@@ -142,7 +142,7 @@ public class AddLombokLog4j2Annotation extends Recipe {
         @Override
         public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method, final Boolean ctx) {
             if (JUL_LEVEL_METHODS.contains(method.getSimpleName())
-                    && JulToLombokLog4j.julLevelOf(method).isPresent()) {
+                    && JulToSlf4j.julLevelOf(method).isPresent()) {
                 found = true;
             }
             return super.visitMethodInvocation(method, ctx);

@@ -2,10 +2,10 @@ package io.github.fiftieshousewife.recipes;
 
 import org.junit.jupiter.api.Test;
 
-import static io.github.fiftieshousewife.recipes.PrintfToLog4jFormatConverter.*;
+import static io.github.fiftieshousewife.recipes.PrintfToSlf4jFormatConverter.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
-class PrintfToLog4jFormatConverterTest {
+class PrintfToSlf4jFormatConverterTest {
 
     @Test
     void convert_singleSpecifier() {

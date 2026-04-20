@@ -1,19 +1,21 @@
-# System.out to Lombok @Log4j2
+# System.out to Lombok @Slf4j
 
-OpenRewrite recipes that migrate Java codebases onto Lombok `@Log4j2` logging. Converts ad-hoc `System.out` / `System.err` / `printStackTrace()` calls, `java.util.logging` (JUL) calls, and hand-rolled Log4j2 `Logger` fields into idiomatic `@Log4j2` + `log.xxx(...)` calls — with parameterized messages and proper stdout/stderr routing.
+OpenRewrite recipes that migrate Java codebases onto Lombok `@Slf4j` + SLF4J logging (with Log4j2 as the backend). Converts ad-hoc `System.out` / `System.err` / `printStackTrace()` calls, `java.util.logging` (JUL) calls, and hand-rolled Log4j2 `Logger` fields into idiomatic `@Slf4j` + `log.xxx(...)` calls — with parameterized messages and proper stdout/stderr routing.
+
+Your application code talks to SLF4J (the standard Java logging facade), so it's never coupled to a specific backend. Log4j2 handles the actual log routing and file rolling under the covers via the `log4j-slf4j2-impl` bridge.
 
 ## What It Does
 
-The default recipe, `SystemOutToLombokLog4jRecipe`, takes a project that's using some mix of `System.out`/`System.err`, `printStackTrace()`, and/or `java.util.logging` and moves it onto Lombok `@Log4j2` logging. On any given class it will:
+The default recipe, `SystemOutToSlf4jRecipe`, takes a project that's using some mix of `System.out`/`System.err`, `printStackTrace()`, and/or `java.util.logging` and moves it onto Lombok `@Slf4j` logging. On any given class it will:
 
 1. **Add the right dependencies to your build.**
-   Lombok (`compileOnly` + `annotationProcessor`) and Log4j2 (`log4j-api` + `log4j-core`). It auto-detects whether the project uses a Gradle version catalog: if `gradle/libs.versions.toml` exists, entries land in the catalog and your `build.gradle.kts` gets `libs.lombok`/`libs.log4jApi`/`libs.log4jCore`; otherwise inline `"group:artifact:version"` declarations are added.
+   Lombok (`compileOnly` + `annotationProcessor`), SLF4J (`slf4j-api`), the SLF4J-to-Log4j2 bridge (`log4j-slf4j2-impl`), and the Log4j2 backend (`log4j-core`). The recipe auto-detects whether the project uses a Gradle version catalog: if `gradle/libs.versions.toml` exists, entries land in the catalog and your `build.gradle.kts` gets `libs.lombok`/`libs.slf4jApi`/`libs.log4jSlf4jImpl`/`libs.log4jCore`; otherwise inline `"group:artifact:version"` declarations are added.
 
 2. **Create the Log4j2 configs.**
    `src/main/resources/log4j2.xml` — production-ready: non-error levels to stdout, errors to stderr (respecting the `System.out` vs `System.err` split), plus a rolling file appender under `./logs/` (daily + 10 MB gzip rollover, keeps 10 files).
    `src/test/resources/log4j2-test.xml` — console only, so unit tests don't spam `./logs/`.
 
-3. **Add `@Log4j2`** to every class that needs a logger — whether it has `System.out`/`System.err` calls, `printStackTrace()` calls, or a `java.util.logging.Logger` field.
+3. **Add `@Slf4j`** to every class that needs a logger — whether it has `System.out`/`System.err` calls, `printStackTrace()` calls, or a `java.util.logging.Logger` field.
 
 4. **Rewrite the call sites:**
 
@@ -34,7 +36,7 @@ The default recipe, `SystemOutToLombokLog4jRecipe`, takes a project that's using
 
    After the call conversion, the hand-rolled `Logger logger = Logger.getLogger(...)` field and the `java.util.logging.Logger` import are removed if nothing else in the class still references them.
 
-A companion recipe, `ConvertManualLog4j2ToLombokRecipe`, handles the separate case of codebases that are **already on Log4j2** but declare their `Logger` fields by hand (`private static final Logger log = LogManager.getLogger(X.class);`). It replaces that boilerplate with `@Log4j2`, renames references (`logger`/`LOG`/`LOGGER` → `log`), and cleans up the now-unused `org.apache.logging.log4j.Logger`/`LogManager` imports. See "Migrating existing Log4j2 code" below.
+A companion recipe, `ConvertManualLoggerToSlf4jRecipe`, handles the separate case of codebases that are **already on Log4j2** but declare their `Logger` fields by hand (`private static final Logger log = LogManager.getLogger(X.class);`). It replaces that boilerplate with `@Slf4j`, renames references (`logger`/`LOG`/`LOGGER` → `log`), and cleans up the now-unused `org.apache.logging.log4j.Logger`/`LogManager` imports. See "Migrating existing Log4j2 code" below.
 
 ## Prerequisites
 
@@ -75,7 +77,7 @@ dependencies {
 }
 
 rewrite {
-    activeRecipe("io.github.fiftieshousewife.SystemOutToLombokLog4jRecipe")
+    activeRecipe("io.github.fiftieshousewife.SystemOutToSlf4jRecipe")
 }
 ```
 
@@ -89,11 +91,11 @@ rewrite {
 
 ### Versions installed
 
-Lombok `1.18.44` and Log4j2 `2.25.4` at the time of this release. These are pinned so the transform is deterministic. To pick up later patch releases, add the Ben-Manes `versions` plugin to your project (`./gradlew dependencyUpdates`) and bump the catalog entries or inline strings by hand after the recipe runs.
+Lombok `1.18.44`, SLF4J `2.0.17`, and Log4j2 `2.25.4` at the time of this release. These are pinned so the transform is deterministic. To pick up later patch releases, add the Ben-Manes `versions` plugin to your project (`./gradlew dependencyUpdates`) and bump the catalog entries or inline strings by hand after the recipe runs.
 
 ## Recipes
 
-### `SystemOutToLombokLog4jRecipe` — the one you usually want
+### `SystemOutToSlf4jRecipe` — the one you usually want
 
 Runs all Java transforms, creates the log4j2 configs, and **auto-detects** your dependency setup:
 
@@ -104,25 +106,25 @@ You don't pick a variant — the recipe figures it out.
 
 ```kotlin
 rewrite {
-    activeRecipe("io.github.fiftieshousewife.SystemOutToLombokLog4jRecipe")
+    activeRecipe("io.github.fiftieshousewife.SystemOutToSlf4jRecipe")
 }
 ```
 
-### `SystemOutToLombokLog4jRecipeNoDeps`
+### `SystemOutToSlf4jRecipeNoDeps`
 
 Runs all the Java transforms and creates the log4j2 configs but touches neither the catalog nor `build.gradle.kts`. Use this in multi-module projects where dependencies live at a parent level, or anywhere you want full manual control.
 
 ```kotlin
 rewrite {
-    activeRecipe("io.github.fiftieshousewife.SystemOutToLombokLog4jRecipeNoDeps")
+    activeRecipe("io.github.fiftieshousewife.SystemOutToSlf4jRecipeNoDeps")
 }
 ```
 
 ## Migrating existing Log4j2 code
 
-If your codebase already uses Log4j2 but declares `Logger` fields by hand (`private static final Logger log = LogManager.getLogger(X.class);`), `ConvertManualLog4j2ToLombokRecipe` removes that boilerplate:
+If your codebase already uses Log4j2 but declares `Logger` fields by hand (`private static final Logger log = LogManager.getLogger(X.class);`), `ConvertManualLoggerToSlf4jRecipe` removes that boilerplate:
 
-- Adds `@Log4j2` to each affected class.
+- Adds `@Slf4j` to each affected class.
 - Deletes the manual field.
 - Renames any references to the old field (`logger.info(...)`, `LOG.error(...)`) to `log.xxx(...)`.
 - Drops now-unused `org.apache.logging.log4j.Logger` / `LogManager` imports.
@@ -130,11 +132,11 @@ If your codebase already uses Log4j2 but declares `Logger` fields by hand (`priv
 
 ```kotlin
 rewrite {
-    activeRecipe("io.github.fiftieshousewife.ConvertManualLog4j2ToLombokRecipe")
+    activeRecipe("io.github.fiftieshousewife.ConvertManualLoggerToSlf4jRecipe")
 }
 ```
 
-A `NoDeps` variant (`ConvertManualLog4j2ToLombokRecipeNoDeps`) exists for projects that manage Lombok separately.
+A `NoDeps` variant (`ConvertManualLoggerToSlf4jRecipeNoDeps`) exists for projects that manage Lombok separately.
 
 ## Logging configuration
 
@@ -160,9 +162,9 @@ public class MyClass {
 
 **After**:
 ```java
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
-@Log4j2
+@Slf4j
 public class MyClass {
     public void greet() {
         log.info("Hello World");
@@ -185,9 +187,9 @@ public class Calculator {
 
 **After**:
 ```java
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
-@Log4j2
+@Slf4j
 public class Calculator {
     public void add(int a, int b) {
         log.info("Adding {} and {}", a, b);
@@ -210,9 +212,9 @@ public class ErrorHandler {
 
 **After**:
 ```java
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
-@Log4j2
+@Slf4j
 public class ErrorHandler {
     public void handleError(Exception e) {
         log.error("Error occurred: {}", e.getMessage());
@@ -233,9 +235,9 @@ public class Formatter {
 
 **After**:
 ```java
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
-@Log4j2
+@Slf4j
 public class Formatter {
     public void displayData(String name, int age) {
         log.info("Name: {}, Age: {}", name, age);
@@ -262,11 +264,11 @@ public class Service {
 
 **After**:
 ```java
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.logging.Logger;
 
-@Log4j2
+@Slf4j
 public class Service {
     private static final Logger logger = Logger.getLogger(Service.class.getName());
 
@@ -280,7 +282,7 @@ public class Service {
 
 Level mapping: `severe` → `error`, `warning` → `warn`, `info` → `info`, `config`/`fine` → `debug`, `finer`/`finest` → `trace`.
 
-The old `Logger logger = Logger.getLogger(...)` field and its `java.util.logging.Logger` import are left in place — remove them yourself once you've confirmed the conversion. (The `ConvertManualLog4j2ToLombokRecipe` family removes hand-rolled Log4j2 fields, but not JUL fields.)
+The old `Logger logger = Logger.getLogger(...)` field and its `java.util.logging.Logger` import are left in place — remove them yourself once you've confirmed the conversion. (The `ConvertManualLoggerToSlf4jRecipe` family removes hand-rolled Log4j2 fields, but not JUL fields.)
 
 ### Exception printStackTrace
 
@@ -299,9 +301,9 @@ public class ErrorHandler {
 
 **After**:
 ```java
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
-@Log4j2
+@Slf4j
 public class ErrorHandler {
     public void handleError() {
         try {
@@ -321,7 +323,7 @@ These transforms are motivated by a few principles from Robert C. Martin's *Clea
 
 **Mumbling is a code smell.** **Chapter 4 — Comments** uses the word *mumbling* to describe comments written in a hurry, that don't actually say anything to the reader. The same principle applies to log messages: a line like `System.out.println("here 3")` or `log.info("done")` is a mumble — it costs the reader time without paying them anything back. When you convert these calls, it's worth taking a moment to make the message carry real information (what happened, which entity it happened to, and why the reader cares).
 
-**Don't pollute the code with logging infrastructure.** Every hand-rolled `private static final Logger log = LogManager.getLogger(...);` is a line that isn't about the business problem. It also creates a small opportunity for inconsistency — the wrong class reference, the wrong field name, the wrong logger vendor. `@Log4j2` removes that line entirely: the annotation declares intent, Lombok generates the field, and the class body stays focused on what it's *for*. The `ConvertManualLog4j2ToLombokRecipe*` family in this project exists specifically to strip that boilerplate out of projects that already use Log4j2.
+**Don't pollute the code with logging infrastructure.** Every hand-rolled `private static final Logger log = LogManager.getLogger(...);` is a line that isn't about the business problem. It also creates a small opportunity for inconsistency — the wrong class reference, the wrong field name, the wrong logger vendor. `@Slf4j` removes that line entirely: the annotation declares intent, Lombok generates the field, and the class body stays focused on what it's *for*. The `ConvertManualLoggerToSlf4jRecipe*` family in this project exists specifically to strip that boilerplate out of projects that already use Log4j2.
 
 **Use the right tool.** Log4j2 gives you levels, layouts, appenders, filters, asynchronous delivery, and structured output. `System.out.println` gives you a string on a stream. The ratio of capability to line-count is enormous, and picking the right abstraction is — in Martin's framing — a defining habit of professional code.
 
@@ -340,7 +342,7 @@ These transforms are motivated by a few principles from Robert C. Martin's *Clea
 ## Resources
 
 - [OpenRewrite Documentation](https://docs.openrewrite.org/)
-- [Lombok @Log4j2](https://projectlombok.org/features/log)
+- [Lombok @Slf4j](https://projectlombok.org/features/log)
 - [Apache Log4j2](https://logging.apache.org/log4j/2.x/)
 
 ---

@@ -8,11 +8,11 @@ import org.openrewrite.test.TypeValidation;
 
 import static org.openrewrite.java.Assertions.java;
 
-class JulToLombokLog4jTest implements RewriteTest {
+class JulToSlf4jTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        spec.recipe(new JulToLombokLog4j())
+        spec.recipe(new JulToSlf4j())
                 .parser(JavaParser.fromJavaVersion())
                 .typeValidationOptions(TypeValidation.none());
     }

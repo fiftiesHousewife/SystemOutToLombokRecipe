@@ -14,15 +14,15 @@ import java.util.regex.Pattern;
  * if nothing to remove.
  */
 @NullMarked
-final class RemoveUnusedLog4j2Imports {
+final class RemoveUnusedLoggerImports {
 
     private static final Set<String> CANDIDATES = Set.of(
-            Log4j2Names.LOG4J2_LOGGER,
-            Log4j2Names.LOG4J2_LOG_MANAGER);
+            LoggerNames.LOG4J2_LOGGER,
+            LoggerNames.LOG4J2_LOG_MANAGER);
 
     private static final Pattern IMPORT_LINE = Pattern.compile("(?m)^import\\s+[^;]+;\\s*$");
 
-    private RemoveUnusedLog4j2Imports() {
+    private RemoveUnusedLoggerImports() {
     }
 
     static List<J.Import> filter(final J.CompilationUnit cu) {

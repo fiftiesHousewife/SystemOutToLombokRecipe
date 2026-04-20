@@ -24,9 +24,9 @@ class PrintStackTraceToLogTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void handleError() {
                                 try {
@@ -44,9 +44,9 @@ class PrintStackTraceToLogTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void handleError() {
                                 try {
@@ -72,9 +72,9 @@ class PrintStackTraceToLogTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void method1() {
                                 try {
@@ -100,9 +100,9 @@ class PrintStackTraceToLogTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void method1() {
                                 try {
@@ -136,10 +136,10 @@ class PrintStackTraceToLogTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
                         import java.io.IOException;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void handleIO() {
                                 try {
@@ -157,10 +157,10 @@ class PrintStackTraceToLogTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
                         import java.io.IOException;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void handleIO() {
                                 try {
@@ -186,9 +186,9 @@ class PrintStackTraceToLogTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void test() {
                                 Exception e = new Exception();

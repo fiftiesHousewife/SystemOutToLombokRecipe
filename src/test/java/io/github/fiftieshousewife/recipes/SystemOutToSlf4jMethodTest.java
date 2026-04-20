@@ -8,11 +8,11 @@ import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaParser;
 import org.openrewrite.java.tree.J;
 
-import static io.github.fiftieshousewife.recipes.SystemOutToLombokLog4j.isSystemErr;
-import static io.github.fiftieshousewife.recipes.SystemOutToLombokLog4j.isSystemOutOrErr;
+import static io.github.fiftieshousewife.recipes.SystemOutToSlf4j.isSystemErr;
+import static io.github.fiftieshousewife.recipes.SystemOutToSlf4j.isSystemOutOrErr;
 import static org.assertj.core.api.Assertions.assertThat;
 
-class SystemOutToLombokLog4jMethodTest {
+class SystemOutToSlf4jMethodTest {
 
     private final JavaParser javaParser = JavaParser.fromJavaVersion().build();
     private final ExecutionContext ctx = new InMemoryExecutionContext();

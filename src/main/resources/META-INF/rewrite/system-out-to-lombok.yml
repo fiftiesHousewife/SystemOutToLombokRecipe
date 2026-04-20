@@ -2,7 +2,7 @@
 type: specs.openrewrite.org/v1beta/recipe
 name: io.github.fiftieshousewife.CreateLog4j2Config
 displayName: Create log4j2 main + test configurations
-description: >
+description: >-
   Creates two log4j2 configurations:
 
   - `src/main/resources/log4j2.xml`: production-ready — non-error levels to
@@ -85,9 +85,9 @@ recipeList:
 ---
 type: specs.openrewrite.org/v1beta/recipe
 name: io.github.fiftieshousewife.JavaTransforms
-displayName: Apply @Log4j2 annotation and convert System.out / printStackTrace / JUL calls
-description: >
-  The Java-side transforms shared by the Lombok-based recipes: add @Log4j2
+displayName: Apply @Slf4j annotation and convert System.out / printStackTrace / JUL calls
+description: >-
+  The Java-side transforms shared by the Lombok-based recipes: add @Slf4j
   to classes that use System.out, printStackTrace, or java.util.logging;
   convert System.out/err calls to log.info/log.error with parameterized
   formatting; convert printStackTrace to log.error; convert JUL level-named
@@ -95,22 +95,27 @@ description: >
   equivalent log.xxx method and remove the now-unused JUL Logger field.
 
 recipeList:
-  - io.github.fiftieshousewife.recipes.AddLombokLog4j2Annotation
-  - io.github.fiftieshousewife.recipes.SystemOutToLombokLog4j
+  - io.github.fiftieshousewife.recipes.AddLombokSlf4jAnnotation
+  - io.github.fiftieshousewife.recipes.SystemOutToSlf4j
   - io.github.fiftieshousewife.recipes.PrintStackTraceToLog
-  - io.github.fiftieshousewife.recipes.JulToLombokLog4j
+  - io.github.fiftieshousewife.recipes.JulToSlf4j
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
-name: io.github.fiftieshousewife.AddLombokLog4j2Dependencies
-displayName: Add Lombok and Log4j2 dependencies (catalog-aware)
-description: >
-  Adds Lombok (compileOnly + annotationProcessor) and Log4j2 (api + core)
-  dependencies to the build. If a Gradle version catalog
-  (`gradle/libs.versions.toml`) is present, the entries are added to the
-  catalog and the build.gradle.kts dependency declarations use libs.xxx
+name: io.github.fiftieshousewife.AddSlf4jDependencies
+displayName: Add Lombok, SLF4J API, and Log4j2 backend dependencies (catalog-aware)
+description: >-
+  Adds:
+
+  - Lombok (`compileOnly` + `annotationProcessor`) — provides `@Slf4j`.
+  - `slf4j-api` (`implementation`) — the logging facade the code will use.
+  - `log4j-slf4j2-impl` (`runtimeOnly`) — routes SLF4J calls to Log4j2.
+  - `log4j-core` (`runtimeOnly`) — the Log4j2 backend.
+
+  If a Gradle version catalog (`gradle/libs.versions.toml`) is present, the
+  entries are added to the catalog and `build.gradle.kts` uses `libs.xxx`
   references. Otherwise inline `"group:artifact:version"` declarations are
-  added to build.gradle.kts.
+  added to `build.gradle.kts`.
 
 recipeList:
   - io.github.fiftieshousewife.recipes.AddVersionCatalogEntry:
@@ -120,13 +125,19 @@ recipeList:
       module: org.projectlombok:lombok
 
   - io.github.fiftieshousewife.recipes.AddVersionCatalogEntry:
-      versionAlias: log4jApi
-      versionValue: 2.25.4
-      libraryAlias: log4jApi
-      module: org.apache.logging.log4j:log4j-api
+      versionAlias: slf4j
+      versionValue: 2.0.17
+      libraryAlias: slf4jApi
+      module: org.slf4j:slf4j-api
 
   - io.github.fiftieshousewife.recipes.AddVersionCatalogEntry:
-      versionAlias: log4jCore
+      versionAlias: log4j
+      versionValue: 2.25.4
+      libraryAlias: log4jSlf4jImpl
+      module: org.apache.logging.log4j:log4j-slf4j2-impl
+
+  - io.github.fiftieshousewife.recipes.AddVersionCatalogEntry:
+      versionAlias: log4j
       versionValue: 2.25.4
       libraryAlias: log4jCore
       module: org.apache.logging.log4j:log4j-core
@@ -146,9 +157,9 @@ recipeList:
       acceptTransitive: true
 
   - org.openrewrite.gradle.AddDependency:
-      groupId: org.apache.logging.log4j
-      artifactId: log4j-api
-      version: 2.25.4
+      groupId: org.slf4j
+      artifactId: slf4j-api
+      version: 2.0.17
       configuration: implementation
 
   - org.openrewrite.gradle.AddDependency:
@@ -157,13 +168,23 @@ recipeList:
       version: 2.25.4
       configuration: runtimeOnly
 
+  - org.openrewrite.gradle.AddDependency:
+      groupId: org.apache.logging.log4j
+      artifactId: log4j-slf4j2-impl
+      version: 2.25.4
+      configuration: runtimeOnly
+
   - io.github.fiftieshousewife.recipes.UseCatalogReferenceForDependency:
       module: org.projectlombok:lombok
       catalogReference: libs.lombok
 
   - io.github.fiftieshousewife.recipes.UseCatalogReferenceForDependency:
-      module: org.apache.logging.log4j:log4j-api
-      catalogReference: libs.log4jApi
+      module: org.slf4j:slf4j-api
+      catalogReference: libs.slf4jApi
+
+  - io.github.fiftieshousewife.recipes.UseCatalogReferenceForDependency:
+      module: org.apache.logging.log4j:log4j-slf4j2-impl
+      catalogReference: libs.log4jSlf4jImpl
 
   - io.github.fiftieshousewife.recipes.UseCatalogReferenceForDependency:
       module: org.apache.logging.log4j:log4j-core
@@ -173,7 +194,7 @@ recipeList:
 type: specs.openrewrite.org/v1beta/recipe
 name: io.github.fiftieshousewife.AddLombokDependency
 displayName: Add Lombok dependency (catalog-aware)
-description: >
+description: >-
   Adds only the Lombok compileOnly + annotationProcessor dependencies to the
   build. If a Gradle version catalog is present, the entry lands in the
   catalog and the build.gradle.kts declarations use `libs.lombok`. Otherwise
@@ -206,31 +227,31 @@ recipeList:
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
-name: io.github.fiftieshousewife.SystemOutToLombokLog4jRecipe
-displayName: Convert System.out to Lombok @Log4j2
-description: >
+name: io.github.fiftieshousewife.SystemOutToSlf4jRecipe
+displayName: Convert System.out to Lombok @Slf4j
+description: >-
   Converts System.out.println/printf, printStackTrace, and java.util.logging
-  calls to Lombok @Log4j2 log statements. Auto-detects whether the project
+  calls to Lombok @Slf4j log statements. Auto-detects whether the project
   uses a Gradle version catalog: entries land in the catalog and references
   use `libs.xxx` when one is present, otherwise inline declarations are added
   to build.gradle.kts. Also creates a production-ready log4j2.xml plus a
   console-only log4j2-test.xml for tests.
 
 recipeList:
-  - io.github.fiftieshousewife.AddLombokLog4j2Dependencies
+  - io.github.fiftieshousewife.AddSlf4jDependencies
   - io.github.fiftieshousewife.CreateLog4j2Config
   - io.github.fiftieshousewife.JavaTransforms
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
-name: io.github.fiftieshousewife.SystemOutToLombokLog4jRecipeNoDeps
-displayName: Convert System.out to Lombok @Log4j2 (no dependency management)
-description: >
-  Same Java transforms and log4j2.xml creation as SystemOutToLombokLog4jRecipe,
+name: io.github.fiftieshousewife.SystemOutToSlf4jRecipeNoDeps
+displayName: Convert System.out to Lombok @Slf4j (no dependency management)
+description: >-
+  Same Java transforms and log4j2.xml creation as SystemOutToSlf4jRecipe,
   but does NOT add any dependencies to your build. Use this variant when you
   manage dependencies yourself. You are responsible for adding Lombok
-  (compileOnly + annotationProcessor) and log4j-api/log4j-core to your build
-  before running this recipe.
+  (compileOnly + annotationProcessor), slf4j-api, log4j-slf4j2-impl, and
+  log4j-core to your build before running this recipe.
 
 recipeList:
   - io.github.fiftieshousewife.CreateLog4j2Config
@@ -238,12 +259,12 @@ recipeList:
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
-name: io.github.fiftieshousewife.ConvertManualLog4j2ToLombokRecipe
-displayName: Convert manual Log4j2 loggers to Lombok @Log4j2
-description: >
+name: io.github.fiftieshousewife.ConvertManualLoggerToSlf4jRecipe
+displayName: Convert manual Log4j2 loggers to Lombok @Slf4j
+description: >-
   For codebases that already use Log4j2 but declare Logger fields manually
   (`private static final Logger log = LogManager.getLogger(X.class);`):
-  replaces each manual field with Lombok's @Log4j2 annotation, renames
+  replaces each manual field with Lombok's @Slf4j annotation, renames
   references (logger/LOG/LOGGER → log), and adds the Lombok compileOnly +
   annotationProcessor dependencies. Catalog-aware: uses libs.lombok when
   a Gradle version catalog is present. Log4j2 API/core dependencies are
@@ -251,18 +272,18 @@ description: >
 
 recipeList:
   - io.github.fiftieshousewife.AddLombokDependency
-  - io.github.fiftieshousewife.recipes.ConvertManualLog4j2ToLombok
+  - io.github.fiftieshousewife.recipes.ConvertManualLoggerToSlf4j
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
-name: io.github.fiftieshousewife.ConvertManualLog4j2ToLombokRecipeNoDeps
-displayName: Convert manual Log4j2 loggers to Lombok @Log4j2 (no dependency management)
-description: >
-  Same transformation as ConvertManualLog4j2ToLombokRecipe but without
+name: io.github.fiftieshousewife.ConvertManualLoggerToSlf4jRecipeNoDeps
+displayName: Convert manual Log4j2 loggers to Lombok @Slf4j (no dependency management)
+description: >-
+  Same transformation as ConvertManualLoggerToSlf4jRecipe but without
   adding Lombok dependencies to the build. Use when you manage dependencies
   yourself (e.g. in a multi-module project where Lombok is already declared
   at a parent level).
 
 recipeList:
-  - io.github.fiftieshousewife.recipes.ConvertManualLog4j2ToLombok
+  - io.github.fiftieshousewife.recipes.ConvertManualLoggerToSlf4j
 

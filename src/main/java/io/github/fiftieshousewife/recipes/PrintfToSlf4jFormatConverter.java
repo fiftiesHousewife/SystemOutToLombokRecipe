@@ -12,11 +12,11 @@ import org.jspecify.annotations.NullMarked;
  * directly.
  */
 @NullMarked
-final class PrintfToLog4jFormatConverter {
+final class PrintfToSlf4jFormatConverter {
 
     private static final String FLAG_CHARS = "+-0 #,(";
 
-    private PrintfToLog4jFormatConverter() {
+    private PrintfToSlf4jFormatConverter() {
     }
 
     static String convert(String printfFormat) {

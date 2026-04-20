@@ -8,11 +8,11 @@ import org.openrewrite.test.TypeValidation;
 
 import static org.openrewrite.java.Assertions.java;
 
-class SystemOutToLombokLog4jTest implements RewriteTest {
+class SystemOutToSlf4jTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        spec.recipe(new SystemOutToLombokLog4j())
+        spec.recipe(new SystemOutToSlf4j())
                 .parser(JavaParser.fromJavaVersion())
                 .typeValidationOptions(TypeValidation.none());
     }
@@ -24,9 +24,9 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething() {
                                 System.out.println("Hello World");
@@ -36,9 +36,9 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething() {
                                 log.info("Hello World");
@@ -56,9 +56,9 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething() {
                                 System.err.println("Error occurred");
@@ -68,9 +68,9 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething() {
                                 log.error("Error occurred");
@@ -88,9 +88,9 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething(int value) {
                                 System.out.println("Value: " + value);
@@ -100,9 +100,9 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething(int value) {
                                 log.info("Value: {}", value);
@@ -120,9 +120,9 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething(int x, int y) {
                                 System.out.println("x = " + x + ", y = " + y);
@@ -132,9 +132,9 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething(int x, int y) {
                                 log.info("x = {}, y = {}", x, y);
@@ -152,9 +152,9 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething(int value) {
                                 System.out.printf("Value: %d%n", value);
@@ -164,9 +164,9 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething(int value) {
                                 log.info("Value: {}", value);
@@ -184,9 +184,9 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething(String name, int age) {
                                 System.out.printf("Name: %s, Age: %d%n", name, age);
@@ -196,9 +196,9 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething(String name, int age) {
                                 log.info("Name: {}, Age: {}", name, age);
@@ -216,9 +216,9 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething() {
                                 System.out.println("First message");
@@ -230,9 +230,9 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething() {
                                 log.info("First message");
@@ -252,9 +252,9 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething() {
                                 System.out.println();
@@ -264,9 +264,9 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething() {
                                 log.info("");
@@ -284,9 +284,9 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething() {
                                 System.out.print("Message");
@@ -296,9 +296,9 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething() {
                                 log.info("Message");
@@ -316,9 +316,9 @@ class SystemOutToLombokLog4jTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void println(String msg) {
                             }

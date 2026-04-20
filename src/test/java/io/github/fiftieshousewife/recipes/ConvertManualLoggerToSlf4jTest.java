@@ -8,11 +8,11 @@ import org.openrewrite.test.TypeValidation;
 
 import static org.openrewrite.java.Assertions.java;
 
-class ConvertManualLog4j2ToLombokTest implements RewriteTest {
+class ConvertManualLoggerToSlf4jTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        spec.recipe(new ConvertManualLog4j2ToLombok())
+        spec.recipe(new ConvertManualLoggerToSlf4j())
                 .parser(JavaParser.fromJavaVersion()
                         .dependsOn(
                                 """
@@ -52,9 +52,9 @@ class ConvertManualLog4j2ToLombokTest implements RewriteTest {
                                 }
                                 """,
                         """
-                                import lombok.extern.log4j.Log4j2;
+                                import lombok.extern.slf4j.Slf4j;
 
-                                @Log4j2
+                                @Slf4j
                                 public class Foo {
 
                                     void run() {
@@ -84,9 +84,9 @@ class ConvertManualLog4j2ToLombokTest implements RewriteTest {
                                 }
                                 """,
                         """
-                                import lombok.extern.log4j.Log4j2;
+                                import lombok.extern.slf4j.Slf4j;
 
-                                @Log4j2
+                                @Slf4j
                                 public class Foo {
 
                                     void run() {
@@ -116,9 +116,9 @@ class ConvertManualLog4j2ToLombokTest implements RewriteTest {
                                 }
                                 """,
                         """
-                                import lombok.extern.log4j.Log4j2;
+                                import lombok.extern.slf4j.Slf4j;
 
-                                @Log4j2
+                                @Slf4j
                                 public class Foo {
 
                                     void run() {
@@ -135,9 +135,9 @@ class ConvertManualLog4j2ToLombokTest implements RewriteTest {
         rewriteRun(
                 java(
                         """
-                                import lombok.extern.log4j.Log4j2;
+                                import lombok.extern.slf4j.Slf4j;
 
-                                @Log4j2
+                                @Slf4j
                                 public class Foo {
                                     void run() {
                                         log.info("hello");

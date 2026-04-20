@@ -7,16 +7,16 @@ import org.openrewrite.test.TypeValidation;
 
 import static org.openrewrite.java.Assertions.java;
 
-class AddLombokLog4j2AnnotationTest implements RewriteTest {
+class AddLombokSlf4jAnnotationTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        spec.recipe(new AddLombokLog4j2Annotation())
+        spec.recipe(new AddLombokSlf4jAnnotation())
             .afterTypeValidationOptions(TypeValidation.none());
     }
 
     @Test
-    void addsLog4j2AnnotationToClassWithSystemOut() {
+    void addsSlf4jAnnotationToClassWithSystemOut() {
         rewriteRun(
                 java(
                         """
@@ -31,9 +31,9 @@ class AddLombokLog4j2AnnotationTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething() {
                                 System.out.println("Hello World");
@@ -45,7 +45,7 @@ class AddLombokLog4j2AnnotationTest implements RewriteTest {
     }
 
     @Test
-    void addsLog4j2AnnotationToClassWithMultipleSystemOut() {
+    void addsSlf4jAnnotationToClassWithMultipleSystemOut() {
         rewriteRun(
                 java(
                         """
@@ -64,9 +64,9 @@ class AddLombokLog4j2AnnotationTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void method1() {
                                 System.out.println("First");
@@ -105,9 +105,9 @@ class AddLombokLog4j2AnnotationTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething() {
                                 System.out.println("Hello World");
@@ -119,7 +119,7 @@ class AddLombokLog4j2AnnotationTest implements RewriteTest {
     }
 
     @Test
-    void addsLog4j2AnnotationForSystemErr() {
+    void addsSlf4jAnnotationForSystemErr() {
         rewriteRun(
                 java(
                         """
@@ -134,9 +134,9 @@ class AddLombokLog4j2AnnotationTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething() {
                                 System.err.println("Error message");
@@ -148,7 +148,7 @@ class AddLombokLog4j2AnnotationTest implements RewriteTest {
     }
 
     @Test
-    void addsLog4j2AnnotationForJulUsage() {
+    void addsSlf4jAnnotationForJulUsage() {
         rewriteRun(
                 java(
                         """
@@ -167,11 +167,11 @@ class AddLombokLog4j2AnnotationTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
                         import java.util.logging.Logger;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             private static final Logger logger = Logger.getLogger(MyClass.class.getName());
 
@@ -224,7 +224,7 @@ class AddLombokLog4j2AnnotationTest implements RewriteTest {
     }
 
     @Test
-    void addsLog4j2AnnotationForSystemOutPrintf() {
+    void addsSlf4jAnnotationForSystemOutPrintf() {
         rewriteRun(
                 java(
                         """
@@ -239,9 +239,9 @@ class AddLombokLog4j2AnnotationTest implements RewriteTest {
                         """
                         package com.example;
 
-                        import lombok.extern.log4j.Log4j2;
+                        import lombok.extern.slf4j.Slf4j;
 
-                        @Log4j2
+                        @Slf4j
                         public class MyClass {
                             public void doSomething() {
                                 System.out.printf("Value: %d%n", 42);

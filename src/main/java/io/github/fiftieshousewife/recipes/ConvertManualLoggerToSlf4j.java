@@ -20,7 +20,7 @@ import java.util.Optional;
 
 /**
  * Converts classes that hand-roll a Log4j2 logger field into the Lombok
- * {@code @Log4j2} form. For a class like
+ * {@code @Slf4j} form. For a class like
  * <pre>
  *   public class Foo {
  *       private static final Logger logger = LogManager.getLogger(Foo.class);
@@ -39,17 +39,17 @@ import java.util.Optional;
  * {@code LogManager} imports when they are no longer used.
  */
 @NullMarked
-public class ConvertManualLog4j2ToLombok extends Recipe {
+public class ConvertManualLoggerToSlf4j extends Recipe {
 
     @Override
     public String getDisplayName() {
-        return "Convert manually declared Log4j2 logger fields to Lombok @Log4j2";
+        return "Convert manually declared Log4j2 logger fields to Lombok @Slf4j";
     }
 
     @Override
     public String getDescription() {
         return "Finds classes that declare a `private static final Logger` field initialised from "
-                + "`LogManager.getLogger(...)`, replaces them with Lombok's `@Log4j2` annotation, "
+                + "`LogManager.getLogger(...)`, replaces them with Lombok's `@Slf4j` annotation, "
                 + "and renames references to the old field so they use the Lombok-generated `log`.";
     }
 
@@ -60,7 +60,7 @@ public class ConvertManualLog4j2ToLombok extends Recipe {
             public J.CompilationUnit visitCompilationUnit(final J.CompilationUnit compilationUnit,
                                                           final ExecutionContext ctx) {
                 final J.CompilationUnit visited = super.visitCompilationUnit(compilationUnit, ctx);
-                final List<J.Import> keep = RemoveUnusedLog4j2Imports.filter(visited);
+                final List<J.Import> keep = RemoveUnusedLoggerImports.filter(visited);
                 return keep.size() == visited.getImports().size() ? visited : visited.withImports(keep);
             }
 
@@ -68,16 +68,16 @@ public class ConvertManualLog4j2ToLombok extends Recipe {
             public J.ClassDeclaration visitClassDeclaration(final J.ClassDeclaration classDecl,
                                                             final ExecutionContext ctx) {
                 final J.ClassDeclaration visited = super.visitClassDeclaration(classDecl, ctx);
-                if (AddLombokLog4j2Annotation.hasLombokLoggingAnnotation(visited)) {
+                if (AddLombokSlf4jAnnotation.hasLombokLoggingAnnotation(visited)) {
                     return visited;
                 }
                 if (findManualLog4j2Field(visited).isEmpty()) {
                     return visited;
                 }
 
-                maybeAddImport(Log4j2Names.LOMBOK_LOG4J2, null, false);
-                final J.ClassDeclaration annotated = JavaTemplate.builder("@Log4j2")
-                        .imports(Log4j2Names.LOMBOK_LOG4J2)
+                maybeAddImport(LoggerNames.LOMBOK_SLF4J, null, false);
+                final J.ClassDeclaration annotated = JavaTemplate.builder("@Slf4j")
+                        .imports(LoggerNames.LOMBOK_SLF4J)
                         .build()
                         .apply(getCursor(),
                                 visited.getCoordinates().addAnnotation(Comparator.comparing(J.Annotation::getSimpleName)));
@@ -104,7 +104,7 @@ public class ConvertManualLog4j2ToLombok extends Recipe {
             return false;
         }
         final JavaType type = typeExpression.getType();
-        return TypeUtils.isOfClassType(type, Log4j2Names.LOG4J2_LOGGER);
+        return TypeUtils.isOfClassType(type, LoggerNames.LOG4J2_LOGGER);
     }
 
     private static J.ClassDeclaration renameReferences(final J.ClassDeclaration classDecl, final String oldName) {

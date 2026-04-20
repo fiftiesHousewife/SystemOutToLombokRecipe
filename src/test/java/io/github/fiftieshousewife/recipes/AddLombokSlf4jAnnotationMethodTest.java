@@ -10,7 +10,7 @@ import org.openrewrite.java.tree.J;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class AddLombokLog4j2AnnotationMethodTest {
+class AddLombokSlf4jAnnotationMethodTest {
 
     private final JavaParser javaParser = JavaParser.fromJavaVersion().build();
     private final ExecutionContext ctx = new InMemoryExecutionContext();
@@ -19,11 +19,11 @@ class AddLombokLog4j2AnnotationMethodTest {
     void isLombokLoggingAnnotation_detectsLog4j2() {
         assertClassProperty("""
                 package com.example;
-                import lombok.extern.log4j.Log4j2;
+                import lombok.extern.slf4j.Slf4j;
 
-                @Log4j2
+                @Slf4j
                 public class Test {}
-                """, c -> AddLombokLog4j2Annotation.hasLombokLoggingAnnotation(c));
+                """, c -> AddLombokSlf4jAnnotation.hasLombokLoggingAnnotation(c));
     }
 
     @Test
@@ -34,7 +34,7 @@ class AddLombokLog4j2AnnotationMethodTest {
 
                 @Slf4j
                 public class Test {}
-                """, c -> AddLombokLog4j2Annotation.hasLombokLoggingAnnotation(c));
+                """, c -> AddLombokSlf4jAnnotation.hasLombokLoggingAnnotation(c));
     }
 
     @Test
@@ -45,7 +45,7 @@ class AddLombokLog4j2AnnotationMethodTest {
 
                 @Log4j
                 public class Test {}
-                """, c -> AddLombokLog4j2Annotation.hasLombokLoggingAnnotation(c));
+                """, c -> AddLombokSlf4jAnnotation.hasLombokLoggingAnnotation(c));
     }
 
     @Test
@@ -57,7 +57,7 @@ class AddLombokLog4j2AnnotationMethodTest {
                 public class Test {
                     private static final Logger log = null;
                 }
-                """, AddLombokLog4j2Annotation::hasExplicitLoggerField);
+                """, AddLombokSlf4jAnnotation::hasExplicitLoggerField);
     }
 
     @Test
@@ -68,7 +68,7 @@ class AddLombokLog4j2AnnotationMethodTest {
                 public class Test {
                     private Object logger;
                 }
-                """, AddLombokLog4j2Annotation::hasExplicitLoggerField);
+                """, AddLombokSlf4jAnnotation::hasExplicitLoggerField);
     }
 
     @Test
@@ -79,7 +79,7 @@ class AddLombokLog4j2AnnotationMethodTest {
                 public class Test {
                     private static final Object LOG = null;
                 }
-                """, AddLombokLog4j2Annotation::hasExplicitLoggerField);
+                """, AddLombokSlf4jAnnotation::hasExplicitLoggerField);
     }
 
     @Test
@@ -90,7 +90,7 @@ class AddLombokLog4j2AnnotationMethodTest {
                 public class Test {
                     private static Object LOGGER;
                 }
-                """, AddLombokLog4j2Annotation::hasExplicitLoggerField);
+                """, AddLombokSlf4jAnnotation::hasExplicitLoggerField);
     }
 
     @Test
@@ -102,7 +102,7 @@ class AddLombokLog4j2AnnotationMethodTest {
                     private String name;
                     private int count;
                 }
-                """, AddLombokLog4j2Annotation::hasExplicitLoggerField);
+                """, AddLombokSlf4jAnnotation::hasExplicitLoggerField);
     }
 
     @Test
@@ -115,7 +115,7 @@ class AddLombokLog4j2AnnotationMethodTest {
                         System.out.println("test");
                     }
                 }
-                """, AddLombokLog4j2Annotation::containsSystemOutCalls);
+                """, AddLombokSlf4jAnnotation::containsSystemOutCalls);
     }
 
     @Test
@@ -128,7 +128,7 @@ class AddLombokLog4j2AnnotationMethodTest {
                         System.err.println("error");
                     }
                 }
-                """, AddLombokLog4j2Annotation::containsSystemOutCalls);
+                """, AddLombokSlf4jAnnotation::containsSystemOutCalls);
     }
 
     @Test
@@ -141,7 +141,7 @@ class AddLombokLog4j2AnnotationMethodTest {
                         String message = "test";
                     }
                 }
-                """, AddLombokLog4j2Annotation::containsSystemOutCalls);
+                """, AddLombokSlf4jAnnotation::containsSystemOutCalls);
     }
 
     private void assertClassProperty(String code, java.util.function.Predicate<J.ClassDeclaration> predicate) {
