@@ -302,19 +302,6 @@ These transforms are motivated by a few principles from Robert C. Martin's *Clea
 
 **Use the right tool.** Log4j2 gives you levels, layouts, appenders, filters, asynchronous delivery, and structured output. `System.out.println` gives you a string on a stream. The ratio of capability to line-count is enormous, and picking the right abstraction is — in Martin's framing — a defining habit of professional code.
 
-## Upgrading from 0.3 or 0.4
-
-In 0.5 the `...RecipeCatalog` activeRecipe names are gone. Use the base recipe name — it auto-detects the catalog and does the right thing:
-
-```diff
- rewrite {
--    activeRecipe("io.github.fiftieshousewife.SystemOutToLombokLog4jRecipeCatalog")
-+    activeRecipe("io.github.fiftieshousewife.SystemOutToLombokLog4jRecipe")
- }
-```
-
-Same change for `ConvertManualLog4j2ToLombokRecipeCatalog` → `ConvertManualLog4j2ToLombokRecipe`. The `NoDeps` variants are unchanged.
-
 ## Troubleshooting
 
 **Recipe not found**: Ensure the dependency coordinates and version in your TOML match exactly.
