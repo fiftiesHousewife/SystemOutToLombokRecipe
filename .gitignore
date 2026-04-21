@@ -52,3 +52,6 @@ src/main/resources/META-INF/rewrite/*.jar
 
 ### Local Maven ###
 # Don't ignore locally published artifacts in ~/.m2
+
+### Claude Code user-local state (skills are committed; settings are per-user) ###
+.claude/settings.local.json
