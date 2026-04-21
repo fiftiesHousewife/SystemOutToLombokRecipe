@@ -128,6 +128,21 @@ Recipe must rewrite the `implementation("org.projectlombok:lombok:…")` line in
 `build-logic/build.gradle.kts` to `implementation(libs.lombok)` using the
 `build-logic/gradle/libs.versions.toml` catalog.
 
+**Composite-build caveat**: `includeBuild` makes `build-logic` a separate
+Gradle build, not a subproject. The OpenRewrite plugin at the outer build
+does NOT reach into it. To rewrite both, apply the plugin in each build
+and run the recipe twice:
+
+```bash
+cd "$TEST" && ./gradlew rewriteRun        # outer build
+cd "$TEST/build-logic" && ./gradlew rewriteRun  # included build
+```
+
+If `build-logic` is instead a regular subproject (`include("build-logic")`
+in `settings.gradle.kts` rather than `includeBuild(...)`), a single outer
+rewrite pass handles everything — but then the project has one root
+catalog, not a nested one.
+
 ### Template D — composite `build-logic` (Groovy)
 
 Same as Template C but with `build-logic/build.gradle` (Groovy DSL) and
