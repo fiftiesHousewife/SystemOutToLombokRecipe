@@ -102,6 +102,23 @@ recipeList:
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
+name: io.github.fiftieshousewife.JavaTransformsClasspathGated
+displayName: Apply @Slf4j / System.out / JUL conversions, gated on Lombok classpath
+description: >-
+  Same Java transforms as JavaTransforms, but @Slf4j is only added to source
+  files whose classpath actually contains lombok.extern.slf4j.Slf4j. Use this
+  from recipes that do NOT manage Lombok dependencies themselves, so classes
+  in modules without Lombok aren't left with an @Slf4j that won't compile.
+
+recipeList:
+  - io.github.fiftieshousewife.recipes.AddLombokSlf4jAnnotation:
+      requireLombokOnClasspath: true
+  - io.github.fiftieshousewife.recipes.SystemOutToSlf4j
+  - io.github.fiftieshousewife.recipes.PrintStackTraceToLog
+  - io.github.fiftieshousewife.recipes.JulToSlf4j
+
+---
+type: specs.openrewrite.org/v1beta/recipe
 name: io.github.fiftieshousewife.AddSlf4jDependencies
 displayName: Add Lombok, SLF4J API, and Log4j2 backend dependencies (catalog-aware)
 description: >-
@@ -162,6 +179,12 @@ recipeList:
       version: 2.0.17
       configuration: implementation
 
+  # Order matters: two runtimeOnly AddDependency calls that share a groupId
+  # (org.apache.logging.log4j) get deduplicated by upstream AddDependency — the
+  # SECOND of the pair is silently dropped. Keep log4j-core before
+  # log4j-slf4j2-impl so the dropped one is the more specific bridge, which
+  # AddDependency later re-adds transitively anyway. If you reorder these,
+  # smoke-test §2 will fail with "log4j-slf4j2-impl not on runtimeOnly".
   - org.openrewrite.gradle.AddDependency:
       groupId: org.apache.logging.log4j
       artifactId: log4j-core
@@ -253,9 +276,13 @@ description: >-
   (compileOnly + annotationProcessor), slf4j-api, log4j-slf4j2-impl, and
   log4j-core to your build before running this recipe.
 
+  @Slf4j is only added to source files whose classpath actually contains
+  lombok.extern.slf4j.Slf4j, so in multi-module projects where Lombok lives
+  on only some modules, classes in the other modules are left alone.
+
 recipeList:
   - io.github.fiftieshousewife.CreateLog4j2Config
-  - io.github.fiftieshousewife.JavaTransforms
+  - io.github.fiftieshousewife.JavaTransformsClasspathGated
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
@@ -284,6 +311,62 @@ description: >-
   yourself (e.g. in a multi-module project where Lombok is already declared
   at a parent level).
 
+  The conversion is only applied in source files whose classpath actually
+  contains lombok.extern.slf4j.Slf4j, so modules without Lombok are skipped.
+
 recipeList:
+  - io.github.fiftieshousewife.recipes.ConvertManualLoggerToSlf4j:
+      requireLombokOnClasspath: true
+
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.github.fiftieshousewife.MigrateToSlf4jRecipe
+displayName: Migrate all logging patterns to Lombok @Slf4j (all-in-one)
+description: >-
+  Single top-level recipe for codebases that have a MIX of logging patterns.
+  Converts every pattern we support to Lombok @Slf4j in one pass:
+
+  - System.out.println / System.err.println / printf → log.info / log.error
+    with parameterized {} formatting.
+  - Throwable.printStackTrace() → log.error("Exception occurred", e).
+  - java.util.logging.Logger calls → log.xxx, with the JUL field and import
+    removed.
+  - Hand-rolled Log4j2 `Logger log = LogManager.getLogger(...)` fields →
+    @Slf4j, with references renamed to `log` and the Log4j2 imports pruned.
+
+  Also adds Lombok + SLF4J + Log4j2 backend dependencies (catalog-aware) and
+  seeds production-ready log4j2.xml + console-only log4j2-test.xml. For
+  codebases that only have ONE of these patterns, the focused recipes
+  (`SystemOutToSlf4jRecipe`, `ConvertManualLoggerToSlf4jRecipe`) remain
+  available and run faster.
+
+recipeList:
+  - io.github.fiftieshousewife.AddSlf4jDependencies
+  - io.github.fiftieshousewife.CreateLog4j2Config
+  # ConvertManualLoggerToSlf4j runs BEFORE JavaTransforms so a class that has
+  # both a manual Log4j2 Logger field AND System.out calls gets its field
+  # removed first; JavaTransforms' AddLombokSlf4jAnnotation would otherwise
+  # see hasExplicitLoggerField() and skip the class entirely.
   - io.github.fiftieshousewife.recipes.ConvertManualLoggerToSlf4j
+  - io.github.fiftieshousewife.JavaTransforms
+
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.github.fiftieshousewife.MigrateToSlf4jRecipeNoDeps
+displayName: Migrate all logging patterns to Lombok @Slf4j (no dependency management)
+description: >-
+  Same transformations as MigrateToSlf4jRecipe but does NOT add dependencies
+  to your build. Use when you manage dependencies yourself (e.g. a
+  multi-module project where Lombok lives on a parent). You are responsible
+  for adding Lombok (compileOnly + annotationProcessor), slf4j-api,
+  log4j-slf4j2-impl, and log4j-core before running this recipe.
+
+  @Slf4j is only added in source files whose classpath actually contains
+  lombok.extern.slf4j.Slf4j, so modules without Lombok are left alone.
+
+recipeList:
+  - io.github.fiftieshousewife.CreateLog4j2Config
+  - io.github.fiftieshousewife.recipes.ConvertManualLoggerToSlf4j:
+      requireLombokOnClasspath: true
+  - io.github.fiftieshousewife.JavaTransformsClasspathGated
 

@@ -2,6 +2,7 @@ package io.github.fiftieshousewife.recipes;
 
 import org.jspecify.annotations.NullMarked;
 import org.openrewrite.ExecutionContext;
+import org.openrewrite.Option;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
@@ -10,6 +11,7 @@ import org.openrewrite.java.MethodMatcher;
 import org.openrewrite.java.tree.J;
 
 import java.util.Comparator;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -17,6 +19,12 @@ import java.util.Set;
  * {@code System.out}, {@code printStackTrace()}, or {@code java.util.logging.Logger}.
  * Apply this recipe before the transforms that actually rewrite those calls to
  * log statements.
+ *
+ * <p>When {@code requireLombokOnClasspath} is set, the annotation is only added
+ * in source files whose classpath actually contains {@code lombok.extern.slf4j.Slf4j}.
+ * Recipes that manage their own dependency set (like {@code SystemOutToSlf4jRecipe})
+ * can leave this off; the {@code *NoDeps} variants turn it on so they don't drop
+ * an {@code @Slf4j} in a module that has no Lombok.
  */
 @NullMarked
 public class AddLombokSlf4jAnnotation extends Recipe {
@@ -41,6 +49,27 @@ public class AddLombokSlf4jAnnotation extends Recipe {
 
     private static final Set<String> LOGGER_FIELD_NAMES = Set.of("log", "logger", "LOG", "LOGGER");
 
+    @Option(displayName = "Require Lombok on classpath",
+            description = "When true, only add @Slf4j in source files where " +
+                    "lombok.extern.slf4j.Slf4j is resolvable on the classpath. " +
+                    "Use this in setups that don't add Lombok as part of the recipe run " +
+                    "(e.g. multi-module projects where Lombok lives on only some modules).",
+            required = false)
+    private final boolean requireLombokOnClasspath;
+
+    public AddLombokSlf4jAnnotation() {
+        this(false);
+    }
+
+    public AddLombokSlf4jAnnotation(final boolean requireLombokOnClasspath) {
+        this.requireLombokOnClasspath = requireLombokOnClasspath;
+    }
+
+    @SuppressWarnings("unused")
+    public boolean isRequireLombokOnClasspath() {
+        return requireLombokOnClasspath;
+    }
+
     @Override
     public String getDisplayName() {
         return "Add Lombok @Slf4j annotation to classes";
@@ -53,11 +82,33 @@ public class AddLombokSlf4jAnnotation extends Recipe {
     }
 
     @Override
+    public boolean equals(final Object o) {
+        if (this == o) return true;
+        if (!(o instanceof AddLombokSlf4jAnnotation other)) return false;
+        return requireLombokOnClasspath == other.requireLombokOnClasspath;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(requireLombokOnClasspath);
+    }
+
+    @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
-        return new AddAnnotationVisitor();
+        return new AddAnnotationVisitor(requireLombokOnClasspath);
     }
 
     static class AddAnnotationVisitor extends JavaIsoVisitor<ExecutionContext> {
+
+        private final boolean requireLombokOnClasspath;
+
+        AddAnnotationVisitor() {
+            this(false);
+        }
+
+        AddAnnotationVisitor(final boolean requireLombokOnClasspath) {
+            this.requireLombokOnClasspath = requireLombokOnClasspath;
+        }
 
         @Override
         public J.ClassDeclaration visitClassDeclaration(final J.ClassDeclaration classDecl, final ExecutionContext ctx) {
@@ -70,6 +121,9 @@ public class AddLombokSlf4jAnnotation extends Recipe {
                 return classDecl;
             }
             if (hasExplicitLoggerField(classDecl) && !hasJul) {
+                return classDecl;
+            }
+            if (requireLombokOnClasspath && !LombokClasspathGate.isAvailable(getCursor())) {
                 return classDecl;
             }
             return addSlf4jAnnotation(classDecl);

@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "io.github.fiftieshousewife"
-version = "0.5"
+version = "0.6"
 
 repositories {
     mavenCentral()
@@ -31,6 +31,7 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.assertj.core)
     testImplementation(libs.openrewrite.test)
+    testImplementation(libs.openrewrite.properties)
 }
 
 tasks.withType<Test> {

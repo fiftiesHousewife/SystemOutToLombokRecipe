@@ -8,10 +8,14 @@ import org.openrewrite.SourceFile;
 import org.openrewrite.Tree;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
-import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
+import org.openrewrite.java.tree.JContainer;
+import org.openrewrite.java.tree.JLeftPadded;
+import org.openrewrite.java.tree.Space;
+import org.openrewrite.marker.Markers;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -122,11 +126,39 @@ public final class UseCatalogReferenceForDependency
                 if (!matchesModule(coordinates, module)) {
                     return visited;
                 }
-                return JavaTemplate.builder("#{}(" + catalogReference + ")")
-                        .build()
-                        .apply(getCursor(), visited.getCoordinates().replace(), visited.getSimpleName());
+                final Expression replacement = buildCatalogReference(catalogReference, literal.getPrefix())
+                        .withMarkers(literal.getMarkers());
+                final JContainer<Expression> newArgs = JContainer.withElements(
+                        visited.getPadding().getArguments(), List.of(replacement));
+                return visited.getPadding().withArguments(newArgs);
             }
         };
+    }
+
+    static Expression buildCatalogReference(final String reference, final Space prefix) {
+        final String[] parts = reference.split("\\.");
+        Expression expr = identifier(parts[0], prefix);
+        for (int i = 1; i < parts.length; i++) {
+            expr = new J.FieldAccess(
+                    Tree.randomId(),
+                    Space.EMPTY,
+                    Markers.EMPTY,
+                    expr,
+                    JLeftPadded.build(identifier(parts[i], Space.EMPTY)),
+                    null);
+        }
+        return expr;
+    }
+
+    private static J.Identifier identifier(final String name, final Space prefix) {
+        return new J.Identifier(
+                Tree.randomId(),
+                prefix,
+                Markers.EMPTY,
+                Collections.emptyList(),
+                name,
+                null,
+                null);
     }
 
     static boolean matchesModule(final String literal, final String module) {

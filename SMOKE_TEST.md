@@ -72,6 +72,81 @@ public class OrderService {
 }
 ```
 
+## 2a. Project-shape matrix (post-0.5)
+
+The single-module bootstrap in §2 covers only one corner of the shape matrix.
+For anything touching version catalogs, Groovy DSL support, or
+composite/`buildSrc` conventions, run the relevant template below. Each one is
+`rewriteDryRun` + `rewriteRun` + `compileJava` — same cycle as §2.
+
+### Template A — multi-module Kotlin DSL
+
+```bash
+TEST=/tmp/smoke-multi-kotlin-$(date +%s)
+mkdir -p "$TEST/gradle/wrapper" "$TEST/app/src/main/java/com/example" "$TEST/lib/src/main/java/com/example"
+cp gradle/wrapper/gradle-wrapper.* "$TEST/gradle/wrapper/"
+cp gradlew gradlew.bat "$TEST/" && chmod +x "$TEST/gradlew"
+cat > "$TEST/settings.gradle.kts" <<'EOF'
+rootProject.name = "smoke-multi"
+include("app", "lib")
+EOF
+# Root build.gradle.kts points at the local recipe jar with the chosen activeRecipe(...)
+# app/build.gradle.kts + lib/build.gradle.kts both declare the java plugin.
+# Drop a System.out-using class in each module's src/main/java/com/example.
+```
+
+Apply the recipe at the root — every subproject's Java + `build.gradle.kts`
+should transform, deps resolve, and `./gradlew :app:compileJava :lib:compileJava`
+should pass.
+
+### Template B — multi-module Groovy DSL
+
+Same shape as Template A but with `settings.gradle`, `app/build.gradle`,
+`lib/build.gradle` in Groovy DSL. Dependency lines use the paren-less command
+form: `compileOnly 'org.projectlombok:lombok:1.18.44'`. After the recipe runs,
+dependency declarations should rewrite to `compileOnly libs.lombok` — the
+paren-less form preserved (regression check for the Phase B1 fix).
+
+### Template C — composite `build-logic` (Kotlin)
+
+```bash
+TEST=/tmp/smoke-buildlogic-kotlin-$(date +%s)
+mkdir -p "$TEST/gradle/wrapper" \
+         "$TEST/build-logic/src/main/kotlin" \
+         "$TEST/build-logic/gradle" \
+         "$TEST/src/main/java/com/example"
+cp gradle/wrapper/gradle-wrapper.* "$TEST/gradle/wrapper/"
+cp gradlew gradlew.bat "$TEST/" && chmod +x "$TEST/gradlew"
+# settings.gradle.kts: includeBuild("build-logic")
+# build-logic/settings.gradle.kts: declares the `build-logic` included build
+# build-logic/build.gradle.kts: plugins { `kotlin-dsl` }; dependencies { implementation("org.projectlombok:lombok:1.18.44") }
+# build-logic/gradle/libs.versions.toml: minimal catalog with [versions]/[libraries] for lombok
+# Root build.gradle.kts applies the convention plugin + the recipe's active list
+```
+
+Recipe must rewrite the `implementation("org.projectlombok:lombok:…")` line in
+`build-logic/build.gradle.kts` to `implementation(libs.lombok)` using the
+`build-logic/gradle/libs.versions.toml` catalog.
+
+### Template D — composite `build-logic` (Groovy)
+
+Same as Template C but with `build-logic/build.gradle` (Groovy DSL) and
+`id 'groovy-gradle-plugin'`. The rewrite should produce
+`implementation libs.lombok` — paren-less. Also confirms the nested catalog is
+discovered by path suffix.
+
+### Expected outcomes
+
+| Template | Java rewritten | Build file rewritten | `compileJava` green |
+| --- | --- | --- | --- |
+| A | ✓ both modules | ✓ both modules | ✓ |
+| B | ✓ both modules | ✓ both modules (paren-less preserved) | ✓ |
+| C | ✓ | ✓ convention plugin | ✓ |
+| D | ✓ | ✓ convention plugin (paren-less) | ✓ |
+
+If any cell doesn't match this table, stop and diagnose — that's a regression
+on the project-shape matrix BACKLOG item.
+
 ## 3. Publish to Maven Local and resolve via coordinates
 
 ```bash

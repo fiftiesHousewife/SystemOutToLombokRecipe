@@ -1,10 +1,16 @@
 package io.github.fiftieshousewife.recipes;
 
 import org.junit.jupiter.api.Test;
+import org.openrewrite.Tree;
 import org.openrewrite.java.JavaParser;
+import org.openrewrite.java.marker.JavaSourceSet;
+import org.openrewrite.java.tree.JavaType;
 import org.openrewrite.test.RecipeSpec;
 import org.openrewrite.test.RewriteTest;
 import org.openrewrite.test.TypeValidation;
+
+import java.util.Collections;
+import java.util.List;
 
 import static org.openrewrite.java.Assertions.java;
 
@@ -161,5 +167,68 @@ class ConvertManualLoggerToSlf4jTest implements RewriteTest {
                                 """
                 )
         );
+    }
+
+    @Test
+    void skipsConversion_whenRequireLombokIsTrueAndClasspathLacksLombok() {
+        rewriteRun(
+                spec -> spec.recipe(new ConvertManualLoggerToSlf4j(true)),
+                java(
+                        """
+                                import org.apache.logging.log4j.LogManager;
+                                import org.apache.logging.log4j.Logger;
+
+                                public class Foo {
+                                    private static final Logger log = LogManager.getLogger(Foo.class);
+
+                                    void run() {
+                                        log.info("hello");
+                                    }
+                                }
+                                """,
+                        spec -> spec.markers(sourceSetWith("java.util.List"))
+                )
+        );
+    }
+
+    @Test
+    void convertsLogger_whenRequireLombokIsTrueAndClasspathContainsLombok() {
+        rewriteRun(
+                spec -> spec.recipe(new ConvertManualLoggerToSlf4j(true)),
+                java(
+                        """
+                                import org.apache.logging.log4j.LogManager;
+                                import org.apache.logging.log4j.Logger;
+
+                                public class Foo {
+                                    private static final Logger log = LogManager.getLogger(Foo.class);
+
+                                    void run() {
+                                        log.info("hello");
+                                    }
+                                }
+                                """,
+                        """
+                                import lombok.extern.slf4j.Slf4j;
+
+                                @Slf4j
+                                public class Foo {
+
+                                    void run() {
+                                        log.info("hello");
+                                    }
+                                }
+                                """,
+                        spec -> spec.markers(sourceSetWith(LoggerNames.LOMBOK_SLF4J))
+                )
+        );
+    }
+
+    private static JavaSourceSet sourceSetWith(String... fqTypes) {
+        return new JavaSourceSet(Tree.randomId(), "main",
+                java.util.Arrays.stream(fqTypes)
+                        .<JavaType.FullyQualified>map(JavaType.ShallowClass::build)
+                        .toList(),
+                Collections.emptyMap());
     }
 }

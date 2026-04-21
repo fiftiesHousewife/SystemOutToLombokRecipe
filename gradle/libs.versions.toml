@@ -14,6 +14,7 @@ spotbugs = "6.5.1"
 openrewrite-recipe-bom = { module = "org.openrewrite.recipe:rewrite-recipe-bom", version.ref = "openrewrite-bom" }
 openrewrite-java = { module = "org.openrewrite:rewrite-java", version.ref = "openrewrite-core" }
 openrewrite-toml = { module = "org.openrewrite:rewrite-toml", version.ref = "openrewrite-core" }
+openrewrite-properties = { module = "org.openrewrite:rewrite-properties", version.ref = "openrewrite-core" }
 openrewrite-java8 = { module = "org.openrewrite:rewrite-java-8", version.ref = "openrewrite-core" }
 openrewrite-java11 = { module = "org.openrewrite:rewrite-java-11", version.ref = "openrewrite-core" }
 openrewrite-java17 = { module = "org.openrewrite:rewrite-java-17", version.ref = "openrewrite-core" }

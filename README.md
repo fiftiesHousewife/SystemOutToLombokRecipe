@@ -45,6 +45,24 @@ A companion recipe, `ConvertManualLoggerToSlf4jRecipe`, handles the separate cas
 
 Supports transforming source code written in Java 8 through Java 25.
 
+## Supported project shapes
+
+Exercised by the matrix tests under `src/test/java/io/github/fiftieshousewife/recipes/matrix/` and pre-release smoke-tested against real Gradle projects (`SMOKE_TEST.md` §2a).
+
+| Dimension | Supported | Notes |
+| --- | --- | --- |
+| Kotlin DSL (`build.gradle.kts`) | ✓ | Catalog references emit `compileOnly(libs.lombok)`. |
+| Groovy DSL (`build.gradle`) | ✓ | Catalog references preserve the idiomatic paren-less form: `compileOnly libs.lombok`. |
+| Version catalog (`gradle/libs.versions.toml`) | ✓ | Auto-detected; when present, inline deps rewrite to `libs.xxx`. |
+| Inline `"group:artifact:version"` deps | ✓ | Left as-is when there's no catalog. |
+| `gradle.properties`-interpolated versions (`${someVersion}`) | ✓ don't-regress | GString / Kotlin template interpolations are left alone (not rewritten, not double-added). |
+| Single-module | ✓ | |
+| Multi-module | ✓ | Each subproject is processed independently. |
+| `build-logic` / composite convention plugins (with their own nested `gradle/libs.versions.toml`) | ✓ | The convention plugin's build file is rewritten using its own catalog. |
+| `buildSrc` convention plugins | ✓ | Same as a regular subproject; uses the root catalog. |
+
+If you hit a shape that's not listed, please open an issue with a minimal reproducer.
+
 ## Quick Start
 
 ```bash
@@ -120,6 +138,20 @@ rewrite {
 }
 ```
 
+### `MigrateToSlf4jRecipe` — everything at once
+
+Does what `SystemOutToSlf4jRecipe` does **plus** the hand-rolled Log4j2 conversion below, in a single pass. Use this when your codebase has a mix of several of these patterns (a `System.out.println` here, a `java.util.logging.Logger` there, a `private static final Logger log = LogManager.getLogger(…)` over there) so you don't have to run two recipes in sequence.
+
+The focused recipes (`SystemOutToSlf4jRecipe`, `ConvertManualLoggerToSlf4jRecipe`) still exist and run faster — use them if you only have one pattern to fix.
+
+```kotlin
+rewrite {
+    activeRecipe("io.github.fiftieshousewife.MigrateToSlf4jRecipe")
+}
+```
+
+A `NoDeps` variant (`MigrateToSlf4jRecipeNoDeps`) exists for projects that manage dependencies at a parent level.
+
 ## Migrating existing Log4j2 code
 
 If your codebase already uses Log4j2 but declares `Logger` fields by hand (`private static final Logger log = LogManager.getLogger(X.class);`), `ConvertManualLoggerToSlf4jRecipe` removes that boilerplate:
@@ -136,7 +168,7 @@ rewrite {
 }
 ```
 
-A `NoDeps` variant (`ConvertManualLoggerToSlf4jRecipeNoDeps`) exists for projects that manage Lombok separately.
+A `NoDeps` variant (`ConvertManualLoggerToSlf4jRecipeNoDeps`) exists for projects that manage Lombok separately. If you have both this *and* `System.out` / JUL patterns to migrate, see `MigrateToSlf4jRecipe` above.
 
 ## Logging configuration
 
@@ -332,6 +364,8 @@ These transforms are motivated by a few principles from Robert C. Martin's *Clea
 **Recipe not found**: Ensure the dependency coordinates and version in your TOML match exactly.
 
 **Build fails after transformation**: Verify dependencies and `log4j2.xml` were added correctly.
+
+**`build.gradle.kts` looks mangled after the rewrite**: if your original `dependencies { ... }` block was on a single line, OpenRewrite inserts new lines with mixed indentation and a dangling closing `}`. It's cosmetic — the build still resolves. Run your formatter of choice (ktfmt, spotless, or the IDE's reformat) afterwards to clean it up.
 
 **Debug recipes**:
 ```bash

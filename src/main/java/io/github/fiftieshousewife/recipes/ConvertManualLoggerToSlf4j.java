@@ -3,6 +3,7 @@ package io.github.fiftieshousewife.recipes;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.openrewrite.ExecutionContext;
+import org.openrewrite.Option;
 import org.openrewrite.Recipe;
 import org.openrewrite.Tree;
 import org.openrewrite.TreeVisitor;
@@ -16,6 +17,7 @@ import org.openrewrite.java.tree.TypeUtils;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -37,9 +39,32 @@ import java.util.Optional;
  * Renames usages of the old field to {@code log} to match the Lombok-generated
  * field. Removes the {@code org.apache.logging.log4j.Logger} and
  * {@code LogManager} imports when they are no longer used.
+ *
+ * <p>When {@code requireLombokOnClasspath} is set, the conversion is skipped
+ * for source files whose classpath doesn't contain
+ * {@code lombok.extern.slf4j.Slf4j}.
  */
 @NullMarked
 public class ConvertManualLoggerToSlf4j extends Recipe {
+
+    @Option(displayName = "Require Lombok on classpath",
+            description = "When true, only convert manual loggers in source files where " +
+                    "lombok.extern.slf4j.Slf4j is resolvable on the classpath.",
+            required = false)
+    private final boolean requireLombokOnClasspath;
+
+    public ConvertManualLoggerToSlf4j() {
+        this(false);
+    }
+
+    public ConvertManualLoggerToSlf4j(final boolean requireLombokOnClasspath) {
+        this.requireLombokOnClasspath = requireLombokOnClasspath;
+    }
+
+    @SuppressWarnings("unused")
+    public boolean isRequireLombokOnClasspath() {
+        return requireLombokOnClasspath;
+    }
 
     @Override
     public String getDisplayName() {
@@ -51,6 +76,18 @@ public class ConvertManualLoggerToSlf4j extends Recipe {
         return "Finds classes that declare a `private static final Logger` field initialised from "
                 + "`LogManager.getLogger(...)`, replaces them with Lombok's `@Slf4j` annotation, "
                 + "and renames references to the old field so they use the Lombok-generated `log`.";
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ConvertManualLoggerToSlf4j other)) return false;
+        return requireLombokOnClasspath == other.requireLombokOnClasspath;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(requireLombokOnClasspath);
     }
 
     @Override
@@ -72,6 +109,9 @@ public class ConvertManualLoggerToSlf4j extends Recipe {
                     return visited;
                 }
                 if (findManualLog4j2Field(visited).isEmpty()) {
+                    return visited;
+                }
+                if (requireLombokOnClasspath && !LombokClasspathGate.isAvailable(getCursor())) {
                     return visited;
                 }
 

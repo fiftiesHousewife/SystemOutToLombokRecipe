@@ -1,9 +1,15 @@
 package io.github.fiftieshousewife.recipes;
 
 import org.junit.jupiter.api.Test;
+import org.openrewrite.Tree;
+import org.openrewrite.java.marker.JavaSourceSet;
+import org.openrewrite.java.tree.JavaType;
 import org.openrewrite.test.RecipeSpec;
 import org.openrewrite.test.RewriteTest;
 import org.openrewrite.test.TypeValidation;
+
+import java.util.Collections;
+import java.util.List;
 
 import static org.openrewrite.java.Assertions.java;
 
@@ -13,6 +19,14 @@ class AddLombokSlf4jAnnotationTest implements RewriteTest {
     public void defaults(RecipeSpec spec) {
         spec.recipe(new AddLombokSlf4jAnnotation())
             .afterTypeValidationOptions(TypeValidation.none());
+    }
+
+    private static JavaSourceSet sourceSetWith(String... fqTypes) {
+        return new JavaSourceSet(Tree.randomId(), "main",
+                java.util.Arrays.stream(fqTypes)
+                        .<JavaType.FullyQualified>map(JavaType.ShallowClass::build)
+                        .toList(),
+                Collections.emptyMap());
     }
 
     @Test
@@ -216,6 +230,77 @@ class AddLombokSlf4jAnnotationTest implements RewriteTest {
 
                             public void doSomething() {
                                 System.out.println("skip me");
+                            }
+                        }
+                        """
+                )
+        );
+    }
+
+    @Test
+    void skipsAnnotation_whenRequireLombokIsTrueAndClasspathLacksLombok() {
+        rewriteRun(
+                spec -> spec.recipe(new AddLombokSlf4jAnnotation(true))
+                        .afterTypeValidationOptions(TypeValidation.none()),
+                java(
+                        """
+                        package com.example;
+
+                        public class MyClass {
+                            public void doSomething() {
+                                System.out.println("Hello World");
+                            }
+                        }
+                        """,
+                        spec -> spec.markers(sourceSetWith("java.util.List"))
+                )
+        );
+    }
+
+    @Test
+    void addsAnnotation_whenRequireLombokIsTrueAndClasspathContainsLombok() {
+        rewriteRun(
+                spec -> spec.recipe(new AddLombokSlf4jAnnotation(true))
+                        .afterTypeValidationOptions(TypeValidation.none()),
+                java(
+                        """
+                        package com.example;
+
+                        public class MyClass {
+                            public void doSomething() {
+                                System.out.println("Hello World");
+                            }
+                        }
+                        """,
+                        """
+                        package com.example;
+
+                        import lombok.extern.slf4j.Slf4j;
+
+                        @Slf4j
+                        public class MyClass {
+                            public void doSomething() {
+                                System.out.println("Hello World");
+                            }
+                        }
+                        """,
+                        spec -> spec.markers(sourceSetWith(LoggerNames.LOMBOK_SLF4J))
+                )
+        );
+    }
+
+    @Test
+    void skipsAnnotation_whenRequireLombokIsTrueAndNoSourceSetMarker() {
+        rewriteRun(
+                spec -> spec.recipe(new AddLombokSlf4jAnnotation(true))
+                        .afterTypeValidationOptions(TypeValidation.none()),
+                java(
+                        """
+                        package com.example;
+
+                        public class MyClass {
+                            public void doSomething() {
+                                System.out.println("Hello World");
                             }
                         }
                         """
