@@ -107,57 +107,77 @@ form: `compileOnly 'org.projectlombok:lombok:1.18.44'`. After the recipe runs,
 dependency declarations should rewrite to `compileOnly libs.lombok` — the
 paren-less form preserved (regression check for the Phase B1 fix).
 
-### Template C — composite `build-logic` (Kotlin)
+### Template C — Kotlin with `build-logic` subproject (`include`)
 
 ```bash
 TEST=/tmp/smoke-buildlogic-kotlin-$(date +%s)
 mkdir -p "$TEST/gradle/wrapper" \
-         "$TEST/build-logic/src/main/kotlin" \
-         "$TEST/build-logic/gradle" \
-         "$TEST/src/main/java/com/example"
+         "$TEST/app/src/main/java/com/example" \
+         "$TEST/build-logic"
 cp gradle/wrapper/gradle-wrapper.* "$TEST/gradle/wrapper/"
 cp gradlew gradlew.bat "$TEST/" && chmod +x "$TEST/gradlew"
-# settings.gradle.kts: includeBuild("build-logic")
-# build-logic/settings.gradle.kts: declares the `build-logic` included build
-# build-logic/build.gradle.kts: plugins { `kotlin-dsl` }; dependencies { implementation("org.projectlombok:lombok:1.18.44") }
-# build-logic/gradle/libs.versions.toml: minimal catalog with [versions]/[libraries] for lombok
-# Root build.gradle.kts applies the convention plugin + the recipe's active list
+# settings.gradle.kts: include("app", "build-logic")
+# gradle/libs.versions.toml: empty [versions]/[libraries] tables — recipe will populate
+# build.gradle.kts (root): rewrite plugin + activeRecipe + subprojects { apply(plugin = "java") }
+# app/build.gradle.kts, build-logic/build.gradle.kts: inline Lombok deps
 ```
 
-Recipe must rewrite the `implementation("org.projectlombok:lombok:…")` line in
-`build-logic/build.gradle.kts` to `implementation(libs.lombok)` using the
-`build-logic/gradle/libs.versions.toml` catalog.
+With `include`, build-logic is a regular subproject. Gradle's catalog
+resolution uses the single root `gradle/libs.versions.toml`. One
+`./gradlew rewriteRun` at the root rewrites every subproject's build file,
+seeds the root catalog, and transforms any Java sources.
 
-**Composite-build caveat**: `includeBuild` makes `build-logic` a separate
-Gradle build, not a subproject. The OpenRewrite plugin at the outer build
-does NOT reach into it. To rewrite both, apply the plugin in each build
-and run the recipe twice:
+### Template D — Groovy with `build-logic` subproject (`include`)
+
+Same layout as Template C but with `settings.gradle`, `build.gradle`,
+`app/build.gradle`, `build-logic/build.gradle` in Groovy DSL and paren-less
+dependency declarations. Rewritten output should produce `compileOnly
+libs.lombok` — paren-less form preserved.
+
+### Template E — Kotlin composite build (`includeBuild`)
 
 ```bash
-cd "$TEST" && ./gradlew rewriteRun        # outer build
-cd "$TEST/build-logic" && ./gradlew rewriteRun  # included build
+TEST=/tmp/smoke-composite-kotlin-$(date +%s)
+mkdir -p "$TEST/gradle/wrapper" \
+         "$TEST/src/main/java/com/example" \
+         "$TEST/build-logic/gradle/wrapper" \
+         "$TEST/build-logic/gradle"
+cp gradle/wrapper/gradle-wrapper.* "$TEST/gradle/wrapper/" "$TEST/build-logic/gradle/wrapper/"
+cp gradlew gradlew.bat "$TEST/" "$TEST/build-logic/"
+chmod +x "$TEST/gradlew" "$TEST/build-logic/gradlew"
+# settings.gradle.kts: includeBuild("build-logic")
+# build-logic/settings.gradle.kts: rootProject.name = "build-logic"
+# EACH build has its own gradle/libs.versions.toml and its own build.gradle.kts
+# EACH build applies the rewrite plugin and activates the recipe
 ```
 
-If `build-logic` is instead a regular subproject (`include("build-logic")`
-in `settings.gradle.kts` rather than `includeBuild(...)`), a single outer
-rewrite pass handles everything — but then the project has one root
-catalog, not a nested one.
+With `includeBuild`, build-logic is a separate Gradle build. The outer
+rewrite pass does NOT reach into it. Run the recipe in **each build**:
 
-### Template D — composite `build-logic` (Groovy)
+```bash
+cd "$TEST" && ./gradlew rewriteRun               # outer build
+cd "$TEST/build-logic" && ./gradlew rewriteRun   # included build
+```
 
-Same as Template C but with `build-logic/build.gradle` (Groovy DSL) and
-`id 'groovy-gradle-plugin'`. The rewrite should produce
-`implementation libs.lombok` — paren-less. Also confirms the nested catalog is
-discovered by path suffix.
+Each build's own `gradle/libs.versions.toml` gets seeded; each build's own
+build file is rewritten to use the local catalog.
+
+### Template F — Groovy composite build (`includeBuild`)
+
+Same structure as Template E but with `settings.gradle`, `build.gradle`,
+and `build-logic/build.gradle` in Groovy DSL. Same two-pass rewrite.
+Idiomatic paren-less form preserved in both builds.
 
 ### Expected outcomes
 
-| Template | Java rewritten | Build file rewritten | `compileJava` green |
-| --- | --- | --- | --- |
-| A | ✓ both modules | ✓ both modules | ✓ |
-| B | ✓ both modules | ✓ both modules (paren-less preserved) | ✓ |
-| C | ✓ | ✓ convention plugin | ✓ |
-| D | ✓ | ✓ convention plugin (paren-less) | ✓ |
+| Template | Rewrite invocations | Java rewritten | Build file rewritten | `compileJava` green |
+| --- | --- | --- | --- | --- |
+| A | 1× at root | ✓ both modules | ✓ both modules | ✓ |
+| B | 1× at root | ✓ both modules | ✓ both modules (paren-less preserved) | ✓ |
+| C | 1× at root | ✓ app | ✓ app + build-logic | ✓ |
+| D | 1× at root | ✓ app | ✓ app + build-logic (paren-less) | ✓ |
+| E | 2× (outer + `build-logic`) | ✓ outer | ✓ both builds, each via its own catalog | ✓ |
+| F | 2× (outer + `build-logic`) | ✓ outer | ✓ both builds (paren-less) | ✓ |
 
 If any cell doesn't match this table, stop and diagnose — that's a regression
 on the project-shape matrix BACKLOG item.
