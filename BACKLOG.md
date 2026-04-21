@@ -12,7 +12,13 @@
 
 - **Per-module Lombok classpath gating (from 0.5 user feedback)** — the `*RecipeNoDeps` variants add `@Slf4j` to every matching class unconditionally, even in modules that don't actually have Lombok on their classpath. Consumer project reports "0.5 does NOT close the per-module Lombok classpath-gating gap (the NoDeps variant still adds `@Slf4j` unconditionally); version pinned at 0.5, recipe remains commented out." Fix: before `AddLombokSlf4jAnnotation` writes the annotation, verify Lombok (`lombok.extern.slf4j.Slf4j`) is resolvable on the current source's classpath — probably via `JavaSourceSet` / `JavaProject` markers OpenRewrite attaches at parse time, or a `UsesType`-style pre-check. Highest priority on this list — currently blocking at least one real user.
 
-- **Groovy DSL (`build.gradle`) coverage** — only `build.gradle.kts` is smoke-tested. OpenRewrite's `AddDependency` handles both, but we haven't exercised the Groovy path. Fix is probably "run the existing smoke test on a Groovy-DSL sample and patch whatever breaks".
+- **Extensive project-shape test matrix** — the `/tmp` smoke test only covers a single-module Kotlin DSL project. Real users come in many shapes; we need to sweep the matrix:
+  - **Build-script language**: Kotlin DSL (`build.gradle.kts`) × Groovy DSL (`build.gradle`).
+  - **Dependency declaration style**: version catalog × inline.
+  - **Project topology**: single-module × multi-module with subprojects.
+  - **Plugin convention**: plain project × `buildSrc`/convention-plugin project × Gradle `build-logic` composite-build plugin (deps declared in a separate convention plugin module).
+
+  Each combination should run both top-level recipes (`SystemOutToSlf4jRecipe`, `ConvertManualLoggerToSlf4jRecipe`) end-to-end and compile the result. That's where per-module classpath gating, catalog detection, and AddDependency quirks will actually get stressed.
 
 - **GitHub Packages publish** — the attempt during 0.1 got 403 because the ambient `GITHUB_TOKEN` lacks `write:packages`. Maven Central is doing the heavy lifting so this is a belt-and-braces extra, but still nominally open if we want the mirror.
 
