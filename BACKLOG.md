@@ -8,6 +8,8 @@
 
 ## Active
 
+- **Roll JUL fixing and vanilla Log4j2 migration into the top-level recipe** — today `SystemOutToSlf4jRecipe` handles `System.out` / `printStackTrace` / JUL, while `ConvertManualLoggerToSlf4jRecipe` handles hand-rolled Log4j2 `Logger log = LogManager.getLogger(…)` fields. A codebase that has a mix of all four patterns currently needs two separate `rewriteRun` invocations. Compose them into a single top-level recipe so callers run one thing and everything gets converted. Keep the focused sub-recipes available for people who want them individually.
+
 - **Per-module Lombok classpath gating (from 0.5 user feedback)** — the `*RecipeNoDeps` variants add `@Slf4j` to every matching class unconditionally, even in modules that don't actually have Lombok on their classpath. Consumer project reports "0.5 does NOT close the per-module Lombok classpath-gating gap (the NoDeps variant still adds `@Slf4j` unconditionally); version pinned at 0.5, recipe remains commented out." Fix: before `AddLombokSlf4jAnnotation` writes the annotation, verify Lombok (`lombok.extern.slf4j.Slf4j`) is resolvable on the current source's classpath — probably via `JavaSourceSet` / `JavaProject` markers OpenRewrite attaches at parse time, or a `UsesType`-style pre-check. Highest priority on this list — currently blocking at least one real user.
 
 - **Groovy DSL (`build.gradle`) coverage** — only `build.gradle.kts` is smoke-tested. OpenRewrite's `AddDependency` handles both, but we haven't exercised the Groovy path. Fix is probably "run the existing smoke test on a Groovy-DSL sample and patch whatever breaks".
