@@ -1,23 +1,27 @@
 # Backlog
 
-## 0.3 — Shipped
+## Shipped
 
-- **Catalog entries populated automatically**: `AddVersionCatalogEntry` recipe using `rewrite-toml` LST adds entries to `[versions]` and `[libraries]` when they aren't already present.
-- **`SystemOutToLombokLog4jRecipeCatalog` composition**: runs the catalog entries + Java transforms + `log4j2.xml` creation in one shot. Verified end-to-end against a sample Gradle catalog project.
+- **0.3** — version-catalog-aware `SystemOutToLombokLog4jRecipeCatalog` composition.
+- **0.4** — catalog auto-wired into `build.gradle.kts`; JUL conversion; manual-Log4j2-logger migration; production-ready `log4j2.xml` + console-only `log4j2-test.xml`; pre-release `SMOKE_TEST.md`.
+- **0.5** — pivot to `@Slf4j` + SLF4J API + Log4j2 backend (via `log4j-slf4j2-impl`); unified catalog auto-detect in a single `SystemOutToSlf4jRecipe`; JUL field and import cleaned up after call conversion; deps pinned to explicit versions; recipe family renamed accordingly (`SystemOutToSlf4jRecipe`, `ConvertManualLoggerToSlf4jRecipe`, `AddSlf4jDependencies`, `AddLombokDependency`).
 
-## 0.4 — Ready to ship
+## Active
 
-- ✅ **`log4j2.xml` review**: main config now includes a `RollingFile` appender (daily + 10 MB gzip rollover, 10 files kept) on top of stdout/stderr routing. A companion `src/test/resources/log4j2-test.xml` (console only) prevents tests from writing into `./logs/`. The XML templates are factored into a shared `CreateLog4j2Config` sub-recipe, and the Java transforms into `JavaTransforms` — three top-level recipes compose these cleanly.
-- ✅ **`java.util.logging` fixer**: `JulToLombokLog4j` recipe maps `severe/warning/info/config/fine/finer/finest` to the corresponding Lombok `log.xxx` calls. `AddLombokLog4j2Annotation` was extended to trigger on JUL usage as well, so JUL-using classes get `@Log4j2` when the default composition runs.
-- ✅ **Manual-logger → Lombok migration**: `ConvertManualLog4j2ToLombok` recipe for codebases that already use Log4j2 with hand-rolled `private static final Logger log = LogManager.getLogger(...)` fields. Adds `@Log4j2`, removes the field, renames `logger`/`LOG`/`LOGGER` references to `log`, and cleans up now-unused Logger/LogManager imports. Three YAML variants (`ConvertManualLog4j2ToLombokRecipe` inline deps, NoDeps, Catalog). Verified end-to-end against a sample project; transformed code compiles.
-- ✅ **Auto-wire `build.gradle.kts`**: the Catalog variant now fills in `compileOnly(libs.lombok)`, `annotationProcessor(libs.lombok)`, `implementation(libs.log4jApi)`, `runtimeOnly(libs.log4jCore)` automatically via `org.openrewrite.gradle.AddDependency` followed by the custom `UseCatalogReferenceForDependency` post-processor. Verified end-to-end — transformed catalog project compiles from scratch.
-- ✅ **Pre-release smoke-test checklist** (`SMOKE_TEST.md`): codifies the "build jar → fresh sample project → `rewriteRun` → `compileJava`" flow for each variant as a documented gate.
+- **Per-module Lombok classpath gating (from 0.5 user feedback)** — the `*RecipeNoDeps` variants add `@Slf4j` to every matching class unconditionally, even in modules that don't actually have Lombok on their classpath. Consumer project reports "0.5 does NOT close the per-module Lombok classpath-gating gap (the NoDeps variant still adds `@Slf4j` unconditionally); version pinned at 0.5, recipe remains commented out." Fix: before `AddLombokSlf4jAnnotation` writes the annotation, verify Lombok (`lombok.extern.slf4j.Slf4j`) is resolvable on the current source's classpath — probably via `JavaSourceSet` / `JavaProject` markers OpenRewrite attaches at parse time, or a `UsesType`-style pre-check. Highest priority on this list — currently blocking at least one real user.
 
-## Future
+- **Groovy DSL (`build.gradle`) coverage** — only `build.gradle.kts` is smoke-tested. OpenRewrite's `AddDependency` handles both, but we haven't exercised the Groovy path. Fix is probably "run the existing smoke test on a Groovy-DSL sample and patch whatever breaks".
 
-- **Dependabot for pinned recipe versions**: our recipe YAML hard-codes `1.18.44` (Lombok) and `2.25.4` (log4j2). Dependabot/Renovate doesn't watch string literals in YAML by default — a small custom manifest or a GitHub Action that queries Maven Central and opens a bump PR would keep us honest without a release-time ritual.
+- **GitHub Packages publish** — the attempt during 0.1 got 403 because the ambient `GITHUB_TOKEN` lacks `write:packages`. Maven Central is doing the heavy lifting so this is a belt-and-braces extra, but still nominally open if we want the mirror.
 
-- **Log-and-throw pattern**: detect `log.error(msg, e); throw ...;` and remove the log call so the exception isn't double-reported. Needs to consider exception swallowing and boundary handling — decide where the error is actually logged (boundary) vs. rethrown silently (internal).
-- **SLF4J path**: today we assume Log4j2 is the target. A parallel family of recipes for SLF4J + Logback (`@Slf4j` annotation, `logback.xml` instead of `log4j2.xml`) would cover the other common logging stack.
-- **Groovy DSL coverage**: `build.gradle` (Groovy) isn't tested. The Kotlin DSL path is verified; extending to `.gradle` would widen the audience.
-- **Local code-quality sweep**: next session's focus per pippa — tighten this repo's own internals (naming, comments, dead code, test structure) now that the feature set is filling out.
+- **RewriteTest multi-source integration harness** — the OpenRewrite-idiomatic way to verify composed recipes (`java()` + `buildGradleKts()` + `toml()` in one `rewriteRun`) needs `withToolingApi()`, which pulls in Gradle's full tooling runtime from a non-Maven-Central repo. Tried and backed out. Worth revisiting if the project grows — meanwhile the `/tmp` smoke test in `SMOKE_TEST.md` is the verification gate.
+
+- **`AddDependency` dedup / ordering quirk** — when two `runtimeOnly` `AddDependency` calls target the same group (`org.apache.logging.log4j`), the second is dropped unless ordered before the first. We work around it by ordering `log4j-core` before `log4j-slf4j2-impl` in the YAML. Worth filing upstream at some point; a short comment in the YAML would help the next reader.
+
+- **`build.gradle.kts` formatting after transform** — when the original `dependencies { ... }` block is a single line, OpenRewrite inserts new lines with mixed indentation and a dangling `}`. Not fixable from our side; cosmetic; consumers can run a formatter. Worth a line in the README troubleshooting section.
+
+## Parked (re-open on request)
+
+- **Auto version-detection at recipe runtime** — for now we pin Lombok / SLF4J / Log4j2 versions explicitly and check Maven Central by hand pre-release (`SMOKE_TEST.md`). Full runtime-detection would be a custom recipe that queries Central when it runs.
+
+- **Log-and-throw cleanup** — detect `log.error(msg, e); throw …;` and drop the log so the exception isn't double-reported. Nontrivial because it needs to reason about whether the throw reaches a boundary where something else logs it. Explicitly deferred.
