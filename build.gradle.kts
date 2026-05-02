@@ -1,10 +1,10 @@
 plugins {
     java
-    jacoco
     alias(libs.plugins.openrewrite)
     alias(libs.plugins.versions)
     alias(libs.plugins.maven.publish)
-    alias(libs.plugins.spotbugs)
+    // jacoco + spotbugs are applied by the cleancode plugin; declare neither here.
+    alias(libs.plugins.cleancode)
 }
 
 group = "io.github.fiftieshousewife"
@@ -32,6 +32,8 @@ dependencies {
     testImplementation(libs.assertj.core)
     testImplementation(libs.openrewrite.test)
     testImplementation(libs.openrewrite.properties)
+    testImplementation(libs.openrewrite.gradle.tooling.api)
+    testImplementation(gradleApi())
 }
 
 tasks.withType<Test> {
@@ -91,6 +93,50 @@ java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(25))
     }
+}
+
+// Integration tests live in their own source set. They drive an embedded
+// Gradle daemon via withToolingApi(), and that daemon's bundled Groovy/ASM
+// (Gradle 8.14.3 by default) cannot read Java 25 bytecode (class major
+// version 69). So integrationTest compiles at release=21 and runs on a
+// JDK 21 launcher. Production code stays on release=17 and the rest of
+// the build keeps the JDK 25 toolchain.
+sourceSets {
+    create("integrationTest") {
+        java.srcDir("src/integrationTest/java")
+        resources.srcDir("src/integrationTest/resources")
+        compileClasspath += sourceSets.main.get().output + sourceSets.test.get().output
+        runtimeClasspath += sourceSets.main.get().output + sourceSets.test.get().output
+    }
+}
+
+configurations {
+    named("integrationTestImplementation") { extendsFrom(configurations.testImplementation.get()) }
+    named("integrationTestRuntimeOnly") { extendsFrom(configurations.testRuntimeOnly.get()) }
+}
+
+tasks.named<JavaCompile>("compileIntegrationTestJava") {
+    options.compilerArgs.add("-parameters")
+    options.release.set(21)
+}
+
+val integrationTest = tasks.register<Test>("integrationTest") {
+    description = "Runs integration tests that drive an embedded Gradle via withToolingApi()."
+    group = "verification"
+    useJUnitPlatform()
+
+    javaLauncher.set(javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    })
+
+    testClassesDirs = sourceSets["integrationTest"].output.classesDirs
+    classpath = sourceSets["integrationTest"].runtimeClasspath
+
+    shouldRunAfter(tasks.test)
+}
+
+tasks.check {
+    dependsOn(integrationTest)
 }
 
 mavenPublishing {

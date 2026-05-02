@@ -37,7 +37,7 @@ final class RemoveUnusedLoggerImports {
     }
 
     private static String simpleNameOf(String fqn) {
-        int dot = fqn.lastIndexOf('.');
+        final int dot = fqn.lastIndexOf('.');
         return dot < 0 ? fqn : fqn.substring(dot + 1);
     }
 

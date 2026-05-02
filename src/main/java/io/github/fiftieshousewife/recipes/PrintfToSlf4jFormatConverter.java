@@ -19,8 +19,8 @@ final class PrintfToSlf4jFormatConverter {
     private PrintfToSlf4jFormatConverter() {
     }
 
-    static String convert(String printfFormat) {
-        StringBuilder result = new StringBuilder();
+    static String convert(final String printfFormat) {
+        final StringBuilder result = new StringBuilder();
         int i = 0;
         while (i < printfFormat.length()) {
             if (printfFormat.charAt(i) != '%') {
@@ -32,7 +32,7 @@ final class PrintfToSlf4jFormatConverter {
                 result.append('%');
                 break;
             }
-            char specifier = printfFormat.charAt(i);
+            final char specifier = printfFormat.charAt(i);
             if (specifier == 'n') {
                 i++;
             } else if (specifier == '%') {
@@ -55,7 +55,7 @@ final class PrintfToSlf4jFormatConverter {
     }
 
     static int skipArgumentIndex(String format, int i) {
-        int mark = i;
+        final int mark = i;
         while (i < format.length() && Character.isDigit(format.charAt(i))) {
             i++;
         }
@@ -90,7 +90,7 @@ final class PrintfToSlf4jFormatConverter {
         if (i >= format.length()) {
             return i;
         }
-        char conv = format.charAt(i++);
+        final char conv = format.charAt(i++);
         if (isDateTimeConversion(conv) && i < format.length()) {
             i++;
         }

@@ -7,7 +7,7 @@ assertj = "4.0.0-M1"
 jspecify = "1.0.0"
 versions = "0.53.0"
 maven-publish = "0.36.0"
-spotbugs = "6.5.1"
+cleancode = "0.1.0"
 
 [libraries]
 # OpenRewrite
@@ -21,6 +21,7 @@ openrewrite-java17 = { module = "org.openrewrite:rewrite-java-17", version.ref =
 openrewrite-java21 = { module = "org.openrewrite:rewrite-java-21", version.ref = "openrewrite-core" }
 openrewrite-java25 = { module = "org.openrewrite:rewrite-java-25", version.ref = "openrewrite-core" }
 openrewrite-gradle = { module = "org.openrewrite:rewrite-gradle", version.ref = "openrewrite-core" }
+openrewrite-gradle-tooling-api = { module = "org.openrewrite.gradle.tooling:model", version.ref = "openrewrite-core" }
 openrewrite-test = { module = "org.openrewrite:rewrite-test", version.ref = "openrewrite-core" }
 
 # Testing
@@ -35,4 +36,4 @@ jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 openrewrite = { id = "org.openrewrite.rewrite", version.ref = "openrewrite" }
 versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
-spotbugs = { id = "com.github.spotbugs", version.ref = "spotbugs" }
+cleancode = { id = "io.github.fiftieshousewife.cleancode", version.ref = "cleancode" }

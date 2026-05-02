@@ -52,6 +52,10 @@ public class SystemOutToSlf4j extends Recipe {
             if (!isSystemOutOrErr(visited)) {
                 return visited;
             }
+            return dispatchByMethodName(visited);
+        }
+
+        private J.MethodInvocation dispatchByMethodName(final J.MethodInvocation visited) {
             final boolean isError = isSystemErr(visited);
             final String name = visited.getSimpleName();
             if ("println".equals(name) && PRINTLN.matches(visited)) {

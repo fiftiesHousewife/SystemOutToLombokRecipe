@@ -4,6 +4,14 @@ Run this checklist before tagging and publishing a new version. It exercises eac
 
 Takes ~10 minutes.
 
+> **Coverage note.** Single-module dependency-management behaviour (catalog
+> seeding, `AddDependency` configuration ordering) is now also covered by the
+> `integrationTest` source set, which uses `withToolingApi()` and resolves a
+> real `GradleProject` marker against Maven Central. That verifies what the
+> RewriteTest matrix can't — but it only models a single `forProjectDirectory`
+> call, so the multi-module and `includeBuild` shapes in §2a remain
+> bootstrap-only.
+
 ## 1. Build the local jar
 
 ```bash
