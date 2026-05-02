@@ -19,13 +19,21 @@
 
 - **Smoke-test automation Phase 2** — Phase 1 covers single-module §2 only; the Maven Central publish gate is in place via Phase 3. Still bootstrap-only: §2a Templates A–F (multi-module Kotlin + Groovy DSL, `include` build-logic, `includeBuild` composite); §3 mavenLocal coordinates round-trip across release-shaped consumer projects. Cost: ~1–1.5 days for §2a (each template has its own scaffolder), ~1 hr for §3.
 
-- **Re-enable Java 25 in integration tests** — bisect performed 2026-05-02 found the catalog regression is a **Gradle 9.x behaviour change**, not an `openrewrite-core` regression:
-  - `8.81.2` + Gradle **8.14.3** + JDK 21 launcher: ✅ both inline AND catalog tests pass.
-  - `8.81.2` + Gradle **9.4.1** + JDK 25: ❌ catalog test fails — `AddDependency` makes no changes to `build.gradle.kts` when `gradle/libs.versions.toml` is present, leaving the dependencies block absent. Inline test still passes.
-  - `8.81.1` + Gradle 9.4.1: rejects `-b` flag. (`isGradle9OrLater` gate landed in 8.81.2, so 8.81.2 is the *first* `openrewrite-core` that runs at all on Gradle 9.)
-  - `8.82.0-SNAPSHOT`: only `org.openrewrite.gradle.tooling:model` is published to OSSRH snapshots; the rest of `org.openrewrite:rewrite-*` are not, so the snapshot can't be tested without a different resolution path.
-  
-  Since 8.81.2 is the first version that runs on Gradle 9 *at all*, there is no earlier "good" version to bisect to. The catalog scenario diverges between Gradle 8.x and Gradle 9.x specifically — either the Tooling API in Gradle 9 returns a `GradleProject` model that confuses `AddDependency`'s catalog-detection branch, or `rewrite-gradle`'s build-script editing assumes a Gradle 8 AST shape. Path forward: file an issue against `openrewrite/rewrite-gradle` with the minimal repro (8.81.2 + 9.4.1 catalog scenario), wait for fix, or temporarily downgrade in-process integration tests to Gradle 8.x while production users on Gradle 9 are covered by the manual `SMOKE_TEST.md`. Current state: harness stays on JDK 21 + Gradle 8.x default until upstream fixes Gradle 9 catalog handling.
+- **Re-enable Java 25 in integration tests** — re-bisected 2026-05-02 (originally conflated JDK 25 and Gradle 9; the third cell isolated the trigger). Catalog regression is a **Gradle 9.x daemon** behaviour change in `org.openrewrite.gradle.AddDependency`, **independent of JDK launcher version**. `openrewrite-core 8.81.3` throughout, JDK 21 launcher throughout:
+
+  | Gradle daemon | inline | catalog |
+  |---|---|---|
+  | 8.14.3 | pass | pass |
+  | 9.0.0  | pass | **no edit to `build.gradle.kts`** |
+  | 9.4.1  | pass | **no edit to `build.gradle.kts`** |
+
+  Reproduces with `org.openrewrite.gradle.AddDependency` invoked directly (no project recipes wrapping it) — the bug is upstream, not in our composition. Inline dep declarations work fine on Gradle 9; only the catalog-aware code path in `AddDependency` fails.
+
+  Older `openrewrite-core` versions can't run on Gradle 9 at all: 8.81.1 and earlier reject the `-b` flag — the `isGradle9OrLater` gate landed in 8.81.2, so 8.81.2 is the *first* `openrewrite-core` that runs on Gradle 9. `8.82.0-SNAPSHOT` can't be tested because only `org.openrewrite.gradle.tooling:model` is published to OSSRH snapshots, not the full `rewrite-*` set.
+
+  **Not the same bug as #6132.** That one (JDK 25 launcher → Kotlin 1.9.x can't parse build.gradle.kts) was fixed by the K2 upgrade in #6766 (`kotlin-compiler-embeddable 2.2.0`). With K2 in place, inline scenarios work on JDK 25 + Gradle 9, but the catalog scenario still fails — confirming it's a separate bug.
+
+  Path forward: upstream issue draft saved to `UPSTREAM_ISSUE_DRAFT.md` (file at `https://github.com/openrewrite/rewrite/issues/new` — local `gh` token lacks write access to that repo). After filing, paste the issue URL back here. Production users on Gradle 9 are covered by the manual `SMOKE_TEST.md`. Current state: integrationTest stays on JDK 21 launcher + Gradle 8.x daemon until upstream fixes Gradle 9 catalog handling.
 
 ## Parked (re-open on request)
 
