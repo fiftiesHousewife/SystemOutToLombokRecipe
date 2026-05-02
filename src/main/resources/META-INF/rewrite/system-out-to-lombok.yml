@@ -113,9 +113,12 @@ description: >-
 recipeList:
   - io.github.fiftieshousewife.recipes.AddLombokSlf4jAnnotation:
       requireLombokOnClasspath: true
-  - io.github.fiftieshousewife.recipes.SystemOutToSlf4j
-  - io.github.fiftieshousewife.recipes.PrintStackTraceToLog
-  - io.github.fiftieshousewife.recipes.JulToSlf4j
+  - io.github.fiftieshousewife.recipes.SystemOutToSlf4j:
+      requireLombokOnClasspath: true
+  - io.github.fiftieshousewife.recipes.PrintStackTraceToLog:
+      requireLombokOnClasspath: true
+  - io.github.fiftieshousewife.recipes.JulToSlf4j:
+      requireLombokOnClasspath: true
 
 ---
 type: specs.openrewrite.org/v1beta/recipe

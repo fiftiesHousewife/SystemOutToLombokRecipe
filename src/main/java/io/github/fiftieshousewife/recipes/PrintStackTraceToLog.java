@@ -2,6 +2,7 @@ package io.github.fiftieshousewife.recipes;
 
 import org.jspecify.annotations.NullMarked;
 import org.openrewrite.ExecutionContext;
+import org.openrewrite.Option;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
@@ -9,15 +10,40 @@ import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.MethodMatcher;
 import org.openrewrite.java.tree.J;
 
+import java.util.Objects;
+
 /**
  * Replaces {@code exception.printStackTrace()} calls with {@code log.error(...)} statements.
  * Assumes the class has been annotated with {@code @Slf4j} (apply
  * {@link AddLombokSlf4jAnnotation} first).
+ *
+ * <p>When {@code requireLombokOnClasspath} is set, the rewrite is skipped in
+ * source files whose classpath doesn't contain {@code lombok.extern.slf4j.Slf4j}
+ * — without {@code @Slf4j} there is no {@code log} field for the rewrite to land on.
  */
 @NullMarked
 public class PrintStackTraceToLog extends Recipe {
 
     private static final MethodMatcher PRINT_STACK_TRACE = new MethodMatcher("java.lang.Throwable printStackTrace(..)");
+
+    @Option(displayName = "Require Lombok on classpath",
+            description = "When true, only rewrite printStackTrace calls in source files where " +
+                    "lombok.extern.slf4j.Slf4j is resolvable on the classpath.",
+            required = false)
+    private final boolean requireLombokOnClasspath;
+
+    public PrintStackTraceToLog() {
+        this(false);
+    }
+
+    public PrintStackTraceToLog(final boolean requireLombokOnClasspath) {
+        this.requireLombokOnClasspath = requireLombokOnClasspath;
+    }
+
+    @SuppressWarnings("unused")
+    public boolean isRequireLombokOnClasspath() {
+        return requireLombokOnClasspath;
+    }
 
     @Override
     public String getDisplayName() {
@@ -31,6 +57,18 @@ public class PrintStackTraceToLog extends Recipe {
     }
 
     @Override
+    public boolean equals(final Object o) {
+        if (this == o) return true;
+        if (!(o instanceof PrintStackTraceToLog other)) return false;
+        return requireLombokOnClasspath == other.requireLombokOnClasspath;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(requireLombokOnClasspath);
+    }
+
+    @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
         return new JavaIsoVisitor<>() {
             @Override
@@ -38,6 +76,9 @@ public class PrintStackTraceToLog extends Recipe {
                                                             final ExecutionContext ctx) {
                 final J.MethodInvocation visited = super.visitMethodInvocation(method, ctx);
                 if (!PRINT_STACK_TRACE.matches(visited) || visited.getSelect() == null) {
+                    return visited;
+                }
+                if (requireLombokOnClasspath && !LombokClasspathGate.isAvailable(getCursor())) {
                     return visited;
                 }
                 return JavaTemplate.builder("log.error(\"Exception occurred\", #{any()})")

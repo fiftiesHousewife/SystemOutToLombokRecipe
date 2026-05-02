@@ -3,6 +3,7 @@ package io.github.fiftieshousewife.recipes;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.openrewrite.ExecutionContext;
+import org.openrewrite.Option;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
@@ -17,6 +18,7 @@ import org.openrewrite.java.tree.TypeUtils;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -40,6 +42,9 @@ import java.util.Optional;
  * {@code private static final Logger logger = Logger.getLogger(...);} field
  * and nothing else in the class still references it, the field and its
  * {@code java.util.logging.Logger} import are removed.
+ *
+ * <p>When {@code requireLombokOnClasspath} is set, the rewrite is skipped in
+ * source files whose classpath doesn't contain {@code lombok.extern.slf4j.Slf4j}.
  */
 @NullMarked
 public class JulToSlf4j extends Recipe {
@@ -68,6 +73,25 @@ public class JulToSlf4j extends Recipe {
         return new MethodMatcher(JUL_LOGGER_FQN + " " + methodName + "(..)");
     }
 
+    @Option(displayName = "Require Lombok on classpath",
+            description = "When true, only rewrite JUL calls in source files where " +
+                    "lombok.extern.slf4j.Slf4j is resolvable on the classpath.",
+            required = false)
+    private final boolean requireLombokOnClasspath;
+
+    public JulToSlf4j() {
+        this(false);
+    }
+
+    public JulToSlf4j(final boolean requireLombokOnClasspath) {
+        this.requireLombokOnClasspath = requireLombokOnClasspath;
+    }
+
+    @SuppressWarnings("unused")
+    public boolean isRequireLombokOnClasspath() {
+        return requireLombokOnClasspath;
+    }
+
     @Override
     public String getDisplayName() {
         return "Replace java.util.logging calls with Lombok log statements";
@@ -79,6 +103,18 @@ public class JulToSlf4j extends Recipe {
                 + "(severe/warning/info/config/fine/finer/finest) to the equivalent "
                 + "Lombok @Slf4j log methods (error/warn/info/debug/trace), then "
                 + "removes the JUL Logger field and its import when no other references remain.";
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) return true;
+        if (!(o instanceof JulToSlf4j other)) return false;
+        return requireLombokOnClasspath == other.requireLombokOnClasspath;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(requireLombokOnClasspath);
     }
 
     @Override
@@ -117,6 +153,9 @@ public class JulToSlf4j extends Recipe {
                 }
                 final List<Expression> args = visited.getArguments();
                 if (args.size() != 1) {
+                    return visited;
+                }
+                if (requireLombokOnClasspath && !LombokClasspathGate.isAvailable(getCursor())) {
                     return visited;
                 }
                 final String targetMethod = JUL_TO_LOG4J.get(level.get());

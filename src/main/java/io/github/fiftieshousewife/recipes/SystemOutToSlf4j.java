@@ -2,6 +2,7 @@ package io.github.fiftieshousewife.recipes;
 
 import org.jspecify.annotations.NullMarked;
 import org.openrewrite.ExecutionContext;
+import org.openrewrite.Option;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
@@ -11,11 +12,17 @@ import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Converts {@code System.out} and {@code System.err} print calls to Lombok
  * {@code log.xxx(...)} statements. Assumes the class has already been annotated
  * with {@code @Slf4j} (apply {@link AddLombokSlf4jAnnotation} first).
+ *
+ * <p>When {@code requireLombokOnClasspath} is set, the rewrite is skipped in
+ * source files whose classpath doesn't contain {@code lombok.extern.slf4j.Slf4j}
+ * — without {@code @Slf4j} there is no {@code log} field, so rewriting the
+ * {@code System.out} call would produce uncompilable Java.
  */
 @NullMarked
 public class SystemOutToSlf4j extends Recipe {
@@ -26,6 +33,25 @@ public class SystemOutToSlf4j extends Recipe {
     private static final MethodMatcher PRINTLN = new MethodMatcher("java.io.PrintStream println(..)");
     private static final MethodMatcher PRINT = new MethodMatcher("java.io.PrintStream print(..)");
     private static final MethodMatcher PRINTF = new MethodMatcher("java.io.PrintStream printf(..)");
+
+    @Option(displayName = "Require Lombok on classpath",
+            description = "When true, only rewrite System.out calls in source files where " +
+                    "lombok.extern.slf4j.Slf4j is resolvable on the classpath.",
+            required = false)
+    private final boolean requireLombokOnClasspath;
+
+    public SystemOutToSlf4j() {
+        this(false);
+    }
+
+    public SystemOutToSlf4j(final boolean requireLombokOnClasspath) {
+        this.requireLombokOnClasspath = requireLombokOnClasspath;
+    }
+
+    @SuppressWarnings("unused")
+    public boolean isRequireLombokOnClasspath() {
+        return requireLombokOnClasspath;
+    }
 
     @Override
     public String getDisplayName() {
@@ -40,16 +66,41 @@ public class SystemOutToSlf4j extends Recipe {
     }
 
     @Override
+    public boolean equals(final Object o) {
+        if (this == o) return true;
+        if (!(o instanceof SystemOutToSlf4j other)) return false;
+        return requireLombokOnClasspath == other.requireLombokOnClasspath;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(requireLombokOnClasspath);
+    }
+
+    @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
-        return new SystemOutVisitor();
+        return new SystemOutVisitor(requireLombokOnClasspath);
     }
 
     static class SystemOutVisitor extends JavaIsoVisitor<ExecutionContext> {
+
+        private final boolean requireLombokOnClasspath;
+
+        SystemOutVisitor() {
+            this(false);
+        }
+
+        SystemOutVisitor(final boolean requireLombokOnClasspath) {
+            this.requireLombokOnClasspath = requireLombokOnClasspath;
+        }
 
         @Override
         public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method, final ExecutionContext ctx) {
             final J.MethodInvocation visited = super.visitMethodInvocation(method, ctx);
             if (!isSystemOutOrErr(visited)) {
+                return visited;
+            }
+            if (requireLombokOnClasspath && !LombokClasspathGate.isAvailable(getCursor())) {
                 return visited;
             }
             return dispatchByMethodName(visited);
