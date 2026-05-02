@@ -17,7 +17,6 @@ import org.openrewrite.java.tree.TypeUtils;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 
 /**
@@ -131,7 +130,7 @@ public class JulToSlf4j extends Recipe {
     static Optional<String> julLevelOf(final J.MethodInvocation method) {
         return MATCHERS.entrySet().stream()
                 .filter(entry -> entry.getValue().matches(method))
-                .map(Entry::getKey)
+                .map(Map.Entry::getKey)
                 .findFirst();
     }
 

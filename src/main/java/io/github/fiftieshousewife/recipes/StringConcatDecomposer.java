@@ -20,10 +20,9 @@ final class StringConcatDecomposer {
     private StringConcatDecomposer() {
     }
 
-    static List<Expression> flatten(final J.Binary binary) {
-        final List<Expression> parts = new ArrayList<>();
-        parts.addAll(flattenSide(binary.getLeft()));
-        parts.addAll(flattenSide(binary.getRight()));
+    static List<Expression> flatten(J.Binary binary) {
+        List<Expression> parts = new ArrayList<>();
+        flattenInto(binary, parts);
         return parts;
     }
 
@@ -46,10 +45,16 @@ final class StringConcatDecomposer {
         return "{}";
     }
 
-    private static List<Expression> flattenSide(final Expression side) {
+    private static void flattenInto(final J.Binary binary, final List<Expression> parts) {
+        addSide(binary.getLeft(), parts);
+        addSide(binary.getRight(), parts);
+    }
+
+    private static void addSide(final Expression side, final List<Expression> parts) {
         if (side instanceof J.Binary childBinary && childBinary.getOperator() == J.Binary.Type.Addition) {
-            return flatten(childBinary);
+            flattenInto(childBinary, parts);
+        } else {
+            parts.add(side);
         }
-        return List.of(side);
     }
 }

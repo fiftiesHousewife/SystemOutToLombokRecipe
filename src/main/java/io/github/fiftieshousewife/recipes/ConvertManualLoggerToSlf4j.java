@@ -105,7 +105,13 @@ public class ConvertManualLoggerToSlf4j extends Recipe {
             public J.ClassDeclaration visitClassDeclaration(final J.ClassDeclaration classDecl,
                                                             final ExecutionContext ctx) {
                 final J.ClassDeclaration visited = super.visitClassDeclaration(classDecl, ctx);
-                if (shouldSkip(visited)) {
+                if (AddLombokSlf4jAnnotation.hasLombokLoggingAnnotation(visited)) {
+                    return visited;
+                }
+                if (findManualLog4j2Field(visited).isEmpty()) {
+                    return visited;
+                }
+                if (requireLombokOnClasspath && !LombokClasspathGate.isAvailable(getCursor())) {
                     return visited;
                 }
 
@@ -119,16 +125,6 @@ public class ConvertManualLoggerToSlf4j extends Recipe {
                 return findManualLog4j2Field(annotated)
                         .map(field -> removeField(renameReferences(annotated, field.name), field.varDecl))
                         .orElse(annotated);
-            }
-
-            private boolean shouldSkip(final J.ClassDeclaration visited) {
-                if (AddLombokSlf4jAnnotation.hasLombokLoggingAnnotation(visited)) {
-                    return true;
-                }
-                if (findManualLog4j2Field(visited).isEmpty()) {
-                    return true;
-                }
-                return requireLombokOnClasspath && !LombokClasspathGate.isAvailable(getCursor());
             }
         };
     }

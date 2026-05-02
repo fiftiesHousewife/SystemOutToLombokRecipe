@@ -112,25 +112,21 @@ public class AddLombokSlf4jAnnotation extends Recipe {
 
         @Override
         public J.ClassDeclaration visitClassDeclaration(final J.ClassDeclaration classDecl, final ExecutionContext ctx) {
-            if (shouldSkip(classDecl)) {
-                return classDecl;
-            }
-            return addSlf4jAnnotation(classDecl);
-        }
-
-        private boolean shouldSkip(final J.ClassDeclaration classDecl) {
             final boolean hasSop = containsSystemOutCalls(classDecl);
             final boolean hasJul = containsJulCalls(classDecl);
             if (!hasSop && !hasJul) {
-                return true;
+                return classDecl;
             }
             if (hasLombokLoggingAnnotation(classDecl)) {
-                return true;
+                return classDecl;
             }
             if (hasExplicitLoggerField(classDecl) && !hasJul) {
-                return true;
+                return classDecl;
             }
-            return requireLombokOnClasspath && !LombokClasspathGate.isAvailable(getCursor());
+            if (requireLombokOnClasspath && !LombokClasspathGate.isAvailable(getCursor())) {
+                return classDecl;
+            }
+            return addSlf4jAnnotation(classDecl);
         }
 
         J.ClassDeclaration addSlf4jAnnotation(final J.ClassDeclaration classDecl) {
