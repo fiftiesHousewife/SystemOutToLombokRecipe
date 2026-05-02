@@ -96,11 +96,24 @@ java {
 }
 
 // Integration tests live in their own source set. They drive an embedded
-// Gradle daemon via withToolingApi(), and that daemon's bundled Groovy/ASM
-// (Gradle 8.14.3 by default) cannot read Java 25 bytecode (class major
-// version 69). So integrationTest compiles at release=21 and runs on a
-// JDK 21 launcher. Production code stays on release=17 and the rest of
-// the build keeps the JDK 25 toolchain.
+// Gradle daemon via withToolingApi(), pinned to Gradle 8.14.3. That daemon's
+// bundled Groovy/ASM cannot read Java 25 bytecode (class major version 69),
+// so integrationTest compiles at release=21 and runs on a JDK 21 launcher.
+// Production code stays on release=17 and the rest of the build keeps the
+// JDK 25 toolchain.
+//
+// Why we don't just upgrade to Gradle 9 (which supports JDK 25): rewrite-gradle's
+// AddDependency no-ops against build.gradle.kts when libs.versions.toml is
+// present and the daemon is Gradle 9.x. See BACKLOG "Re-enable Java 25 in
+// integration tests" for the bisect, and UPSTREAM_ISSUE_DRAFT.md for the
+// upstream report (file at openrewrite/rewrite). When that ships, drop the
+// release=21 / JDK 21 launcher pair below and bump the withToolingApi()
+// pins in src/integrationTest to a Gradle 9.x version.
+//
+// Decoupling the launcher from the daemon JDK (run launcher on 25, keep
+// daemon on 21 via BuildLauncher.setJavaHome) was considered and rejected
+// in 2026-05: would require a custom withToolingApi() shim that becomes
+// dead code the moment upstream lands the catalog fix. Not worth it.
 sourceSets {
     create("integrationTest") {
         java.srcDir("src/integrationTest/java")
