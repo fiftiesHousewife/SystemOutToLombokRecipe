@@ -205,6 +205,23 @@ tasks.register<Test>("smokeTest") {
     shouldRunAfter(tasks.test, tasks.named("integrationTest"))
 }
 
+// Hard pre-publish gate: every path to Maven Central goes through smokeTest.
+// CLAUDE.md's release workflow tells the operator to walk SMOKE_TEST.md by
+// hand at step 2, but operator discipline is the wrong place to enforce a
+// release gate. Wire the dependency so the gate is structural — there's no
+// way to invoke a Maven Central publish task that skips the smoke run.
+//
+// Note: publishToMavenLocal is NOT gated — smokeTest itself depends on it
+// (so the throwaway projects can resolve the recipe via coordinates), and
+// gating would be circular.
+listOf(
+        "publishAndReleaseToMavenCentral",
+        "publishToMavenCentral",
+        "publishAllPublicationsToMavenCentralRepository",
+).forEach { name ->
+    tasks.matching { it.name == name }.configureEach { dependsOn("smokeTest") }
+}
+
 mavenPublishing {
     publishToMavenCentral(automaticRelease = true)
     signAllPublications()
