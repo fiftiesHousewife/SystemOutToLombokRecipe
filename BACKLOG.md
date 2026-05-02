@@ -15,8 +15,6 @@
 
 ## Active
 
-- **GitHub Packages publish** — the attempt during 0.1 got 403 because the ambient `GITHUB_TOKEN` lacks `write:packages`. Maven Central is doing the heavy lifting so this is a belt-and-braces extra, but still nominally open if we want the mirror.
-
 - **Expand integration coverage further** — currently covered: `AddLombokDependency` (inline + catalog), `AddSlf4jDependencies` (inline dedup-ordering regression guard + catalog seeding), `MigrateToSlf4jRecipe` (mixed-pattern end-to-end including XML seeding), `CreateLog4j2Config` (fresh project + `overwriteExisting=false` idempotency), `JavaTransformsClasspathGated` negative case. Still bootstrap-only: `SystemOutToSlf4jRecipe` (likely covered transitively by `MigrateToSlf4jRecipe`); multi-module / `includeBuild` shapes (the harness only models a single `forProjectDirectory`).
 
 - **Smoke-test automation Phase 2** — Phase 1 covers single-module §2 only; the Maven Central publish gate is in place via Phase 3. Still bootstrap-only: §2a Templates A–F (multi-module Kotlin + Groovy DSL, `include` build-logic, `includeBuild` composite); §3 mavenLocal coordinates round-trip across release-shaped consumer projects. Cost: ~1–1.5 days for §2a (each template has its own scaffolder), ~1 hr for §3.
@@ -30,6 +28,8 @@
   Since 8.81.2 is the first version that runs on Gradle 9 *at all*, there is no earlier "good" version to bisect to. The catalog scenario diverges between Gradle 8.x and Gradle 9.x specifically — either the Tooling API in Gradle 9 returns a `GradleProject` model that confuses `AddDependency`'s catalog-detection branch, or `rewrite-gradle`'s build-script editing assumes a Gradle 8 AST shape. Path forward: file an issue against `openrewrite/rewrite-gradle` with the minimal repro (8.81.2 + 9.4.1 catalog scenario), wait for fix, or temporarily downgrade in-process integration tests to Gradle 8.x while production users on Gradle 9 are covered by the manual `SMOKE_TEST.md`. Current state: harness stays on JDK 21 + Gradle 8.x default until upstream fixes Gradle 9 catalog handling.
 
 ## Parked (re-open on request)
+
+- **GitHub Packages publish** — the attempt during 0.1 got 403 because the ambient `GITHUB_TOKEN` lacks `write:packages`. Maven Central is the real channel; this would only be a mirror. Not worth the auth setup for the marginal benefit. Re-open if a consumer specifically asks for the GitHub Packages coordinates.
 
 - **Auto version-detection at recipe runtime** — for now we pin Lombok / SLF4J / Log4j2 versions explicitly and check Maven Central by hand pre-release (`SMOKE_TEST.md`). Full runtime-detection would be a custom recipe that queries Central when it runs.
 
