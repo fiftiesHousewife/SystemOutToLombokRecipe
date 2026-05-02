@@ -53,5 +53,10 @@ src/main/resources/META-INF/rewrite/*.jar
 ### Local Maven ###
 # Don't ignore locally published artifacts in ~/.m2
 
-### Claude Code user-local state (skills are committed; settings are per-user) ###
+### Claude Code user-local state (project skills are committed; settings are per-user) ###
 .claude/settings.local.json
+
+### Clean Code plugin: skills installed by ./gradlew installSkills are not committed ###
+.claude/skills/SKILLS.md
+.claude/skills/.thresholds-hash
+.claude/skills/clean-code-*/
