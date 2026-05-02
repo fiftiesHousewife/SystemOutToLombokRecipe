@@ -41,11 +41,18 @@ For each variant listed below:
 
 ### Variants to test
 
-- `io.github.fiftieshousewife.SystemOutToLombokLog4jRecipe` — default (inline deps)
-- `io.github.fiftieshousewife.SystemOutToLombokLog4jRecipeNoDeps` — manual dep management
-- `io.github.fiftieshousewife.SystemOutToLombokLog4jRecipeCatalog` — version catalog
-- `io.github.fiftieshousewife.ConvertManualLog4j2ToLombokRecipe` — migrate hand-rolled Log4j2 loggers
-- `io.github.fiftieshousewife.ConvertManualLog4j2ToLombokRecipeCatalog` — same, with catalog
+Catalog handling is auto-detected post-0.5: each non-`NoDeps` recipe checks whether `gradle/libs.versions.toml` is present and adds inline declarations or seeds the catalog accordingly. So instead of separate `Catalog` variants, run each non-`NoDeps` recipe **twice** — once with an empty `gradle/libs.versions.toml` present, once without.
+
+| Recipe | Fixture | Catalog axis |
+| --- | --- | --- |
+| `io.github.fiftieshousewife.SystemOutToSlf4jRecipe` | Greeting.java | with + without |
+| `io.github.fiftieshousewife.SystemOutToSlf4jRecipeNoDeps` | Greeting.java | n/a (no dep management) |
+| `io.github.fiftieshousewife.ConvertManualLoggerToSlf4jRecipe` | OrderService.java | with + without |
+| `io.github.fiftieshousewife.ConvertManualLoggerToSlf4jRecipeNoDeps` | OrderService.java | n/a |
+| `io.github.fiftieshousewife.MigrateToSlf4jRecipe` | Greeting.java + OrderService.java | with + without |
+| `io.github.fiftieshousewife.MigrateToSlf4jRecipeNoDeps` | Greeting.java + OrderService.java | n/a |
+
+For `*NoDeps` variants the throwaway project must declare Lombok / SLF4J / log4j2 itself before `compileJava` will pass — otherwise the rewrite produces uncompilable Java.
 
 ### Fixtures
 
@@ -65,7 +72,7 @@ public class Greeting {
 }
 ```
 
-Minimal manual-Log4j2 source for the conversion recipes:
+Minimal manual-Log4j2 source for the conversion recipes (`src/main/java/com/example/OrderService.java`):
 
 ```java
 package com.example;

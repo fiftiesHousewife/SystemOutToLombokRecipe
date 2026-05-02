@@ -160,7 +160,7 @@ If your codebase already uses Log4j2 but declares `Logger` fields by hand (`priv
 - Deletes the manual field.
 - Renames any references to the old field (`logger.info(...)`, `LOG.error(...)`) to `log.xxx(...)`.
 - Drops now-unused `org.apache.logging.log4j.Logger` / `LogManager` imports.
-- Adds the Lombok dependency (catalog-aware — same auto-detect as above).
+- Adds the deps the rewritten code needs — Lombok (compileOnly + annotationProcessor), `slf4j-api` (for the `org.slf4j.Logger` field that `@Slf4j` generates), and the `log4j-slf4j2-impl` bridge so SLF4J calls still route through Log4j2 at runtime. Catalog-aware (same auto-detect as above).
 
 ```kotlin
 rewrite {

@@ -139,6 +139,72 @@ tasks.check {
     dependsOn(integrationTest)
 }
 
+// Smoke tests: scaffold a fresh /tmp Gradle project per recipe variant, run the
+// recipe end-to-end via a nested Gradle process, and confirm the rewritten Java
+// still compiles. Backs up SMOKE_TEST.md §2 — the bit RewriteTest can't prove
+// because there's no real javac + Lombok annotation processor in the loop.
+//
+// Pinned to Gradle 8.14.3 in the smoke project so we sidestep the Gradle 9
+// catalog-handling regression noted in BACKLOG. Daemon runs on JDK 21 because
+// Gradle 8.x can't host JDK 25.
+//
+// Not wired into ./gradlew check — these are minutes, not seconds. They run as
+// the pre-publish gate (see publishAndReleaseToMavenCentral wiring below once
+// Phase 3 lands).
+sourceSets {
+    create("smokeTest")
+}
+
+configurations {
+    named("smokeTestImplementation") { extendsFrom(configurations.testImplementation.get()) }
+    named("smokeTestRuntimeOnly") { extendsFrom(configurations.testRuntimeOnly.get()) }
+}
+
+tasks.named<JavaCompile>("compileSmokeTestJava") {
+    options.compilerArgs.add("-parameters")
+    options.release.set(21)
+}
+
+// The clean-code plugin auto-applies SpotBugs / Checkstyle / PMD / CPD to every
+// source set. The smokeTest source set is just orchestration scaffolding for
+// driving nested Gradle processes — quality-gating it gives no signal but
+// blocks `./gradlew check`. Disable those tasks for the smokeTest source set.
+listOf("spotbugsSmokeTest", "checkstyleSmokeTest", "pmdSmokeTest").forEach { name ->
+    tasks.findByName(name)?.enabled = false
+}
+
+tasks.register<Test>("smokeTest") {
+    description = "Scaffolds a /tmp Gradle project per recipe variant, runs the recipe, " +
+            "and confirms the rewritten Java compiles. Slower than integrationTest — " +
+            "depends on jar + publishToMavenLocal so the throwaway projects can resolve " +
+            "the recipe via coordinates."
+    group = "verification"
+    useJUnitPlatform()
+
+    dependsOn(tasks.named("publishToMavenLocal"))
+
+    val jdk21Home = javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }.map { it.metadata.installationPath.asFile.absolutePath }
+
+    val rewritePluginVersion = versionCatalogs.named("libs")
+            .findVersion("openrewrite").orElseThrow().requiredVersion
+    systemProperty("smokeTest.projectGroup", project.group.toString())
+    systemProperty("smokeTest.projectVersion", project.version.toString())
+    systemProperty("smokeTest.rewritePluginVersion", rewritePluginVersion)
+    systemProperty("smokeTest.projectRoot", project.projectDir.absolutePath)
+    systemProperty("smokeTest.buildDir", layout.buildDirectory.get().asFile.absolutePath)
+
+    doFirst {
+        systemProperty("smokeTest.jdk21Home", jdk21Home.get())
+    }
+
+    testClassesDirs = sourceSets["smokeTest"].output.classesDirs
+    classpath = sourceSets["smokeTest"].runtimeClasspath
+
+    shouldRunAfter(tasks.test, tasks.named("integrationTest"))
+}
+
 mavenPublishing {
     publishToMavenCentral(automaticRelease = true)
     signAllPublications()

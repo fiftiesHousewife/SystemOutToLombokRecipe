@@ -295,13 +295,16 @@ description: >-
   For codebases that already use Log4j2 but declare Logger fields manually
   (`private static final Logger log = LogManager.getLogger(X.class);`):
   replaces each manual field with Lombok's @Slf4j annotation, renames
-  references (logger/LOG/LOGGER → log), and adds the Lombok compileOnly +
-  annotationProcessor dependencies. Catalog-aware: uses libs.lombok when
-  a Gradle version catalog is present. Log4j2 API/core dependencies are
-  expected to already be present.
+  references (logger/LOG/LOGGER → log), and wires in the deps the
+  rewritten code needs — Lombok (compileOnly + annotationProcessor) for
+  the @Slf4j expansion, slf4j-api for the org.slf4j.Logger field that
+  expansion produces, and the log4j-slf4j2-impl bridge so SLF4J calls
+  still route through Log4j2 at runtime. Catalog-aware: uses libs.X
+  references when a Gradle version catalog is present. Existing
+  log4j-core declarations are kept; the recipe is idempotent.
 
 recipeList:
-  - io.github.fiftieshousewife.AddLombokDependency
+  - io.github.fiftieshousewife.AddSlf4jDependencies
   - io.github.fiftieshousewife.recipes.ConvertManualLoggerToSlf4j
 
 ---
