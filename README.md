@@ -40,8 +40,19 @@ A companion recipe, `ConvertManualLoggerToSlf4jRecipe`, handles the separate cas
 
 ## Prerequisites
 
-- JDK 17 or later (JDK 25 recommended — enables the newest parser)
-- Gradle 9.x (wrapper included)
+- JDK 17 or later (JDK 25 supported)
+- Gradle 8.x or 9.x
+
+> [!IMPORTANT]
+> If your project uses a Gradle version catalog (`gradle/libs.versions.toml`),
+> we recommend Gradle 8.14.x until [openrewrite/rewrite#7548][] ships. On Gradle
+> 9.x, the upstream `AddDependency` recipe no-ops against `build.gradle.kts`
+> when a catalog is present — the catalog gets the new `[versions]` and
+> `[libraries]` entries, but the `dependencies { ... }` block in your build
+> script doesn't get the corresponding `compileOnly(libs.lombok)` line. Inline
+> dependency declarations are unaffected.
+
+[openrewrite/rewrite#7548]: https://github.com/openrewrite/rewrite/issues/7548
 
 Supports transforming source code written in Java 8 through Java 25.
 
