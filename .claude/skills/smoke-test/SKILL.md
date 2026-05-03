@@ -1,13 +1,13 @@
 ---
 name: smoke-test
-description: Use this skill when designing or extending a pre-release smoke-test procedure for an OpenRewrite recipe project — both the automated `./gradlew smokeTest` runner (single-module §2 cells, wired into `publishAndReleaseToMavenCentral` as a hard gate) and the manual `/tmp` Gradle bootstrap templates that still cover the multi-module shapes the runner doesn't yet model. Covers the runner architecture (SmokeVariant data model + project scaffolder + ProcessBuilder GradleRunner + JUnit per-cell), the throwaway-project bootstrap pattern, the dryRun → inspect → Run → compile verification cycle, the project-shape matrix design (DSL × topology × deps-style), expected-outcomes tables, and the mavenLocal-resolution check. Invoke when phrases like "author a smoke test", "add a smoke cell", "release checklist", "pre-publish verification", "add a project-shape template", or "how do we validate the recipe end-to-end" appear — or when a user has just added a new recipe or new supported project shape and needs to extend either the runner or the manual `SMOKE_TEST.md`.
+description: Use this skill when designing or extending a pre-release smoke-test procedure for an OpenRewrite recipe project — both the automated `./gradlew smokeTest` runner (single-module §2 cells AND multi-module / build-logic / composite §2a cells, wired into `publishAndReleaseToMavenCentral` as a hard gate) and the manual `/tmp` Gradle bootstrap reference in `SMOKE_TEST.md`. Covers the runner architecture (SmokeVariant + ProjectShapeVariant data models + project scaffolders + ProcessBuilder GradleRunner + JUnit per-cell), the throwaway-project bootstrap pattern, the dryRun → inspect → Run → compile verification cycle, the project-shape matrix design (DSL × topology × deps-style), expected-outcomes tables, and the mavenLocal-resolution check. Invoke when phrases like "author a smoke test", "add a smoke cell", "release checklist", "pre-publish verification", "add a project-shape template", or "how do we validate the recipe end-to-end" appear — or when a user has just added a new recipe or new supported project shape and needs to extend either the runner or the manual `SMOKE_TEST.md`.
 ---
 
 # Pre-release smoke tests for recipe projects
 
 For running the existing smoke tests:
-- **Single-module §2 cells**: `./gradlew smokeTest` (~2 min). Wired into `publishAndReleaseToMavenCentral` as a hard dependency, so the gate is structural, not operator discipline.
-- **Multi-module / `build-logic` / `includeBuild` §2a templates + §3 mavenLocal round-trip**: still manual, follow `SMOKE_TEST.md` at the repo root.
+- **Single-module §2 cells AND multi-module / `build-logic` / `includeBuild` §2a templates A–F**: `./gradlew smokeTest` (~4 min). Wired into `publishAndReleaseToMavenCentral` as a hard dependency, so the gate is structural, not operator discipline.
+- **§3 mavenLocal coordinates round-trip**: still manual, follow `SMOKE_TEST.md` at the repo root.
 
 This skill is about **designing and extending** both layers.
 
@@ -25,21 +25,33 @@ Each of those is a real Gradle concern, not a RewriteTest concern. A smoke test 
 
 The right mental model: RewriteTest is the inner loop; the smoke test is the release gate.
 
-## Runner architecture (single-module §2 cells)
+## Runner architecture
 
-`./gradlew smokeTest` runs a JUnit-driven scaffold-and-execute loop, one parameterized test per cell. Files live under `src/smokeTest/java/`; the source set is wired in `build.gradle.kts` parallel to `integrationTest`. The pieces:
+`./gradlew smokeTest` runs a JUnit-driven scaffold-and-execute loop. Two parameterized tests, one per matrix:
+- `SmokeTest` — single-module §2 cells (one row per top-level recipe × catalog axis).
+- `ProjectShapeSmokeTest` — multi-module / build-logic / composite §2a templates A–F.
 
-- `SmokeVariant` (record): one cell — recipe id, catalog mode (`WITHOUT_TOML` / `WITH_EMPTY_TOML` / `NOT_APPLICABLE`), `managesDependencies` flag, list of fixtures.
-- `Fixture` (record): one Java source file the recipe should transform, plus any `prerequisiteImplementationDeps` the **original** source needs to compile (e.g. `org.apache.logging.log4j:log4j-api` for a manual-Log4j2 fixture — without that on the classpath OpenRewrite can't resolve types and the recipe matches nothing).
-- `SmokeProject`: writes a fresh Gradle project per cell — wrapper (pinned to a known-good Gradle version that hosts the JDKs you need), `settings.gradle.kts`, `build.gradle.kts` with `mavenLocal()` first and the recipe pulled by coordinates, the fixture source files, and (when the cell calls for it) an empty `gradle/libs.versions.toml`.
-- `GradleRunner`: invokes nested `./gradlew rewriteRun` then `compileJava` via `ProcessBuilder`, captures combined stdout/stderr to `<cell-dir>/run.log`, sets `JAVA_HOME` to a JDK old enough to host the smoke project's Gradle daemon (`smokeTest.jdk21Home` system property, wired in `build.gradle.kts` from `javaToolchains.launcherFor`).
-- `SmokeTest`: a single `@ParameterizedTest` whose `@MethodSource` returns one `(displayName, variant)` pair per cell.
+Files live under `src/smokeTest/java/`; the source set is wired in `build.gradle.kts` parallel to `integrationTest`. The pieces:
 
-### Adding a new cell
+- `SmokeVariant` (record): one §2 cell — recipe id, catalog mode (`WITHOUT_TOML` / `WITH_EMPTY_TOML` / `NOT_APPLICABLE`), `managesDependencies` flag, list of fixtures.
+- `ProjectShapeVariant` (record): one §2a template — recipe id, `Topology` (MULTI_MODULE / BUILD_LOGIC_INCLUDE / COMPOSITE_INCLUDE_BUILD), `Dsl` (KOTLIN / GROOVY), and a `rewriteRunSubdirs` list (`[""]` for single-invocation shapes, `["", "build-logic"]` for composites that need one rewriteRun per included build).
+- `Fixture` (record, §2 only): one Java source file the recipe should transform, plus any `prerequisiteImplementationDeps` the **original** source needs to compile (e.g. `org.apache.logging.log4j:log4j-api` for a manual-Log4j2 fixture — without that on the classpath OpenRewrite can't resolve types and the recipe matches nothing).
+- `SmokeProject`: writes a fresh single-module Gradle project per §2 cell — wrapper (pinned to a known-good Gradle version that hosts the JDKs you need), `settings.gradle.kts`, `build.gradle.kts` with `mavenLocal()` first and the recipe pulled by coordinates, the fixture source files, and (when the cell calls for it) an empty `gradle/libs.versions.toml`.
+- `ProjectShapeScaffolder`: writes a fresh §2a project — branches on `topology` and `dsl` to lay out multi-module subprojects, `include("build-logic")` setups, or composite `includeBuild` builds (each with its own wrapper, settings, build script, and catalog).
+- `GradleRunner`: invokes nested `./gradlew <task>` via `ProcessBuilder`, captures combined stdout/stderr to `<cell-dir>/run.log`, sets `JAVA_HOME` to a JDK old enough to host the smoke project's Gradle daemon (`smokeTest.jdk21Home` system property, wired in `build.gradle.kts` from `javaToolchains.launcherFor`). Reused by both matrices.
+- `ProjectShapeSmokeTest` adds a post-rewrite `@Slf4j` sweep across the project's Java sources — guards against silent no-op failures where rewriteRun "succeeds" but doesn't actually edit anything (compileJava would still pass on the unmodified `System.out` source). Worth applying back to `SmokeTest` if a similar regression is ever observed.
+
+### Adding a new §2 cell
 
 1. If a new fixture shape is needed, add a `Fixture` constant. Declare any prerequisite implementation deps the unrewritten source needs.
 2. Add a `cell(...)` entry to `SmokeTest.matrix()`. Pick the right `CatalogMode` and `managesDependencies` for the variant you're testing.
 3. Run `./gradlew smokeTest`. If the cell fails, the JUnit failure message includes the path to `run.log` — read it, fix the issue, re-run.
+
+### Adding a new §2a template
+
+1. If the new template fits an existing `Topology` value, just add a `cell(...)` entry to `ProjectShapeSmokeTest.matrix()` with the appropriate `Topology` + `Dsl` + `rewriteRunSubdirs`.
+2. If the new template needs a new topology, add a value to `ProjectShapeVariant.Topology` and a corresponding `scaffold...()` branch in `ProjectShapeScaffolder.scaffold()`. Reuse the helper methods (`writeSettings`, `writeRootBuildWithSubprojectJavaPlugin`, `writeStandaloneRootBuild`, `writeSubprojectBuild`, `writeJava`, `writeEmptyCatalog`, `copyWrapper`) — they already branch on Kotlin vs Groovy DSL.
+3. Run `./gradlew smokeTest --tests "*ProjectShapeSmokeTest*"`. Per-cell `run.log` paths surface in the failure message.
 
 ### The runner is wired into the publish gate
 
@@ -57,7 +69,7 @@ There's no path to Maven Central that skips smoke. `publishToMavenLocal` is deli
 
 ### What stays manual
 
-Multi-module / `build-logic` / `includeBuild` shapes, and the §3 mavenLocal coordinates round-trip across release-shaped consumer projects, still live in `SMOKE_TEST.md`. The runner could grow templates for them — each template would need its own scaffolder method since the project layout differs — but the manual procedure is the current backstop.
+The §3 mavenLocal coordinates round-trip across release-shaped consumer projects still lives in `SMOKE_TEST.md`. Everything else in §2 and §2a is automated.
 
 ## The verification cycle (per template)
 

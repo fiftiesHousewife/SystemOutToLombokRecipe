@@ -89,9 +89,14 @@ public class OrderService {
 
 ## 2a. Project-shape matrix (post-0.5)
 
+**Automated by `./gradlew smokeTest`** — Templates A–F below run as cells in
+`src/smokeTest/java/io/github/fiftieshousewife/smoketest/ProjectShapeSmokeTest.java`,
+covered by the same publish gate as §2. The procedure below is kept as reference
+for adding new templates and for manual inspection when a cell fails.
+
 The single-module bootstrap in §2 covers only one corner of the shape matrix.
-For anything touching version catalogs, Groovy DSL support, or
-composite/`buildSrc` conventions, run the relevant template below. Each one is
+The §2a templates extend it to multi-module, build-logic-as-subproject, and
+composite-build topologies in both Kotlin and Groovy DSL. Each one is
 `rewriteDryRun` + `rewriteRun` + `compileJava` — same cycle as §2.
 
 ### Template A — multi-module Kotlin DSL

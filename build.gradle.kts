@@ -138,6 +138,13 @@ val integrationTest = tasks.register<Test>("integrationTest") {
     group = "verification"
     useJUnitPlatform()
 
+    // Each test forks a JVM that hosts the Tooling API daemon (rewrite-gradle
+    // parser, Kotlin embedded compiler, JaCoCo agent). 512 MB default OOMs once
+    // multiple tests run back-to-back in one JVM — the symptom is an
+    // intermittent ClassCastException from ParseError to K.CompilationUnit
+    // because the build.gradle.kts parse aborts mid-flight under memory pressure.
+    maxHeapSize = "2g"
+
     javaLauncher.set(javaToolchains.launcherFor {
         languageVersion.set(JavaLanguageVersion.of(21))
     })
