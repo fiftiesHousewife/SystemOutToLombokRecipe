@@ -75,7 +75,7 @@ If you hit a shape that's not listed, please open an issue with a minimal reprod
 ```toml
 [versions]
 openrewrite = "7.30.0"
-fifties-recipes = "0.4"
+fifties-recipes = "0.7"
 
 [libraries]
 fifties-systemout = { module = "io.github.fiftieshousewife:system-out-to-lombok-log4j", version.ref = "fifties-recipes" }
