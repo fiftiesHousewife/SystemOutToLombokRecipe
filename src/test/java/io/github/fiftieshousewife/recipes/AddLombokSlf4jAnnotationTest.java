@@ -9,7 +9,6 @@ import org.openrewrite.test.RewriteTest;
 import org.openrewrite.test.TypeValidation;
 
 import java.util.Collections;
-import java.util.List;
 
 import static org.openrewrite.java.Assertions.java;
 
@@ -284,7 +283,7 @@ class AddLombokSlf4jAnnotationTest implements RewriteTest {
                             }
                         }
                         """,
-                        spec -> spec.markers(sourceSetWith(LoggerNames.LOMBOK_SLF4J))
+                        spec -> spec.markers(sourceSetWith(LombokLoggingAnnotation.SLF4J.fqn()))
                 )
         );
     }

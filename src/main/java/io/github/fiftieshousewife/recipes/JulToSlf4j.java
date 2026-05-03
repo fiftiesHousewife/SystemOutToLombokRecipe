@@ -9,7 +9,6 @@ import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.MethodMatcher;
-import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.JavaType;
 import org.openrewrite.java.tree.Statement;
@@ -20,6 +19,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+
+import static io.github.fiftieshousewife.recipes.LoggerNames.JUL_LOGGER;
 
 /**
  * Converts {@code java.util.logging.Logger} level-named method calls to the
@@ -49,8 +51,6 @@ import java.util.Optional;
 @NullMarked
 public class JulToSlf4j extends Recipe {
 
-    private static final String JUL_LOGGER_FQN = "java.util.logging.Logger";
-
     private static final Map<String, MethodMatcher> MATCHERS = Map.of(
             "severe", matcher("severe"),
             "warning", matcher("warning"),
@@ -59,6 +59,8 @@ public class JulToSlf4j extends Recipe {
             "fine", matcher("fine"),
             "finer", matcher("finer"),
             "finest", matcher("finest"));
+
+    static final Set<String> JUL_LEVEL_METHODS = MATCHERS.keySet();
 
     private static final Map<String, String> JUL_TO_LOG4J = Map.of(
             "severe", "error",
@@ -70,7 +72,7 @@ public class JulToSlf4j extends Recipe {
             "finest", "trace");
 
     private static MethodMatcher matcher(final String methodName) {
-        return new MethodMatcher(JUL_LOGGER_FQN + " " + methodName + "(..)");
+        return new MethodMatcher(JUL_LOGGER.fqn() + " " + methodName + "(..)");
     }
 
     @Option(displayName = "Require Lombok on classpath",
@@ -127,7 +129,7 @@ public class JulToSlf4j extends Recipe {
                 final J.CompilationUnit visited = super.visitCompilationUnit(compilationUnit, ctx);
                 if (!julLoggerTypeReferencedIn(visited)) {
                     return visited.withImports(visited.getImports().stream()
-                            .filter(imp -> !JUL_LOGGER_FQN.equals(imp.getTypeName()))
+                            .filter(imp -> !JUL_LOGGER.fqn().equals(imp.getTypeName()))
                             .toList());
                 }
                 return visited;
@@ -147,21 +149,27 @@ public class JulToSlf4j extends Recipe {
             public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method,
                                                             final ExecutionContext ctx) {
                 final J.MethodInvocation visited = super.visitMethodInvocation(method, ctx);
-                final Optional<String> level = julLevelOf(visited);
-                if (level.isEmpty()) {
-                    return visited;
-                }
-                final List<Expression> args = visited.getArguments();
-                if (args.size() != 1) {
-                    return visited;
+                return targetSlf4jMethodFor(visited)
+                        .map(targetMethod -> rewriteAsSlf4jCall(visited, targetMethod))
+                        .orElse(visited);
+            }
+
+            private Optional<String> targetSlf4jMethodFor(final J.MethodInvocation method) {
+                if (method.getArguments().size() != 1) {
+                    return Optional.empty();
                 }
                 if (requireLombokOnClasspath && !LombokClasspathGate.isAvailable(getCursor())) {
-                    return visited;
+                    return Optional.empty();
                 }
-                final String targetMethod = JUL_TO_LOG4J.get(level.get());
+                return julLevelOf(method).map(JUL_TO_LOG4J::get);
+            }
+
+            private J.MethodInvocation rewriteAsSlf4jCall(final J.MethodInvocation original,
+                                                          final String targetMethod) {
                 return JavaTemplate.builder("log." + targetMethod + "(#{any()})")
                         .build()
-                        .apply(getCursor(), visited.getCoordinates().replace(), args.get(0));
+                        .apply(getCursor(), original.getCoordinates().replace(),
+                                original.getArguments().get(0));
             }
         };
     }
@@ -186,7 +194,7 @@ public class JulToSlf4j extends Recipe {
             return false;
         }
         final JavaType type = typeExpression.getType();
-        return TypeUtils.isOfClassType(type, JUL_LOGGER_FQN);
+        return TypeUtils.isOfClassType(type, JUL_LOGGER.fqn());
     }
 
     private static boolean fieldReferenced(final J.ClassDeclaration classDecl,
@@ -205,9 +213,9 @@ public class JulToSlf4j extends Recipe {
         return classDecl.withBody(classDecl.getBody().withStatements(keep));
     }
 
-    private static boolean julLoggerTypeReferencedIn(final J.CompilationUnit cu) {
+    private static boolean julLoggerTypeReferencedIn(final J.CompilationUnit compilationUnit) {
         final JulLoggerTypeDetector detector = new JulLoggerTypeDetector();
-        detector.visit(cu, 0);
+        detector.visit(compilationUnit, 0);
         return detector.found;
     }
 
@@ -249,7 +257,7 @@ public class JulToSlf4j extends Recipe {
 
         @Override
         public J.Identifier visitIdentifier(final J.Identifier identifier, final Integer p) {
-            if (!found && TypeUtils.isOfClassType(identifier.getType(), JUL_LOGGER_FQN)) {
+            if (!found && TypeUtils.isOfClassType(identifier.getType(), JUL_LOGGER.fqn())) {
                 found = true;
             }
             return super.visitIdentifier(identifier, p);

@@ -8,9 +8,11 @@ import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.MethodMatcher;
+import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Replaces {@code exception.printStackTrace()} calls with {@code log.error(...)} statements.
@@ -75,15 +77,26 @@ public class PrintStackTraceToLog extends Recipe {
             public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method,
                                                             final ExecutionContext ctx) {
                 final J.MethodInvocation visited = super.visitMethodInvocation(method, ctx);
-                if (!PRINT_STACK_TRACE.matches(visited) || visited.getSelect() == null) {
-                    return visited;
+                return exceptionExpressionIfRewritable(visited)
+                        .map(exception -> rewriteAsLogError(visited, exception))
+                        .orElse(visited);
+            }
+
+            private Optional<Expression> exceptionExpressionIfRewritable(final J.MethodInvocation method) {
+                if (!PRINT_STACK_TRACE.matches(method) || method.getSelect() == null) {
+                    return Optional.empty();
                 }
                 if (requireLombokOnClasspath && !LombokClasspathGate.isAvailable(getCursor())) {
-                    return visited;
+                    return Optional.empty();
                 }
+                return Optional.of(method.getSelect());
+            }
+
+            private J.MethodInvocation rewriteAsLogError(final J.MethodInvocation original,
+                                                         final Expression exception) {
                 return JavaTemplate.builder("log.error(\"Exception occurred\", #{any()})")
                         .build()
-                        .apply(getCursor(), visited.getCoordinates().replace(), visited.getSelect());
+                        .apply(getCursor(), original.getCoordinates().replace(), exception);
             }
         };
     }

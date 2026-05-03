@@ -20,6 +20,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import static io.github.fiftieshousewife.recipes.LoggerNames.LOG4J2_LOGGER;
+import static io.github.fiftieshousewife.recipes.LombokLoggingAnnotation.SLF4J;
+
 /**
  * Converts classes that hand-roll a Log4j2 logger field into the Lombok
  * {@code @Slf4j} form. For a class like
@@ -115,9 +118,9 @@ public class ConvertManualLoggerToSlf4j extends Recipe {
                     return visited;
                 }
 
-                maybeAddImport(LoggerNames.LOMBOK_SLF4J, null, false);
+                maybeAddImport(SLF4J.fqn(), null, false);
                 final J.ClassDeclaration annotated = JavaTemplate.builder("@Slf4j")
-                        .imports(LoggerNames.LOMBOK_SLF4J)
+                        .imports(SLF4J.fqn())
                         .build()
                         .apply(getCursor(),
                                 visited.getCoordinates().addAnnotation(Comparator.comparing(J.Annotation::getSimpleName)));
@@ -144,7 +147,7 @@ public class ConvertManualLoggerToSlf4j extends Recipe {
             return false;
         }
         final JavaType type = typeExpression.getType();
-        return TypeUtils.isOfClassType(type, LoggerNames.LOG4J2_LOGGER);
+        return TypeUtils.isOfClassType(type, LOG4J2_LOGGER.fqn());
     }
 
     private static J.ClassDeclaration renameReferences(final J.ClassDeclaration classDecl, final String oldName) {

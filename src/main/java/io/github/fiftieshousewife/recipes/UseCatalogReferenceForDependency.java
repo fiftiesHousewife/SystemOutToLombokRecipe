@@ -18,6 +18,7 @@ import org.openrewrite.marker.Markers;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Rewrites inline Gradle dependency string literals ({@code "group:artifact:version"})
@@ -113,24 +114,35 @@ public final class UseCatalogReferenceForDependency
             public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method,
                                                             final ExecutionContext ctx) {
                 final J.MethodInvocation visited = super.visitMethodInvocation(method, ctx);
-                final List<Expression> args = visited.getArguments();
+                return matchedCoordinateLiteral(visited)
+                        .map(literal -> rewriteAsCatalogRef(visited, literal))
+                        .orElse(visited);
+            }
+
+            private Optional<J.Literal> matchedCoordinateLiteral(final J.MethodInvocation method) {
+                final List<Expression> args = method.getArguments();
                 if (args.size() != 1) {
-                    return visited;
+                    return Optional.empty();
                 }
                 if (!(args.get(0) instanceof J.Literal literal)) {
-                    return visited;
+                    return Optional.empty();
                 }
                 if (!(literal.getValue() instanceof String coordinates)) {
-                    return visited;
+                    return Optional.empty();
                 }
                 if (!matchesModule(coordinates, module)) {
-                    return visited;
+                    return Optional.empty();
                 }
+                return Optional.of(literal);
+            }
+
+            private J.MethodInvocation rewriteAsCatalogRef(final J.MethodInvocation method,
+                                                           final J.Literal literal) {
                 final Expression replacement = buildCatalogReference(catalogReference, literal.getPrefix())
                         .withMarkers(literal.getMarkers());
                 final JContainer<Expression> newArgs = JContainer.withElements(
-                        visited.getPadding().getArguments(), List.of(replacement));
-                return visited.getPadding().withArguments(newArgs);
+                        method.getPadding().getArguments(), List.of(replacement));
+                return method.getPadding().withArguments(newArgs);
             }
         };
     }

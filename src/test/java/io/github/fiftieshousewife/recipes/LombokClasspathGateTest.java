@@ -23,7 +23,7 @@ class LombokClasspathGateTest {
     @Test
     void returnsTrue_whenSourceSetContainsLombokSlf4j() {
         J.CompilationUnit cu = parse().withMarkers(
-                markersWithSourceSet(JavaType.ShallowClass.build(LoggerNames.LOMBOK_SLF4J)));
+                markersWithSourceSet(JavaType.ShallowClass.build(LombokLoggingAnnotation.SLF4J.fqn())));
 
         assertThat(LombokClasspathGate.isAvailable(cursorAt(cu))).isTrue();
     }

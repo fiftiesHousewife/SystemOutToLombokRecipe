@@ -219,7 +219,7 @@ class ConvertManualLoggerToSlf4jTest implements RewriteTest {
                                     }
                                 }
                                 """,
-                        spec -> spec.markers(sourceSetWith(LoggerNames.LOMBOK_SLF4J))
+                        spec -> spec.markers(sourceSetWith(LombokLoggingAnnotation.SLF4J.fqn()))
                 )
         );
     }

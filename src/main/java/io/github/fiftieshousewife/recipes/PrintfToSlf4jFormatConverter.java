@@ -2,18 +2,8 @@ package io.github.fiftieshousewife.recipes;
 
 import org.jspecify.annotations.NullMarked;
 
-/**
- * Converts a Java {@code printf}-style format string into the {@code {}}-style
- * format expected by Log4j2. Handles the full grammar of specifiers
- * (argument index, flags, width, precision, conversion char, including the
- * {@code %t/%T} date-time pair).
- *
- * <p>Stateless. All methods are pure static utilities and unit-testable
- * directly.
- */
 @NullMarked
 final class PrintfToSlf4jFormatConverter {
-
     private static final String FLAG_CHARS = "+-0 #,(";
 
     private PrintfToSlf4jFormatConverter() {

@@ -2,11 +2,6 @@ package io.github.fiftieshousewife.recipes;
 
 import org.jspecify.annotations.NullMarked;
 
-/**
- * Builds the string templates that OpenRewrite's {@code JavaTemplate} will
- * parse into log-call AST nodes. Separated from the visitor so the string
- * shape is unit-testable without ever constructing a J.MethodInvocation.
- */
 @NullMarked
 final class LogCallTemplate {
 

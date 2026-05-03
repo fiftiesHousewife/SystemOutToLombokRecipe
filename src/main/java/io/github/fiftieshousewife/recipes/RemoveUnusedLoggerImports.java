@@ -7,6 +7,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import static io.github.fiftieshousewife.recipes.LoggerNames.LOG4J2_LOGGER;
+import static io.github.fiftieshousewife.recipes.LoggerNames.LOG4J2_LOG_MANAGER;
+
 /**
  * After a class body has been rewritten to no longer reference Log4j2's
  * {@code Logger} or {@code LogManager}, removes those imports from the
@@ -17,17 +20,17 @@ import java.util.regex.Pattern;
 final class RemoveUnusedLoggerImports {
 
     private static final Set<String> CANDIDATES = Set.of(
-            LoggerNames.LOG4J2_LOGGER,
-            LoggerNames.LOG4J2_LOG_MANAGER);
+            LOG4J2_LOGGER.fqn(),
+            LOG4J2_LOG_MANAGER.fqn());
 
     private static final Pattern IMPORT_LINE = Pattern.compile("(?m)^import\\s+[^;]+;\\s*$");
 
     private RemoveUnusedLoggerImports() {
     }
 
-    static List<J.Import> filter(final J.CompilationUnit cu) {
-        final String nonImportCode = IMPORT_LINE.matcher(cu.printAll()).replaceAll("");
-        return cu.getImports().stream()
+    static List<J.Import> filter(final J.CompilationUnit compilationUnit) {
+        final String nonImportCode = IMPORT_LINE.matcher(compilationUnit.printAll()).replaceAll("");
+        return compilationUnit.getImports().stream()
                 .filter(imp -> isStillUsed(imp.getTypeName(), nonImportCode))
                 .toList();
     }
