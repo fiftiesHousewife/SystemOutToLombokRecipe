@@ -41,7 +41,11 @@ jobs:
       uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
 
     - name: Build with Gradle Wrapper
-      run: ./gradlew check
+      # smokeTest scaffolds /tmp Gradle projects per recipe variant, runs the
+      # recipe end-to-end via a nested Gradle process, and confirms the rewritten
+      # Java compiles. It's the structural pre-publish gate locally; running it
+      # in CI ensures a green main means the same thing the publish task gates on.
+      run: ./gradlew check smokeTest
 
   dependency-submission:
 
