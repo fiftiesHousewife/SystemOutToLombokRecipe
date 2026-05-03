@@ -94,6 +94,19 @@ tasks.withType<Checkstyle>().configureEach {
     maxWarnings = 0
 }
 
+// signAllPublications() pulls signing into every publishToMavenLocal, including
+// the one smokeTest depends on. In CI there's no GPG key, so signing fails and
+// smokeTest never runs. Throwaway smoke projects resolve unsigned artifacts
+// fine, so make signing a no-op when no key is configured. Local publish to
+// Maven Central is unaffected because the key is in ~/.gradle/gradle.properties.
+tasks.withType<Sign>().configureEach {
+    onlyIf("a signing key is configured") {
+        project.hasProperty("signing.keyId")
+                || project.hasProperty("signingInMemoryKey")
+                || System.getenv("ORG_GRADLE_PROJECT_signingInMemoryKey") != null
+    }
+}
+
 tasks.withType<Javadoc> {
     (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:all,-missing", "-quiet")
 }
