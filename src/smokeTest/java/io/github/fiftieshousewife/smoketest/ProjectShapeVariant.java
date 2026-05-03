@@ -19,7 +19,8 @@ record ProjectShapeVariant(String displayName,
     enum Topology {
         MULTI_MODULE,
         BUILD_LOGIC_INCLUDE,
-        COMPOSITE_INCLUDE_BUILD
+        COMPOSITE_INCLUDE_BUILD,
+        RELEASE_SHAPED_CONSUMER
     }
 
     enum Dsl {

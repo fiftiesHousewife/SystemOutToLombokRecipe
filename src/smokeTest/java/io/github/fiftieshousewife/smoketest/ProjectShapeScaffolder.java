@@ -62,6 +62,7 @@ final class ProjectShapeScaffolder {
                 case MULTI_MODULE -> scaffoldMultiModule();
                 case BUILD_LOGIC_INCLUDE -> scaffoldBuildLogicInclude();
                 case COMPOSITE_INCLUDE_BUILD -> scaffoldCompositeIncludeBuild();
+                case RELEASE_SHAPED_CONSUMER -> scaffoldReleaseShapedConsumer();
             }
         } catch (final IOException e) {
             throw new UncheckedIOException("Failed to scaffold project at " + projectDir, e);
@@ -88,6 +89,59 @@ final class ProjectShapeScaffolder {
         writeSubprojectBuild(projectDir.resolve("build-logic"));
         writeJava(projectDir.resolve("app"), "Greeting.java", GREETING_BODY);
         writeJava(projectDir.resolve("build-logic"), "Helper.java", HELPER_BODY);
+    }
+
+    private void scaffoldReleaseShapedConsumer() throws IOException {
+        if (variant.dsl() != ProjectShapeVariant.Dsl.KOTLIN) {
+            throw new UnsupportedOperationException("RELEASE_SHAPED_CONSUMER only implemented for Kotlin DSL");
+        }
+        Files.writeString(projectDir.resolve("settings.gradle.kts"),
+                "rootProject.name = \"release-shaped-consumer\"\n");
+        Files.writeString(projectDir.resolve("build.gradle.kts"), """
+                plugins {
+                    java
+                    id("org.openrewrite.rewrite") version "%s"
+                    id("com.github.ben-manes.versions") version "0.53.0"
+                }
+
+                repositories {
+                    mavenLocal()
+                    mavenCentral()
+                }
+
+                dependencies {
+                    rewrite("%s:system-out-to-lombok-log4j:%s")
+
+                    compileOnly("org.projectlombok:lombok:1.18.44")
+                    annotationProcessor("org.projectlombok:lombok:1.18.44")
+                }
+
+                rewrite {
+                    activeRecipe("%s")
+                }
+                """.formatted(
+                config.rewritePluginVersion(),
+                config.projectGroup(),
+                config.projectVersion(),
+                variant.recipeId()));
+        writeJava(projectDir, "foo/Foo.java", """
+                package com.example.foo;
+
+                public class Foo {
+                    public void greet(String name) {
+                        System.out.println("foo: " + name);
+                    }
+                }
+                """);
+        writeJava(projectDir, "bar/Bar.java", """
+                package com.example.bar;
+
+                public class Bar {
+                    public void announce(String topic) {
+                        System.out.println("bar: " + topic);
+                    }
+                }
+                """);
     }
 
     private void scaffoldCompositeIncludeBuild() throws IOException {
@@ -249,10 +303,10 @@ final class ProjectShapeScaffolder {
         }
     }
 
-    private void writeJava(final Path moduleDir, final String fileName, final String body) throws IOException {
-        final Path javaDir = moduleDir.resolve("src/main/java/com/example");
-        Files.createDirectories(javaDir);
-        Files.writeString(javaDir.resolve(fileName), body);
+    private void writeJava(final Path moduleDir, final String relativePath, final String body) throws IOException {
+        final Path target = moduleDir.resolve("src/main/java/com/example").resolve(relativePath);
+        Files.createDirectories(target.getParent());
+        Files.writeString(target, body);
     }
 
     private void writeEmptyCatalog(final Path dir) throws IOException {

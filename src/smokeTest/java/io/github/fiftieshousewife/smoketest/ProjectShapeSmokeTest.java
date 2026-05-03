@@ -72,7 +72,14 @@ class ProjectShapeSmokeTest {
                         "io.github.fiftieshousewife.SystemOutToSlf4jRecipe",
                         ProjectShapeVariant.Topology.COMPOSITE_INCLUDE_BUILD,
                         ProjectShapeVariant.Dsl.GROOVY,
-                        List.of("", "build-logic"))));
+                        List.of("", "build-logic"))),
+                cell(new ProjectShapeVariant(
+                        "G — release-shaped consumer (existing Lombok + ben-manes plugin + multi-package sources)",
+                        "G",
+                        "io.github.fiftieshousewife.SystemOutToSlf4jRecipe",
+                        ProjectShapeVariant.Topology.RELEASE_SHAPED_CONSUMER,
+                        ProjectShapeVariant.Dsl.KOTLIN,
+                        List.of(""))));
     }
 
     private static Arguments cell(final ProjectShapeVariant variant) {

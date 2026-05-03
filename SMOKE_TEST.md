@@ -204,6 +204,15 @@ on the project-shape matrix BACKLOG item.
 
 ## 3. Publish to Maven Local and resolve via coordinates
 
+**Structurally automated by §2 + §2a + `RecipeResolutionSmokeTest`** — every
+smoke cell (`SmokeTest`, `ProjectShapeSmokeTest`, `RecipeResolutionSmokeTest`)
+already (a) `dependsOn(publishToMavenLocal)`, (b) scaffolds projects that
+resolve the recipe via Maven coordinates from `mavenLocal()` rather than via
+`files(...)`, and (c) walks the dry-run / apply / compile cycle (or, in the
+resolution-only case, `dependencies --configuration rewrite`). The procedure
+below is kept as the manual fallback if you want to inspect the resolved
+artifact by hand.
+
 ```bash
 ./gradlew publishToMavenLocal
 ```
