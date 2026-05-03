@@ -33,7 +33,7 @@
 
   **Not the same bug as #6132.** That one (JDK 25 launcher → Kotlin 1.9.x can't parse build.gradle.kts) was fixed by the K2 upgrade in #6766 (`kotlin-compiler-embeddable 2.2.0`). With K2 in place, inline scenarios work on JDK 25 + Gradle 9, but the catalog scenario still fails — confirming it's a separate bug.
 
-  Path forward: upstream issue draft saved to `UPSTREAM_ISSUE_DRAFT.md` (file at `https://github.com/openrewrite/rewrite/issues/new` — local `gh` token lacks write access to that repo). After filing, paste the issue URL back here. Production users on Gradle 9 are covered by the manual `SMOKE_TEST.md`. Current state: integrationTest stays on JDK 21 launcher + Gradle 8.x daemon until upstream fixes Gradle 9 catalog handling.
+  Upstream issue filed: https://github.com/openrewrite/rewrite/issues/7548. Production users on Gradle 9 are covered by the manual `SMOKE_TEST.md`. Current state: integrationTest stays on JDK 21 launcher + Gradle 8.x daemon until upstream ships a fix; once it does, drop `release.set(21)` + the JDK 21 launcher block in `build.gradle.kts` and bump the `withToolingApi()` pins to a Gradle 9.x version.
 
 ## Parked (re-open on request)
 
