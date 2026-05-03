@@ -14,8 +14,8 @@ final class StringConcatDecomposer {
     private StringConcatDecomposer() {
     }
 
-    static List<Expression> flatten(J.Binary binary) {
-        List<Expression> parts = new ArrayList<>();
+    static List<Expression> flatten(final J.Binary binary) {
+        final List<Expression> parts = new ArrayList<>();
         flattenInto(binary, parts);
         return parts;
     }

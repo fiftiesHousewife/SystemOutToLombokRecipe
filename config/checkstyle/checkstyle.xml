@@ -3,12 +3,20 @@
     "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
     "https://checkstyle.org/dtds/configuration_1_3.dtd">
 <!--
-  Project override of the bundled cleancode-checkstyle.xml. Identical to the
-  plugin default except LineLength.max is bumped to 140 — OpenRewrite recipe
-  call sites and method signatures are intrinsically wide.
+  Project override of the bundled cleancode-checkstyle.xml.
+  - LineLength.max bumped to 140 — OpenRewrite recipe call sites and method
+    signatures are intrinsically wide.
+  - severity = error: findings fail the build (gate, not advisory).
+  - FileLength + MethodLength suppressed under src/test and src/integrationTest:
+    integration-test method bodies legitimately spell out before/after fixtures
+    that would lose readability if split.
 -->
 <module name="Checker">
-    <property name="severity" value="warning"/>
+    <property name="severity" value="error"/>
+    <module name="SuppressionSingleFilter">
+        <property name="checks" value="FileLength|MethodLength"/>
+        <property name="files" value="[\\/]src[\\/](test|integrationTest)[\\/]"/>
+    </module>
     <module name="TreeWalker">
         <module name="AvoidStarImport"/>
         <module name="UnusedImports"/>

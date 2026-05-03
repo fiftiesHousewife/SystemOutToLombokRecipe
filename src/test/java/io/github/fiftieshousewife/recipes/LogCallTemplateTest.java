@@ -2,7 +2,10 @@ package io.github.fiftieshousewife.recipes;
 
 import org.junit.jupiter.api.Test;
 
-import static io.github.fiftieshousewife.recipes.LogCallTemplate.*;
+import static io.github.fiftieshousewife.recipes.LogCallTemplate.argsOnly;
+import static io.github.fiftieshousewife.recipes.LogCallTemplate.escape;
+import static io.github.fiftieshousewife.recipes.LogCallTemplate.logLevel;
+import static io.github.fiftieshousewife.recipes.LogCallTemplate.parameterized;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class LogCallTemplateTest {

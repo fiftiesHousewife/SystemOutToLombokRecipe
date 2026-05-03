@@ -9,18 +9,14 @@ import org.openrewrite.ScanningRecipe;
 import org.openrewrite.SourceFile;
 import org.openrewrite.Tree;
 import org.openrewrite.TreeVisitor;
-import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
-import org.openrewrite.java.tree.JContainer;
 import org.openrewrite.java.tree.JLeftPadded;
 import org.openrewrite.java.tree.Space;
 import org.openrewrite.marker.Markers;
 
 import java.time.Duration;
 import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -104,36 +100,7 @@ public class UseCatalogReferenceForDependency
         if (!acc.catalogFound) {
             return TreeVisitor.noop();
         }
-        return new JavaIsoVisitor<>() {
-            @Override
-            public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method,
-                                                            final ExecutionContext ctx) {
-                final J.MethodInvocation visited = super.visitMethodInvocation(method, ctx);
-                return matchedCoordinateLiteral(visited)
-                        .map(literal -> rewriteAsCatalogRef(visited, literal))
-                        .orElse(visited);
-            }
-
-            private Optional<J.Literal> matchedCoordinateLiteral(final J.MethodInvocation method) {
-                final List<Expression> args = method.getArguments();
-                if (args.size() != 1) {
-                    return Optional.empty();
-                }
-                return Optional.of(args.get(0))
-                        .filter(J.Literal.class::isInstance)
-                        .map(J.Literal.class::cast)
-                        .filter(literal -> literal.getValue() instanceof String coords && matchesModule(coords, module));
-            }
-
-            private J.MethodInvocation rewriteAsCatalogRef(final J.MethodInvocation method,
-                                                           final J.Literal literal) {
-                final Expression replacement = buildCatalogReference(catalogReference, literal.getPrefix())
-                        .withMarkers(literal.getMarkers());
-                final JContainer<Expression> newArgs = JContainer.withElements(
-                        method.getPadding().getArguments(), List.of(replacement));
-                return method.getPadding().withArguments(newArgs);
-            }
-        };
+        return new UseCatalogReferenceForDependencyVisitor(module, catalogReference);
     }
 
     static Expression buildCatalogReference(final String reference, final Space prefix) {

@@ -26,7 +26,7 @@ class SystemOutToSlf4jMethodTest {
 
     @Test
     void isSystemOutOrErr_detectsSystemOut() {
-        MethodInvocationFinder finder = visit("""
+        final MethodInvocationFinder finder = visit("""
                 package com.example;
                 public class Test {
                     void method() {
@@ -39,7 +39,7 @@ class SystemOutToSlf4jMethodTest {
 
     @Test
     void isSystemErr_detectsSystemErr() {
-        MethodInvocationFinder finder = visit("""
+        final MethodInvocationFinder finder = visit("""
                 package com.example;
                 public class Test {
                     void method() {
@@ -57,7 +57,7 @@ class SystemOutToSlf4jMethodTest {
 
     @Test
     void hasNoRealArg_trueForSingleEmpty() {
-        List<org.openrewrite.java.tree.Expression> args = new ArrayList<>();
+        final List<org.openrewrite.java.tree.Expression> args = new ArrayList<>();
         firstMethodInvocation("""
                 package com.example;
                 public class T { void m() { System.out.println(); } }
@@ -67,7 +67,7 @@ class SystemOutToSlf4jMethodTest {
 
     @Test
     void hasNoRealArg_falseForNonEmptyArg() {
-        List<org.openrewrite.java.tree.Expression> args = new ArrayList<>();
+        final List<org.openrewrite.java.tree.Expression> args = new ArrayList<>();
         firstMethodInvocation("""
                 package com.example;
                 public class T { void m() { System.out.println("hi"); } }
@@ -97,7 +97,7 @@ class SystemOutToSlf4jMethodTest {
 
     @Test
     void printMethod_matches_falseForMismatchedName() {
-        J.MethodInvocation flush = captureMethodInvocation("System.out.flush()");
+        final J.MethodInvocation flush = captureMethodInvocation("System.out.flush()");
         assertThat(PrintMethod.PRINTLN.matches(flush)).isFalse();
     }
 
@@ -106,7 +106,7 @@ class SystemOutToSlf4jMethodTest {
     }
 
     private J.MethodInvocation captureMethodInvocation(String call) {
-        J.MethodInvocation[] captured = {null};
+        final J.MethodInvocation[] captured = {null};
         firstMethodInvocation(
                 "package com.example;\npublic class T { void m() { " + call + "; } }\n",
                 mi -> captured[0] = mi);
@@ -114,7 +114,7 @@ class SystemOutToSlf4jMethodTest {
     }
 
     private void firstMethodInvocation(String code, Consumer<J.MethodInvocation> sink) {
-        SourceFile cu = javaParser.parse(code).findFirst().orElseThrow();
+        final SourceFile cu = javaParser.parse(code).findFirst().orElseThrow();
         new JavaIsoVisitor<ExecutionContext>() {
             boolean done;
             @Override
@@ -129,8 +129,8 @@ class SystemOutToSlf4jMethodTest {
     }
 
     private MethodInvocationFinder visit(String code) {
-        SourceFile cu = javaParser.parse(code).findFirst().orElseThrow();
-        MethodInvocationFinder finder = new MethodInvocationFinder();
+        final SourceFile cu = javaParser.parse(code).findFirst().orElseThrow();
+        final MethodInvocationFinder finder = new MethodInvocationFinder();
         finder.visit(cu, ctx);
         return finder;
     }

@@ -22,7 +22,7 @@ class LombokClasspathGateTest {
 
     @Test
     void returnsTrue_whenSourceSetContainsLombokSlf4j() {
-        J.CompilationUnit cu = parse().withMarkers(
+        final J.CompilationUnit cu = parse().withMarkers(
                 markersWithSourceSet(JavaType.ShallowClass.build(LombokLoggingAnnotation.SLF4J.fqn())));
 
         assertThat(LombokClasspathGate.isAvailable(cursorAt(cu))).isTrue();
@@ -30,7 +30,7 @@ class LombokClasspathGateTest {
 
     @Test
     void returnsFalse_whenSourceSetLacksLombokSlf4j() {
-        J.CompilationUnit cu = parse().withMarkers(
+        final J.CompilationUnit cu = parse().withMarkers(
                 markersWithSourceSet(JavaType.ShallowClass.build("java.util.List")));
 
         assertThat(LombokClasspathGate.isAvailable(cursorAt(cu))).isFalse();
@@ -38,8 +38,8 @@ class LombokClasspathGateTest {
 
     @Test
     void returnsFalse_whenSourceSetMarkerIsAbsent() {
-        J.CompilationUnit cu = parse();
-        J.CompilationUnit withoutSourceSet = cu.withMarkers(
+        final J.CompilationUnit cu = parse();
+        final J.CompilationUnit withoutSourceSet = cu.withMarkers(
                 cu.getMarkers().removeByType(JavaSourceSet.class));
 
         assertThat(LombokClasspathGate.isAvailable(cursorAt(withoutSourceSet))).isFalse();
@@ -47,7 +47,7 @@ class LombokClasspathGateTest {
 
     @Test
     void returnsFalse_whenCursorIsNotInsideCompilationUnit() {
-        Cursor detached = new Cursor(null, Cursor.ROOT_VALUE);
+        final Cursor detached = new Cursor(null, Cursor.ROOT_VALUE);
 
         assertThat(LombokClasspathGate.isAvailable(detached)).isFalse();
     }
@@ -60,7 +60,7 @@ class LombokClasspathGateTest {
     }
 
     private org.openrewrite.marker.Markers markersWithSourceSet(JavaType.FullyQualified... classpath) {
-        JavaSourceSet sourceSet = new JavaSourceSet(
+        final JavaSourceSet sourceSet = new JavaSourceSet(
                 Tree.randomId(), "main", List.of(classpath), Collections.emptyMap());
         return org.openrewrite.marker.Markers.build(List.of(sourceSet));
     }

@@ -85,6 +85,15 @@ spotbugs {
     reportLevel.set(com.github.spotbugs.snom.Confidence.DEFAULT)
 }
 
+// The cleancode plugin sets ignoreFailures=true on Checkstyle, so findings
+// land in CI as advisory warnings. We want them to gate the build like
+// SpotBugs does — flip back here so any error-level finding fails ./gradlew check.
+tasks.withType<Checkstyle>().configureEach {
+    isIgnoreFailures = false
+    maxErrors = 0
+    maxWarnings = 0
+}
+
 tasks.withType<Javadoc> {
     (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:all,-missing", "-quiet")
 }

@@ -153,8 +153,8 @@ class AddLombokSlf4jAnnotationMethodTest {
     }
 
     private boolean evaluate(String code, java.util.function.Predicate<J.ClassDeclaration> predicate) {
-        SourceFile cu = javaParser.parse(code).findFirst().orElseThrow();
-        ClassDeclarationCollector collector = new ClassDeclarationCollector();
+        final SourceFile cu = javaParser.parse(code).findFirst().orElseThrow();
+        final ClassDeclarationCollector collector = new ClassDeclarationCollector();
         collector.visit(cu, ctx);
         return collector.result != null && predicate.test(collector.result);
     }

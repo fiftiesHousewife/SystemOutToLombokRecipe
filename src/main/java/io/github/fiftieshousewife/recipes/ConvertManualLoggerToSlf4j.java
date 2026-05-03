@@ -11,25 +11,18 @@ import org.openrewrite.Recipe;
 import org.openrewrite.Tree;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
-import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.search.UsesType;
 import org.openrewrite.java.tree.J;
-import org.openrewrite.java.tree.JavaType;
 import org.openrewrite.java.tree.Statement;
 import org.openrewrite.java.tree.TypeTree;
 import org.openrewrite.java.tree.TypeUtils;
 
 import java.time.Duration;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import static io.github.fiftieshousewife.recipes.AddLombokSlf4jAnnotation.hasLombokLoggingAnnotation;
 import static io.github.fiftieshousewife.recipes.LoggerNames.LOG4J2_LOGGER;
-import static io.github.fiftieshousewife.recipes.LombokClasspathGate.isAvailable;
-import static io.github.fiftieshousewife.recipes.LombokLoggingAnnotation.SLF4J;
-import static io.github.fiftieshousewife.recipes.RemoveUnusedLoggerImports.stillUsedImports;
 
 /**
  * Converts classes that hand-roll a Log4j2 logger field into the Lombok
@@ -90,41 +83,8 @@ public class ConvertManualLoggerToSlf4j extends Recipe {
 
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
-        return Preconditions.check(new UsesType<>(LOG4J2_LOGGER.fqn(), false), new JavaIsoVisitor<>() {
-            @Override
-            public J.CompilationUnit visitCompilationUnit(final J.CompilationUnit compilationUnit,
-                                                          final ExecutionContext ctx) {
-                final J.CompilationUnit visited = super.visitCompilationUnit(compilationUnit, ctx);
-                final List<J.Import> keep = stillUsedImports(visited);
-                return keep.size() == visited.getImports().size() ? visited : visited.withImports(keep);
-            }
-
-            @Override
-            public J.ClassDeclaration visitClassDeclaration(final J.ClassDeclaration classDecl,
-                                                            final ExecutionContext ctx) {
-                final J.ClassDeclaration visited = super.visitClassDeclaration(classDecl, ctx);
-                return shouldConvert(visited) ? convertToSlf4j(visited) : visited;
-            }
-
-            private boolean shouldConvert(final J.ClassDeclaration classDecl) {
-                return !AddLombokSlf4jAnnotation.hasLombokLoggingAnnotation(classDecl)
-                        && findManualLog4j2Field(classDecl).isPresent()
-                        && (!requireLombokOnClasspath || isAvailable(getCursor()));
-            }
-
-            private J.ClassDeclaration convertToSlf4j(final J.ClassDeclaration classDecl) {
-                maybeAddImport(SLF4J.fqn(), null, false);
-                final J.ClassDeclaration annotated = JavaTemplate.builder("@Slf4j")
-                        .imports(SLF4J.fqn())
-                        .build()
-                        .apply(getCursor(),
-                                classDecl.getCoordinates().addAnnotation(Comparator.comparing(J.Annotation::getSimpleName)));
-
-                return findManualLog4j2Field(annotated)
-                        .map(field -> removeField(renameReferences(annotated, field.name()), field.varDecl()))
-                        .orElse(annotated);
-            }
-        });
+        return Preconditions.check(new UsesType<>(LOG4J2_LOGGER.fqn(), false),
+                new ConvertManualLoggerToSlf4jVisitor(requireLombokOnClasspath));
     }
 
     static Optional<ManualField> findManualLog4j2Field(final J.ClassDeclaration classDecl) {
@@ -141,15 +101,14 @@ public class ConvertManualLoggerToSlf4j extends Recipe {
         return typeExpression != null && TypeUtils.isOfClassType(typeExpression.getType(), LOG4J2_LOGGER.fqn());
     }
 
-    private static J.ClassDeclaration renameReferences(final J.ClassDeclaration classDecl, final String oldName) {
+    static J.ClassDeclaration renameReferences(final J.ClassDeclaration classDecl, final String oldName) {
         if ("log".equals(oldName)) {
             return classDecl;
         }
         return (J.ClassDeclaration) new RenameFieldReferenceVisitor(oldName).visitNonNull(classDecl, 0);
     }
 
-    private static J.ClassDeclaration removeField(final J.ClassDeclaration classDecl,
-                                                  final J.VariableDeclarations toRemove) {
+    static J.ClassDeclaration removeField(final J.ClassDeclaration classDecl, final J.VariableDeclarations toRemove) {
         final List<Statement> keep = classDecl.getBody().getStatements().stream()
                 .filter(statement -> statement != toRemove)
                 .toList();

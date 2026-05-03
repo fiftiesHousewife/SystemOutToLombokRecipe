@@ -1,6 +1,5 @@
 package io.github.fiftieshousewife.recipes;
 
-import io.github.fiftieshousewife.recipes.SystemOutToSlf4j.SystemOutVisitor;
 import org.jspecify.annotations.NullMarked;
 import org.openrewrite.java.MethodMatcher;
 import org.openrewrite.java.tree.J;

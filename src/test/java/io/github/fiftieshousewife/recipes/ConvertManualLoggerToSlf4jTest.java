@@ -10,7 +10,6 @@ import org.openrewrite.test.RewriteTest;
 import org.openrewrite.test.TypeValidation;
 
 import java.util.Collections;
-import java.util.List;
 
 import static org.openrewrite.java.Assertions.java;
 

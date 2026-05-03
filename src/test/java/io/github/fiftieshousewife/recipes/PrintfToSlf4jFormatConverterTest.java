@@ -2,7 +2,14 @@ package io.github.fiftieshousewife.recipes;
 
 import org.junit.jupiter.api.Test;
 
-import static io.github.fiftieshousewife.recipes.PrintfToSlf4jFormatConverter.*;
+import static io.github.fiftieshousewife.recipes.PrintfToSlf4jFormatConverter.convert;
+import static io.github.fiftieshousewife.recipes.PrintfToSlf4jFormatConverter.isDateTimeConversion;
+import static io.github.fiftieshousewife.recipes.PrintfToSlf4jFormatConverter.skipArgumentIndex;
+import static io.github.fiftieshousewife.recipes.PrintfToSlf4jFormatConverter.skipConversionChar;
+import static io.github.fiftieshousewife.recipes.PrintfToSlf4jFormatConverter.skipFlags;
+import static io.github.fiftieshousewife.recipes.PrintfToSlf4jFormatConverter.skipPrecision;
+import static io.github.fiftieshousewife.recipes.PrintfToSlf4jFormatConverter.skipSpecifier;
+import static io.github.fiftieshousewife.recipes.PrintfToSlf4jFormatConverter.skipWidth;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class PrintfToSlf4jFormatConverterTest {

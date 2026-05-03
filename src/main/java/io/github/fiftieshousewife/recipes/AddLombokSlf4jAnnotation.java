@@ -9,20 +9,16 @@ import org.openrewrite.Preconditions;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
-import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.MethodMatcher;
 import org.openrewrite.java.search.UsesMethod;
 import org.openrewrite.java.search.UsesType;
 import org.openrewrite.java.tree.J;
 
 import java.time.Duration;
-import java.util.Comparator;
 import java.util.Set;
 
 import static io.github.fiftieshousewife.recipes.JulToSlf4j.JUL_LEVEL_METHODS;
 import static io.github.fiftieshousewife.recipes.JulToSlf4j.julLevelOf;
-import static io.github.fiftieshousewife.recipes.LombokClasspathGate.isAvailable;
-import static io.github.fiftieshousewife.recipes.LombokLoggingAnnotation.SLF4J;
 import static io.github.fiftieshousewife.recipes.LombokLoggingAnnotation.matchesSimpleName;
 import static io.github.fiftieshousewife.recipes.LombokLoggingAnnotation.matchesTypeFragment;
 import static io.github.fiftieshousewife.recipes.SystemOutToSlf4j.isSystemOutOrErr;
@@ -45,7 +41,6 @@ import static io.github.fiftieshousewife.recipes.SystemOutToSlf4j.isSystemOutOrE
 public class AddLombokSlf4jAnnotation extends Recipe {
 
     private static final MethodMatcher PRINT_STACK_TRACE = new MethodMatcher("java.lang.Throwable printStackTrace(..)");
-
     private static final Set<String> LOGGER_FIELD_NAMES = Set.of("log", "logger", "LOG", "LOGGER");
 
     @Option(displayName = "Require Lombok on classpath",
@@ -86,37 +81,7 @@ public class AddLombokSlf4jAnnotation extends Recipe {
                         new UsesMethod<>("java.io.PrintStream printf(..)"),
                         new UsesMethod<>("java.lang.Throwable printStackTrace(..)"),
                         new UsesType<>(LoggerNames.JUL_LOGGER.fqn(), false)),
-                new AddAnnotationVisitor(requireLombokOnClasspath));
-    }
-
-    static class AddAnnotationVisitor extends JavaIsoVisitor<ExecutionContext> {
-
-        private final boolean requireLombokOnClasspath;
-
-        AddAnnotationVisitor(final boolean requireLombokOnClasspath) {
-            this.requireLombokOnClasspath = requireLombokOnClasspath;
-        }
-
-        @Override
-        public J.ClassDeclaration visitClassDeclaration(final J.ClassDeclaration classDecl, final ExecutionContext ctx) {
-            return needsSlf4jAnnotation(classDecl) ? addSlf4jAnnotation(classDecl) : classDecl;
-        }
-
-        private boolean needsSlf4jAnnotation(final J.ClassDeclaration classDecl) {
-            return (containsJulCalls(classDecl)
-                            || (containsSystemOutCalls(classDecl) && !hasExplicitLoggerField(classDecl)))
-                    && !hasLombokLoggingAnnotation(classDecl)
-                    && (!requireLombokOnClasspath || isAvailable(getCursor()));
-        }
-
-        J.ClassDeclaration addSlf4jAnnotation(final J.ClassDeclaration classDecl) {
-            maybeAddImport(SLF4J.fqn(), null, false);
-            return JavaTemplate.builder("@Slf4j")
-                    .imports(SLF4J.fqn())
-                    .build()
-                    .apply(getCursor(),
-                            classDecl.getCoordinates().addAnnotation(Comparator.comparing(J.Annotation::getSimpleName)));
-        }
+                new AddLombokSlf4jVisitor(requireLombokOnClasspath));
     }
 
     static boolean containsSystemOutCalls(final J.ClassDeclaration classDecl) {

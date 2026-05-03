@@ -4,6 +4,9 @@ import org.junit.jupiter.api.Test;
 import org.openrewrite.test.RecipeSpec;
 import org.openrewrite.test.RewriteTest;
 import org.openrewrite.test.SourceSpec;
+import org.openrewrite.toml.tree.Toml;
+
+import java.util.function.Consumer;
 
 import static org.openrewrite.gradle.Assertions.buildGradleKts;
 import static org.openrewrite.toml.Assertions.toml;
@@ -19,7 +22,7 @@ class UseCatalogReferenceForDependencyTest implements RewriteTest {
     @Test
     void rewritesInlineStringToCatalogReferenceWhenCatalogPresent() {
         rewriteRun(
-                toml(CATALOG_STUB, (java.util.function.Consumer<SourceSpec<org.openrewrite.toml.tree.Toml.Document>>) spec -> spec.path("gradle/libs.versions.toml")),
+                toml(CATALOG_STUB, (Consumer<SourceSpec<Toml.Document>>) spec -> spec.path("gradle/libs.versions.toml")),
                 buildGradleKts(
                         """
                                 plugins {
@@ -63,7 +66,7 @@ class UseCatalogReferenceForDependencyTest implements RewriteTest {
     @Test
     void ignoresDifferentModules() {
         rewriteRun(
-                toml(CATALOG_STUB, (java.util.function.Consumer<SourceSpec<org.openrewrite.toml.tree.Toml.Document>>) spec -> spec.path("gradle/libs.versions.toml")),
+                toml(CATALOG_STUB, (Consumer<SourceSpec<Toml.Document>>) spec -> spec.path("gradle/libs.versions.toml")),
                 buildGradleKts(
                         """
                                 plugins {
@@ -81,7 +84,7 @@ class UseCatalogReferenceForDependencyTest implements RewriteTest {
     @Test
     void handlesAnnotationProcessor() {
         rewriteRun(
-                toml(CATALOG_STUB, (java.util.function.Consumer<SourceSpec<org.openrewrite.toml.tree.Toml.Document>>) spec -> spec.path("gradle/libs.versions.toml")),
+                toml(CATALOG_STUB, (Consumer<SourceSpec<Toml.Document>>) spec -> spec.path("gradle/libs.versions.toml")),
                 buildGradleKts(
                         """
                                 plugins {
