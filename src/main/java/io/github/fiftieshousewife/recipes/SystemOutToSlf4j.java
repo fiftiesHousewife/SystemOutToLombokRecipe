@@ -3,10 +3,12 @@ package io.github.fiftieshousewife.recipes;
 import org.jspecify.annotations.NullMarked;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Option;
+import org.openrewrite.Preconditions;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaTemplate;
+import org.openrewrite.java.search.UsesMethod;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
 
@@ -83,7 +85,12 @@ public class SystemOutToSlf4j extends Recipe {
 
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
-        return new SystemOutVisitor(requireLombokOnClasspath);
+        return Preconditions.check(
+                Preconditions.or(
+                        new UsesMethod<>("java.io.PrintStream println(..)"),
+                        new UsesMethod<>("java.io.PrintStream print(..)"),
+                        new UsesMethod<>("java.io.PrintStream printf(..)")),
+                new SystemOutVisitor(requireLombokOnClasspath));
     }
 
     static class SystemOutVisitor extends JavaIsoVisitor<ExecutionContext> {
@@ -169,11 +176,7 @@ public class SystemOutToSlf4j extends Recipe {
 
     static boolean isSystemOutOrErr(final J.MethodInvocation method) {
         final Expression select = method.getSelect();
-        if (select == null) {
-            return false;
-        }
-        final String selectStr = select.toString();
-        return SYSTEM_OUT.equals(selectStr) || SYSTEM_ERR.equals(selectStr);
+        return select!=null && (SYSTEM_OUT.equals(select.toString()) || SYSTEM_ERR.equals(select.toString()));
     }
 
     static boolean isSystemErr(final J.MethodInvocation method) {

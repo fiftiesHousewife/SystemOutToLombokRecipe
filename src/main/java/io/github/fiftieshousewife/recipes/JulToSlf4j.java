@@ -4,11 +4,13 @@ import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Option;
+import org.openrewrite.Preconditions;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.MethodMatcher;
+import org.openrewrite.java.search.UsesType;
 import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.Statement;
 import org.openrewrite.java.tree.TypeTree;
@@ -124,7 +126,7 @@ public class JulToSlf4j extends Recipe {
 
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
-        return new JavaIsoVisitor<>() {
+        return Preconditions.check(new UsesType<>(JUL_LOGGER.fqn(), false), new JavaIsoVisitor<>() {
 
             @Override
             public J.CompilationUnit visitCompilationUnit(final J.CompilationUnit compilationUnit,
@@ -172,7 +174,7 @@ public class JulToSlf4j extends Recipe {
                         .apply(getCursor(), original.getCoordinates().replace(),
                                 original.getArguments().get(0));
             }
-        };
+        });
     }
 
     static Optional<String> julLevelOf(final J.MethodInvocation method) {

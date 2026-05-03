@@ -3,11 +3,14 @@ package io.github.fiftieshousewife.recipes;
 import org.jspecify.annotations.NullMarked;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Option;
+import org.openrewrite.Preconditions;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.MethodMatcher;
+import org.openrewrite.java.search.UsesMethod;
+import org.openrewrite.java.search.UsesType;
 import org.openrewrite.java.tree.J;
 
 import java.util.Comparator;
@@ -87,7 +90,14 @@ public class AddLombokSlf4jAnnotation extends Recipe {
 
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
-        return new AddAnnotationVisitor(requireLombokOnClasspath);
+        return Preconditions.check(
+                Preconditions.or(
+                        new UsesMethod<>("java.io.PrintStream println(..)"),
+                        new UsesMethod<>("java.io.PrintStream print(..)"),
+                        new UsesMethod<>("java.io.PrintStream printf(..)"),
+                        new UsesMethod<>("java.lang.Throwable printStackTrace(..)"),
+                        new UsesType<>(LoggerNames.JUL_LOGGER.fqn(), false)),
+                new AddAnnotationVisitor(requireLombokOnClasspath));
     }
 
     static class AddAnnotationVisitor extends JavaIsoVisitor<ExecutionContext> {

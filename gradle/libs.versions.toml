@@ -1,7 +1,6 @@
 [versions]
 openrewrite = "7.30.0"
 openrewrite-bom = "3.28.0"
-openrewrite-core = "8.79.6"
 junit = "6.1.0-M1"
 assertj = "4.0.0-M1"
 jspecify = "1.0.0"
@@ -12,17 +11,17 @@ cleancode = "0.1.0"
 [libraries]
 # OpenRewrite
 openrewrite-recipe-bom = { module = "org.openrewrite.recipe:rewrite-recipe-bom", version.ref = "openrewrite-bom" }
-openrewrite-java = { module = "org.openrewrite:rewrite-java", version.ref = "openrewrite-core" }
-openrewrite-toml = { module = "org.openrewrite:rewrite-toml", version.ref = "openrewrite-core" }
-openrewrite-properties = { module = "org.openrewrite:rewrite-properties", version.ref = "openrewrite-core" }
-openrewrite-java8 = { module = "org.openrewrite:rewrite-java-8", version.ref = "openrewrite-core" }
-openrewrite-java11 = { module = "org.openrewrite:rewrite-java-11", version.ref = "openrewrite-core" }
-openrewrite-java17 = { module = "org.openrewrite:rewrite-java-17", version.ref = "openrewrite-core" }
-openrewrite-java21 = { module = "org.openrewrite:rewrite-java-21", version.ref = "openrewrite-core" }
-openrewrite-java25 = { module = "org.openrewrite:rewrite-java-25", version.ref = "openrewrite-core" }
-openrewrite-gradle = { module = "org.openrewrite:rewrite-gradle", version.ref = "openrewrite-core" }
-openrewrite-gradle-tooling-api = { module = "org.openrewrite.gradle.tooling:model", version.ref = "openrewrite-core" }
-openrewrite-test = { module = "org.openrewrite:rewrite-test", version.ref = "openrewrite-core" }
+openrewrite-java = { module = "org.openrewrite:rewrite-java" }
+openrewrite-toml = { module = "org.openrewrite:rewrite-toml" }
+openrewrite-properties = { module = "org.openrewrite:rewrite-properties" }
+openrewrite-java8 = { module = "org.openrewrite:rewrite-java-8" }
+openrewrite-java11 = { module = "org.openrewrite:rewrite-java-11" }
+openrewrite-java17 = { module = "org.openrewrite:rewrite-java-17" }
+openrewrite-java21 = { module = "org.openrewrite:rewrite-java-21" }
+openrewrite-java25 = { module = "org.openrewrite:rewrite-java-25" }
+openrewrite-gradle = { module = "org.openrewrite:rewrite-gradle" }
+openrewrite-gradle-tooling-api = { module = "org.openrewrite.gradle.tooling:model" }
+openrewrite-test = { module = "org.openrewrite:rewrite-test" }
 
 # Testing
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }

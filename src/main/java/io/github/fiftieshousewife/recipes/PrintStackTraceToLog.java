@@ -3,11 +3,13 @@ package io.github.fiftieshousewife.recipes;
 import org.jspecify.annotations.NullMarked;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Option;
+import org.openrewrite.Preconditions;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.MethodMatcher;
+import org.openrewrite.java.search.UsesMethod;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
 
@@ -75,7 +77,7 @@ public class PrintStackTraceToLog extends Recipe {
 
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
-        return new JavaIsoVisitor<>() {
+        return Preconditions.check(new UsesMethod<>("java.lang.Throwable printStackTrace(..)"), new JavaIsoVisitor<>() {
             @Override
             public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method,
                                                             final ExecutionContext ctx) {
@@ -98,6 +100,6 @@ public class PrintStackTraceToLog extends Recipe {
                         .build()
                         .apply(getCursor(), original.getCoordinates().replace(), exception);
             }
-        };
+        });
     }
 }

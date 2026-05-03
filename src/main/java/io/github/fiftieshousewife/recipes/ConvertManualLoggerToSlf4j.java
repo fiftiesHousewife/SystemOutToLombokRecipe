@@ -4,11 +4,13 @@ import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Option;
+import org.openrewrite.Preconditions;
 import org.openrewrite.Recipe;
 import org.openrewrite.Tree;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaTemplate;
+import org.openrewrite.java.search.UsesType;
 import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.JavaType;
 import org.openrewrite.java.tree.Statement;
@@ -98,7 +100,7 @@ public class ConvertManualLoggerToSlf4j extends Recipe {
 
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
-        return new JavaIsoVisitor<>() {
+        return Preconditions.check(new UsesType<>(LOG4J2_LOGGER.fqn(), false), new JavaIsoVisitor<>() {
             @Override
             public J.CompilationUnit visitCompilationUnit(final J.CompilationUnit compilationUnit,
                                                           final ExecutionContext ctx) {
@@ -132,7 +134,7 @@ public class ConvertManualLoggerToSlf4j extends Recipe {
                         .map(field -> removeField(renameReferences(annotated, field.name()), field.varDecl()))
                         .orElse(annotated);
             }
-        };
+        });
     }
 
     static Optional<ManualField> findManualLog4j2Field(final J.ClassDeclaration classDecl) {
