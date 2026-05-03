@@ -7,7 +7,6 @@ import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaTemplate;
-import org.openrewrite.java.MethodMatcher;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
 
@@ -38,10 +37,6 @@ public class SystemOutToSlf4j extends Recipe {
 
     private static final String SYSTEM_OUT = "System.out";
     private static final String SYSTEM_ERR = "System.err";
-
-    private static final MethodMatcher PRINTLN = new MethodMatcher("java.io.PrintStream println(..)");
-    private static final MethodMatcher PRINT = new MethodMatcher("java.io.PrintStream print(..)");
-    private static final MethodMatcher PRINTF = new MethodMatcher("java.io.PrintStream printf(..)");
 
     @Option(displayName = "Require Lombok on classpath",
             description = "When true, only rewrite System.out calls in source files where " +
@@ -112,20 +107,12 @@ public class SystemOutToSlf4j extends Recipe {
 
         private J.MethodInvocation dispatchByMethodName(final J.MethodInvocation visited) {
             final boolean isError = isSystemErr(visited);
-            final String name = visited.getSimpleName();
-            if ("println".equals(name) && PRINTLN.matches(visited)) {
-                return replacePrintln(visited, isError);
-            }
-            if ("print".equals(name) && PRINT.matches(visited)) {
-                return replacePrint(visited, isError);
-            }
-            if ("printf".equals(name) && PRINTF.matches(visited)) {
-                return replacePrintf(visited, isError);
-            }
-            return visited;
+            return PrintMethod.forCall(visited)
+                    .map(printMethod -> printMethod.apply(this, visited, isError))
+                    .orElse(visited);
         }
 
-        private J.MethodInvocation replacePrintln(final J.MethodInvocation method, final boolean isError) {
+        J.MethodInvocation replacePrintln(final J.MethodInvocation method, final boolean isError) {
             final List<Expression> args = method.getArguments();
             if (hasNoRealArg(args)) {
                 return applyTemplate(method, emptyMessage(isError));
@@ -136,7 +123,7 @@ public class SystemOutToSlf4j extends Recipe {
             return method;
         }
 
-        private J.MethodInvocation replacePrint(final J.MethodInvocation method, final boolean isError) {
+        J.MethodInvocation replacePrint(final J.MethodInvocation method, final boolean isError) {
             final List<Expression> args = method.getArguments();
             if (args.size() == 1) {
                 return handleSingleArgument(method, args.get(0), isError);
@@ -144,7 +131,7 @@ public class SystemOutToSlf4j extends Recipe {
             return method;
         }
 
-        private J.MethodInvocation replacePrintf(final J.MethodInvocation method, final boolean isError) {
+        J.MethodInvocation replacePrintf(final J.MethodInvocation method, final boolean isError) {
             final List<Expression> args = method.getArguments();
             if (hasNoRealArg(args)) {
                 return method;
@@ -161,7 +148,7 @@ public class SystemOutToSlf4j extends Recipe {
                     args.toArray());
         }
 
-        private J.MethodInvocation handleSingleArgument(final J.MethodInvocation method, final Expression arg, final boolean isError) {
+        J.MethodInvocation handleSingleArgument(final J.MethodInvocation method, final Expression arg, final boolean isError) {
             if (arg instanceof J.Binary binary && binary.getOperator() == J.Binary.Type.Addition) {
                 final List<Expression> parts = flatten(binary);
                 final String format = formatString(parts);
@@ -173,7 +160,7 @@ public class SystemOutToSlf4j extends Recipe {
             return applyTemplate(method, argsOnly(1, isError), arg);
         }
 
-        private J.MethodInvocation applyTemplate(final J.MethodInvocation method, final String template, final Object... args) {
+        J.MethodInvocation applyTemplate(final J.MethodInvocation method, final String template, final Object... args) {
             return JavaTemplate.builder(template)
                     .build()
                     .apply(getCursor(), method.getCoordinates().replace(), args);
