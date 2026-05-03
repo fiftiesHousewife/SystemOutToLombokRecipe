@@ -1,5 +1,7 @@
 package io.github.fiftieshousewife.recipes;
 
+import lombok.EqualsAndHashCode;
+import lombok.Value;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.openrewrite.ExecutionContext;
@@ -16,9 +18,9 @@ import org.openrewrite.java.tree.Statement;
 import org.openrewrite.java.tree.TypeTree;
 import org.openrewrite.java.tree.TypeUtils;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -50,6 +52,8 @@ import static io.github.fiftieshousewife.recipes.LombokClasspathGate.isAvailable
  * <p>When {@code requireLombokOnClasspath} is set, the rewrite is skipped in
  * source files whose classpath doesn't contain {@code lombok.extern.slf4j.Slf4j}.
  */
+@Value
+@EqualsAndHashCode(callSuper = false)
 @NullMarked
 public class JulToSlf4j extends Recipe {
 
@@ -84,20 +88,7 @@ public class JulToSlf4j extends Recipe {
             description = "When true, only rewrite JUL calls in source files where " +
                     "lombok.extern.slf4j.Slf4j is resolvable on the classpath.",
             required = false)
-    private final boolean requireLombokOnClasspath;
-
-    public JulToSlf4j() {
-        this(false);
-    }
-
-    public JulToSlf4j(final boolean requireLombokOnClasspath) {
-        this.requireLombokOnClasspath = requireLombokOnClasspath;
-    }
-
-    @SuppressWarnings("unused")
-    public boolean isRequireLombokOnClasspath() {
-        return requireLombokOnClasspath;
-    }
+    boolean requireLombokOnClasspath;
 
     @Override
     public String getDisplayName() {
@@ -113,15 +104,13 @@ public class JulToSlf4j extends Recipe {
     }
 
     @Override
-    public boolean equals(final Object o) {
-        if (this == o) return true;
-        if (!(o instanceof JulToSlf4j other)) return false;
-        return requireLombokOnClasspath == other.requireLombokOnClasspath;
+    public Set<String> getTags() {
+        return Set.of("logging", "lombok", "slf4j", "jul");
     }
 
     @Override
-    public int hashCode() {
-        return Objects.hash(requireLombokOnClasspath);
+    public Duration getEstimatedEffortPerOccurrence() {
+        return Duration.ofMinutes(2);
     }
 
     @Override

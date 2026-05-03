@@ -12,7 +12,7 @@ class JulToSlf4jTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        spec.recipe(new JulToSlf4j())
+        spec.recipe(new JulToSlf4j(false))
                 .parser(JavaParser.fromJavaVersion())
                 .typeValidationOptions(TypeValidation.none());
     }

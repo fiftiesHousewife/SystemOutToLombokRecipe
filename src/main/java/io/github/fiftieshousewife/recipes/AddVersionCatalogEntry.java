@@ -1,5 +1,7 @@
 package io.github.fiftieshousewife.recipes;
 
+import lombok.EqualsAndHashCode;
+import lombok.Value;
 import org.jspecify.annotations.NullMarked;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Option;
@@ -11,18 +13,21 @@ import org.openrewrite.toml.tree.Space;
 import org.openrewrite.toml.tree.Toml;
 import org.openrewrite.toml.tree.TomlValue;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
+import java.util.Set;
 
 /**
  * Adds an entry to a Gradle version catalog ({@code gradle/libs.versions.toml}).
  * Adds a value to the {@code [versions]} table and a module binding to the
  * {@code [libraries]} table. If an alias is already present, does nothing.
  */
+@Value
+@EqualsAndHashCode(callSuper = false)
 @NullMarked
-public final class AddVersionCatalogEntry extends Recipe {
+public class AddVersionCatalogEntry extends Recipe {
 
     private static final String VERSION_ROW_TEMPLATE = "%s = \"%s\"";
     private static final String LIBRARY_ROW_TEMPLATE = "%s = { module = \"%s\", version.ref = \"%s\" }";
@@ -30,37 +35,22 @@ public final class AddVersionCatalogEntry extends Recipe {
     @Option(displayName = "Version alias",
             description = "Alias used as the key in the [versions] table.",
             example = "lombok")
-    private final String versionAlias;
+    String versionAlias;
 
     @Option(displayName = "Version value",
             description = "Version string.",
             example = "1.18.44")
-    private final String versionValue;
+    String versionValue;
 
     @Option(displayName = "Library alias",
             description = "Alias used as the key in the [libraries] table.",
             example = "lombok")
-    private final String libraryAlias;
+    String libraryAlias;
 
     @Option(displayName = "Module coordinates",
             description = "Module in group:artifact form.",
             example = "org.projectlombok:lombok")
-    private final String module;
-
-    public AddVersionCatalogEntry(final String versionAlias,
-                                  final String versionValue,
-                                  final String libraryAlias,
-                                  final String module) {
-        this.versionAlias = versionAlias;
-        this.versionValue = versionValue;
-        this.libraryAlias = libraryAlias;
-        this.module = module;
-    }
-
-    @SuppressWarnings("unused") public String getVersionAlias() { return versionAlias; }
-    @SuppressWarnings("unused") public String getVersionValue() { return versionValue; }
-    @SuppressWarnings("unused") public String getLibraryAlias() { return libraryAlias; }
-    @SuppressWarnings("unused") public String getModule() { return module; }
+    String module;
 
     @Override
     public String getDisplayName() {
@@ -73,18 +63,13 @@ public final class AddVersionCatalogEntry extends Recipe {
     }
 
     @Override
-    public boolean equals(final Object o) {
-        if (this == o) return true;
-        if (!(o instanceof AddVersionCatalogEntry other)) return false;
-        return versionAlias.equals(other.versionAlias)
-                && versionValue.equals(other.versionValue)
-                && libraryAlias.equals(other.libraryAlias)
-                && module.equals(other.module);
+    public Set<String> getTags() {
+        return Set.of("gradle", "catalog");
     }
 
     @Override
-    public int hashCode() {
-        return Objects.hash(versionAlias, versionValue, libraryAlias, module);
+    public Duration getEstimatedEffortPerOccurrence() {
+        return Duration.ofMinutes(1);
     }
 
     @Override

@@ -26,6 +26,9 @@ dependencies {
 
     compileOnly(libs.jspecify)
 
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)
+
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.assertj.core)
@@ -38,6 +41,14 @@ dependencies {
 tasks.withType<Test> {
     useJUnitPlatform()
     finalizedBy(tasks.jacocoTestReport)
+}
+
+// JaCoCo 0.8.12 (Gradle 9.4 default) bundles ASM that can't read class file
+// major version 69, so the agent throws while instrumenting JDK 25 system
+// classes. The build still passes — JaCoCo skips the un-instrumentable classes
+// — but tens of stack traces flood the test output. 0.8.13+ adds JDK 25 support.
+jacoco {
+    toolVersion = "0.8.14"
 }
 
 tasks.jacocoTestReport {

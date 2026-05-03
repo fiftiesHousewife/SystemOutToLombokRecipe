@@ -16,6 +16,7 @@ final class IdentifierUsageCounter extends JavaIsoVisitor<Integer> {
     }
 
     @Override
+    @SuppressWarnings("PMD.CompareObjectsWithEquals") // AST node identity, not value equality
     public J.VariableDeclarations visitVariableDeclarations(final J.VariableDeclarations varDecl, final Integer p) {
         if (varDecl == declaringField) {
             return varDecl;

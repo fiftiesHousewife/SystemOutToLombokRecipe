@@ -11,7 +11,7 @@ class AddLombokSlf4jAnnotationPrintStackTraceTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        spec.recipe(new AddLombokSlf4jAnnotation())
+        spec.recipe(new AddLombokSlf4jAnnotation(false))
             .afterTypeValidationOptions(TypeValidation.none());
     }
 

@@ -4,6 +4,7 @@ openrewrite-bom = "3.28.0"
 junit = "6.1.0-M1"
 assertj = "4.0.0-M1"
 jspecify = "1.0.0"
+lombok = "1.18.44"
 versions = "0.53.0"
 maven-publish = "0.36.0"
 cleancode = "0.1.0"
@@ -30,6 +31,11 @@ assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 
 # JSpecify for nullability annotations
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
+
+# Lombok — recipe authors use @Value / @EqualsAndHashCode to keep recipe classes terse.
+# Yes, this project ships a Lombok-migration recipe AND uses Lombok internally —
+# that's the standard pattern in the OpenRewrite ecosystem (see moderneinc/rewrite-recipe-starter).
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 
 [plugins]
 openrewrite = { id = "org.openrewrite.rewrite", version.ref = "openrewrite" }

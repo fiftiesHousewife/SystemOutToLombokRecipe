@@ -12,7 +12,7 @@ class SystemOutToSlf4jTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        spec.recipe(new SystemOutToSlf4j())
+        spec.recipe(new SystemOutToSlf4j(false))
                 .parser(JavaParser.fromJavaVersion())
                 .typeValidationOptions(TypeValidation.none());
     }

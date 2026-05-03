@@ -12,7 +12,7 @@ class PrintStackTraceToLogTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        spec.recipe(new PrintStackTraceToLog())
+        spec.recipe(new PrintStackTraceToLog(false))
                 .parser(JavaParser.fromJavaVersion())
                 .typeValidationOptions(TypeValidation.none());
     }

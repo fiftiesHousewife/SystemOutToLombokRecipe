@@ -1,5 +1,7 @@
 package io.github.fiftieshousewife.recipes;
 
+import lombok.EqualsAndHashCode;
+import lombok.Value;
 import org.jspecify.annotations.NullMarked;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Option;
@@ -15,10 +17,11 @@ import org.openrewrite.java.tree.JLeftPadded;
 import org.openrewrite.java.tree.Space;
 import org.openrewrite.marker.Markers;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Rewrites inline Gradle dependency string literals ({@code "group:artifact:version"})
@@ -38,27 +41,21 @@ import java.util.Optional;
  * catalog-aware composition: AddDependency inserts the inline line, this recipe
  * converts it to the catalog reference when a catalog exists.
  */
+@Value
+@EqualsAndHashCode(callSuper = false)
 @NullMarked
-public final class UseCatalogReferenceForDependency
+public class UseCatalogReferenceForDependency
         extends ScanningRecipe<UseCatalogReferenceForDependency.Accumulator> {
 
     @Option(displayName = "Module coordinates",
             description = "The dependency module in group:artifact form.",
             example = "org.projectlombok:lombok")
-    private final String module;
+    String module;
 
     @Option(displayName = "Catalog alias path",
             description = "The Gradle-accessor form of the catalog alias (e.g. libs.lombok or libs.log4jApi).",
             example = "libs.lombok")
-    private final String catalogReference;
-
-    public UseCatalogReferenceForDependency(final String module, final String catalogReference) {
-        this.module = module;
-        this.catalogReference = catalogReference;
-    }
-
-    @SuppressWarnings("unused") public String getModule() { return module; }
-    @SuppressWarnings("unused") public String getCatalogReference() { return catalogReference; }
+    String catalogReference;
 
     @Override
     public String getDisplayName() {
@@ -73,15 +70,13 @@ public final class UseCatalogReferenceForDependency
     }
 
     @Override
-    public boolean equals(final Object o) {
-        if (this == o) return true;
-        if (!(o instanceof UseCatalogReferenceForDependency other)) return false;
-        return module.equals(other.module) && catalogReference.equals(other.catalogReference);
+    public Set<String> getTags() {
+        return Set.of("gradle", "catalog");
     }
 
     @Override
-    public int hashCode() {
-        return Objects.hash(module, catalogReference);
+    public Duration getEstimatedEffortPerOccurrence() {
+        return Duration.ofMinutes(1);
     }
 
     @Override

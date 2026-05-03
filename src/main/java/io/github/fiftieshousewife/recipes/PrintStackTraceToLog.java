@@ -1,5 +1,7 @@
 package io.github.fiftieshousewife.recipes;
 
+import lombok.EqualsAndHashCode;
+import lombok.Value;
 import org.jspecify.annotations.NullMarked;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Option;
@@ -13,8 +15,9 @@ import org.openrewrite.java.search.UsesMethod;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
 
-import java.util.Objects;
+import java.time.Duration;
 import java.util.Optional;
+import java.util.Set;
 
 import static io.github.fiftieshousewife.recipes.LombokClasspathGate.isAvailable;
 
@@ -27,6 +30,8 @@ import static io.github.fiftieshousewife.recipes.LombokClasspathGate.isAvailable
  * source files whose classpath doesn't contain {@code lombok.extern.slf4j.Slf4j}
  * — without {@code @Slf4j} there is no {@code log} field for the rewrite to land on.
  */
+@Value
+@EqualsAndHashCode(callSuper = false)
 @NullMarked
 public class PrintStackTraceToLog extends Recipe {
 
@@ -37,20 +42,7 @@ public class PrintStackTraceToLog extends Recipe {
             description = "When true, only rewrite printStackTrace calls in source files where " +
                     "lombok.extern.slf4j.Slf4j is resolvable on the classpath.",
             required = false)
-    private final boolean requireLombokOnClasspath;
-
-    public PrintStackTraceToLog() {
-        this(false);
-    }
-
-    public PrintStackTraceToLog(final boolean requireLombokOnClasspath) {
-        this.requireLombokOnClasspath = requireLombokOnClasspath;
-    }
-
-    @SuppressWarnings("unused")
-    public boolean isRequireLombokOnClasspath() {
-        return requireLombokOnClasspath;
-    }
+    boolean requireLombokOnClasspath;
 
     @Override
     public String getDisplayName() {
@@ -64,15 +56,13 @@ public class PrintStackTraceToLog extends Recipe {
     }
 
     @Override
-    public boolean equals(final Object o) {
-        if (this == o) return true;
-        if (!(o instanceof PrintStackTraceToLog other)) return false;
-        return requireLombokOnClasspath == other.requireLombokOnClasspath;
+    public Set<String> getTags() {
+        return Set.of("logging", "lombok", "slf4j");
     }
 
     @Override
-    public int hashCode() {
-        return Objects.hash(requireLombokOnClasspath);
+    public Duration getEstimatedEffortPerOccurrence() {
+        return Duration.ofMinutes(1);
     }
 
     @Override

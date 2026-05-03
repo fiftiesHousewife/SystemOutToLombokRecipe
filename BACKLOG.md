@@ -17,6 +17,8 @@
 
 ## Active
 
+- **A14 — Extract recipe-library-base convention plugin** — the half of `build.gradle.kts` that doesn't depend on this recipe's specific shape (clean-code plugin wiring, JaCoCo 90% gate, JDK toolchain + dual `release` targets, `-parameters`, `mavenPublishing { signAllPublications(); publishToMavenCentral(automaticRelease=true) }` skeleton, the `publish*MavenCentral { dependsOn("smokeTest") }` structural gate, the `integrationTest` + `smokeTest` source-set scaffolding) is rebuild-from-scratch boilerplate every time we start a new OpenRewrite recipe project. Lift it into a `recipe-library-base` Gradle convention plugin published alongside the existing `cleancode` plugin. New recipe projects then become `plugins { id("io.github.fiftieshousewife.recipe-library-base") }` plus the recipe-specific dependencies and `coordinates(...)`. Pairs naturally with the JBang+picocli scaffolder (Plan agent draft) — the scaffolder generates the project skeleton, the plugin keeps it on the convention rails.
+
 - **Multi-module integration tests** — the `withToolingApi()` harness models a single `forProjectDirectory` per test, so multi-module / `includeBuild` shapes are only exercised by the `smokeTest` runner today. Investigating whether the Tooling API can model multi-module projects in-process would close the last in-process coverage gap. Defer unless smokeTest stops being enough signal.
 
 - **Re-enable Java 25 in integration tests** — re-bisected 2026-05-02 (originally conflated JDK 25 and Gradle 9; the third cell isolated the trigger). Catalog regression is a **Gradle 9.x daemon** behaviour change in `org.openrewrite.gradle.AddDependency`, **independent of JDK launcher version**. `openrewrite-core 8.81.3` throughout, JDK 21 launcher throughout:

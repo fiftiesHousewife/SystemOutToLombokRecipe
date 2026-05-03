@@ -262,6 +262,10 @@ description: >-
   use `libs.xxx` when one is present, otherwise inline declarations are added
   to build.gradle.kts. Also creates a production-ready log4j2.xml plus a
   console-only log4j2-test.xml for tests.
+tags:
+  - logging
+  - lombok
+  - slf4j
 
 recipeList:
   - io.github.fiftieshousewife.AddSlf4jDependencies
@@ -282,6 +286,10 @@ description: >-
   @Slf4j is only added to source files whose classpath actually contains
   lombok.extern.slf4j.Slf4j, so in multi-module projects where Lombok lives
   on only some modules, classes in the other modules are left alone.
+tags:
+  - logging
+  - lombok
+  - slf4j
 
 recipeList:
   - io.github.fiftieshousewife.CreateLog4j2Config
@@ -302,6 +310,11 @@ description: >-
   still route through Log4j2 at runtime. Catalog-aware: uses libs.X
   references when a Gradle version catalog is present. Existing
   log4j-core declarations are kept; the recipe is idempotent.
+tags:
+  - logging
+  - lombok
+  - slf4j
+  - log4j2
 
 recipeList:
   - io.github.fiftieshousewife.AddSlf4jDependencies
@@ -319,6 +332,11 @@ description: >-
 
   The conversion is only applied in source files whose classpath actually
   contains lombok.extern.slf4j.Slf4j, so modules without Lombok are skipped.
+tags:
+  - logging
+  - lombok
+  - slf4j
+  - log4j2
 
 recipeList:
   - io.github.fiftieshousewife.recipes.ConvertManualLoggerToSlf4j:
@@ -345,6 +363,12 @@ description: >-
   codebases that only have ONE of these patterns, the focused recipes
   (`SystemOutToSlf4jRecipe`, `ConvertManualLoggerToSlf4jRecipe`) remain
   available and run faster.
+tags:
+  - logging
+  - lombok
+  - slf4j
+  - log4j2
+  - jul
 
 recipeList:
   - io.github.fiftieshousewife.AddSlf4jDependencies

@@ -18,7 +18,7 @@ class ConvertManualLoggerToSlf4jTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        spec.recipe(new ConvertManualLoggerToSlf4j())
+        spec.recipe(new ConvertManualLoggerToSlf4j(false))
                 .parser(JavaParser.fromJavaVersion()
                         .dependsOn(
                                 """
