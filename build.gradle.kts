@@ -3,7 +3,6 @@ plugins {
     alias(libs.plugins.openrewrite)
     alias(libs.plugins.versions)
     alias(libs.plugins.maven.publish)
-    // jacoco + spotbugs are applied by the cleancode plugin; declare neither here.
     alias(libs.plugins.cleancode)
 }
 
