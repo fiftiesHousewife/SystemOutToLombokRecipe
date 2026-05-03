@@ -14,7 +14,13 @@ import java.util.Comparator;
 import java.util.Objects;
 import java.util.Set;
 
+import static io.github.fiftieshousewife.recipes.JulToSlf4j.JUL_LEVEL_METHODS;
+import static io.github.fiftieshousewife.recipes.JulToSlf4j.julLevelOf;
+import static io.github.fiftieshousewife.recipes.LombokClasspathGate.isAvailable;
 import static io.github.fiftieshousewife.recipes.LombokLoggingAnnotation.SLF4J;
+import static io.github.fiftieshousewife.recipes.LombokLoggingAnnotation.matchesSimpleName;
+import static io.github.fiftieshousewife.recipes.LombokLoggingAnnotation.matchesTypeFragment;
+import static io.github.fiftieshousewife.recipes.SystemOutToSlf4j.isSystemOutOrErr;
 
 /**
  * Adds the Lombok {@code @Slf4j} annotation to classes that use
@@ -88,10 +94,6 @@ public class AddLombokSlf4jAnnotation extends Recipe {
 
         private final boolean requireLombokOnClasspath;
 
-        AddAnnotationVisitor() {
-            this(false);
-        }
-
         AddAnnotationVisitor(final boolean requireLombokOnClasspath) {
             this.requireLombokOnClasspath = requireLombokOnClasspath;
         }
@@ -102,18 +104,10 @@ public class AddLombokSlf4jAnnotation extends Recipe {
         }
 
         private boolean needsSlf4jAnnotation(final J.ClassDeclaration classDecl) {
-            final boolean hasSop = containsSystemOutCalls(classDecl);
-            final boolean hasJul = containsJulCalls(classDecl);
-            if (!hasSop && !hasJul) {
-                return false;
-            }
-            if (hasLombokLoggingAnnotation(classDecl)) {
-                return false;
-            }
-            if (hasExplicitLoggerField(classDecl) && !hasJul) {
-                return false;
-            }
-            return !requireLombokOnClasspath || LombokClasspathGate.isAvailable(getCursor());
+            return (containsJulCalls(classDecl)
+                            || (containsSystemOutCalls(classDecl) && !hasExplicitLoggerField(classDecl)))
+                    && !hasLombokLoggingAnnotation(classDecl)
+                    && (!requireLombokOnClasspath || isAvailable(getCursor()));
         }
 
         J.ClassDeclaration addSlf4jAnnotation(final J.ClassDeclaration classDecl) {
@@ -143,13 +137,8 @@ public class AddLombokSlf4jAnnotation extends Recipe {
     }
 
     static boolean isLombokLoggingAnnotation(final J.Annotation annotation) {
-        if (LombokLoggingAnnotation.matchesSimpleName(annotation.getSimpleName())) {
-            return true;
-        }
-        if (annotation.getType() == null) {
-            return false;
-        }
-        return LombokLoggingAnnotation.matchesTypeFragment(annotation.getType().toString());
+        return matchesSimpleName(annotation.getSimpleName())
+                || (annotation.getType() != null && matchesTypeFragment(annotation.getType().toString()));
     }
 
     static boolean hasExplicitLoggerField(final J.ClassDeclaration classDecl) {
@@ -169,7 +158,7 @@ public class AddLombokSlf4jAnnotation extends Recipe {
 
         @Override
         public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method, final Boolean ctx) {
-            if (SystemOutToSlf4j.isSystemOutOrErr(method) || PRINT_STACK_TRACE.matches(method)) {
+            if (isSystemOutOrErr(method) || PRINT_STACK_TRACE.matches(method)) {
                 found = true;
             }
             return super.visitMethodInvocation(method, ctx);
@@ -181,8 +170,8 @@ public class AddLombokSlf4jAnnotation extends Recipe {
 
         @Override
         public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method, final Boolean ctx) {
-            if (JulToSlf4j.JUL_LEVEL_METHODS.contains(method.getSimpleName())
-                    && JulToSlf4j.julLevelOf(method).isPresent()) {
+            if (JUL_LEVEL_METHODS.contains(method.getSimpleName())
+                    && julLevelOf(method).isPresent()) {
                 found = true;
             }
             return super.visitMethodInvocation(method, ctx);

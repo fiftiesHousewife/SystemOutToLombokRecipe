@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static io.github.fiftieshousewife.recipes.LoggerNames.JUL_LOGGER;
+import static io.github.fiftieshousewife.recipes.LombokClasspathGate.isAvailable;
 
 /**
  * Converts {@code java.util.logging.Logger} level-named method calls to the
@@ -155,13 +156,11 @@ public class JulToSlf4j extends Recipe {
             }
 
             private Optional<String> targetSlf4jMethodFor(final J.MethodInvocation method) {
-                if (method.getArguments().size() != 1) {
-                    return Optional.empty();
-                }
-                if (requireLombokOnClasspath && !LombokClasspathGate.isAvailable(getCursor())) {
-                    return Optional.empty();
-                }
-                return julLevelOf(method).map(JUL_TO_LOG4J::get);
+                return Optional.of(method)
+                        .filter(m -> m.getArguments().size() == 1)
+                        .filter(m -> !requireLombokOnClasspath || isAvailable(getCursor()))
+                        .flatMap(JulToSlf4j::julLevelOf)
+                        .map(JUL_TO_LOG4J::get);
             }
 
             private J.MethodInvocation rewriteAsSlf4jCall(final J.MethodInvocation original,
@@ -190,11 +189,7 @@ public class JulToSlf4j extends Recipe {
     }
 
     private static boolean isJulLoggerType(final @Nullable TypeTree typeExpression) {
-        if (typeExpression == null) {
-            return false;
-        }
-        final JavaType type = typeExpression.getType();
-        return TypeUtils.isOfClassType(type, JUL_LOGGER.fqn());
+        return typeExpression != null && TypeUtils.isOfClassType(typeExpression.getType(), JUL_LOGGER.fqn());
     }
 
     private static boolean fieldReferenced(final J.ClassDeclaration classDecl,

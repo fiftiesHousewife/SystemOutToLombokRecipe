@@ -20,8 +20,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import static io.github.fiftieshousewife.recipes.AddLombokSlf4jAnnotation.hasLombokLoggingAnnotation;
 import static io.github.fiftieshousewife.recipes.LoggerNames.LOG4J2_LOGGER;
+import static io.github.fiftieshousewife.recipes.LombokClasspathGate.isAvailable;
 import static io.github.fiftieshousewife.recipes.LombokLoggingAnnotation.SLF4J;
+import static io.github.fiftieshousewife.recipes.RemoveUnusedLoggerImports.stillUsedImports;
 
 /**
  * Converts classes that hand-roll a Log4j2 logger field into the Lombok
@@ -100,7 +103,7 @@ public class ConvertManualLoggerToSlf4j extends Recipe {
             public J.CompilationUnit visitCompilationUnit(final J.CompilationUnit compilationUnit,
                                                           final ExecutionContext ctx) {
                 final J.CompilationUnit visited = super.visitCompilationUnit(compilationUnit, ctx);
-                final List<J.Import> keep = RemoveUnusedLoggerImports.filter(visited);
+                final List<J.Import> keep = stillUsedImports(visited);
                 return keep.size() == visited.getImports().size() ? visited : visited.withImports(keep);
             }
 
@@ -108,25 +111,25 @@ public class ConvertManualLoggerToSlf4j extends Recipe {
             public J.ClassDeclaration visitClassDeclaration(final J.ClassDeclaration classDecl,
                                                             final ExecutionContext ctx) {
                 final J.ClassDeclaration visited = super.visitClassDeclaration(classDecl, ctx);
-                if (AddLombokSlf4jAnnotation.hasLombokLoggingAnnotation(visited)) {
-                    return visited;
-                }
-                if (findManualLog4j2Field(visited).isEmpty()) {
-                    return visited;
-                }
-                if (requireLombokOnClasspath && !LombokClasspathGate.isAvailable(getCursor())) {
-                    return visited;
-                }
+                return shouldConvert(visited) ? convertToSlf4j(visited) : visited;
+            }
 
+            private boolean shouldConvert(final J.ClassDeclaration classDecl) {
+                return !AddLombokSlf4jAnnotation.hasLombokLoggingAnnotation(classDecl)
+                        && findManualLog4j2Field(classDecl).isPresent()
+                        && (!requireLombokOnClasspath || isAvailable(getCursor()));
+            }
+
+            private J.ClassDeclaration convertToSlf4j(final J.ClassDeclaration classDecl) {
                 maybeAddImport(SLF4J.fqn(), null, false);
                 final J.ClassDeclaration annotated = JavaTemplate.builder("@Slf4j")
                         .imports(SLF4J.fqn())
                         .build()
                         .apply(getCursor(),
-                                visited.getCoordinates().addAnnotation(Comparator.comparing(J.Annotation::getSimpleName)));
+                                classDecl.getCoordinates().addAnnotation(Comparator.comparing(J.Annotation::getSimpleName)));
 
                 return findManualLog4j2Field(annotated)
-                        .map(field -> removeField(renameReferences(annotated, field.name), field.varDecl))
+                        .map(field -> removeField(renameReferences(annotated, field.name()), field.varDecl()))
                         .orElse(annotated);
             }
         };
@@ -143,11 +146,7 @@ public class ConvertManualLoggerToSlf4j extends Recipe {
     }
 
     private static boolean isLog4j2LoggerType(final @Nullable TypeTree typeExpression) {
-        if (typeExpression == null) {
-            return false;
-        }
-        final JavaType type = typeExpression.getType();
-        return TypeUtils.isOfClassType(type, LOG4J2_LOGGER.fqn());
+        return typeExpression != null && TypeUtils.isOfClassType(typeExpression.getType(), LOG4J2_LOGGER.fqn());
     }
 
     private static J.ClassDeclaration renameReferences(final J.ClassDeclaration classDecl, final String oldName) {
@@ -165,14 +164,7 @@ public class ConvertManualLoggerToSlf4j extends Recipe {
         return classDecl.withBody(classDecl.getBody().withStatements(keep));
     }
 
-    static final class ManualField {
-        final J.VariableDeclarations varDecl;
-        final String name;
-
-        ManualField(final J.VariableDeclarations varDecl, final String name) {
-            this.varDecl = varDecl;
-            this.name = name;
-        }
+    record ManualField(J.VariableDeclarations varDecl, String name) {
     }
 
     private static final class RenameFieldReferenceVisitor extends JavaIsoVisitor<Integer> {

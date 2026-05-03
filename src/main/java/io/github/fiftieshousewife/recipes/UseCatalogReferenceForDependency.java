@@ -124,16 +124,10 @@ public final class UseCatalogReferenceForDependency
                 if (args.size() != 1) {
                     return Optional.empty();
                 }
-                if (!(args.get(0) instanceof J.Literal literal)) {
-                    return Optional.empty();
-                }
-                if (!(literal.getValue() instanceof String coordinates)) {
-                    return Optional.empty();
-                }
-                if (!matchesModule(coordinates, module)) {
-                    return Optional.empty();
-                }
-                return Optional.of(literal);
+                return Optional.of(args.get(0))
+                        .filter(J.Literal.class::isInstance)
+                        .map(J.Literal.class::cast)
+                        .filter(literal -> literal.getValue() instanceof String coords && matchesModule(coords, module));
             }
 
             private J.MethodInvocation rewriteAsCatalogRef(final J.MethodInvocation method,

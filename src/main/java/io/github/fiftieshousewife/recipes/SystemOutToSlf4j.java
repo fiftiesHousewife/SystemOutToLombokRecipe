@@ -14,6 +14,15 @@ import org.openrewrite.java.tree.J;
 import java.util.List;
 import java.util.Objects;
 
+import static io.github.fiftieshousewife.recipes.LogCallTemplate.argsOnly;
+import static io.github.fiftieshousewife.recipes.LogCallTemplate.logLevel;
+import static io.github.fiftieshousewife.recipes.LogCallTemplate.parameterized;
+import static io.github.fiftieshousewife.recipes.LombokClasspathGate.isAvailable;
+import static io.github.fiftieshousewife.recipes.PrintfToSlf4jFormatConverter.convert;
+import static io.github.fiftieshousewife.recipes.StringConcatDecomposer.flatten;
+import static io.github.fiftieshousewife.recipes.StringConcatDecomposer.formatString;
+import static io.github.fiftieshousewife.recipes.StringConcatDecomposer.nonLiterals;
+
 /**
  * Converts {@code System.out} and {@code System.err} print calls to Lombok
  * {@code log.xxx(...)} statements. Assumes the class has already been annotated
@@ -86,10 +95,6 @@ public class SystemOutToSlf4j extends Recipe {
 
         private final boolean requireLombokOnClasspath;
 
-        SystemOutVisitor() {
-            this(false);
-        }
-
         SystemOutVisitor(final boolean requireLombokOnClasspath) {
             this.requireLombokOnClasspath = requireLombokOnClasspath;
         }
@@ -97,13 +102,12 @@ public class SystemOutToSlf4j extends Recipe {
         @Override
         public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method, final ExecutionContext ctx) {
             final J.MethodInvocation visited = super.visitMethodInvocation(method, ctx);
-            if (!isSystemOutOrErr(visited)) {
-                return visited;
-            }
-            if (requireLombokOnClasspath && !LombokClasspathGate.isAvailable(getCursor())) {
-                return visited;
-            }
-            return dispatchByMethodName(visited);
+            return shouldRewrite(visited) ? dispatchByMethodName(visited) : visited;
+        }
+
+        private boolean shouldRewrite(final J.MethodInvocation method) {
+            return isSystemOutOrErr(method)
+                    && (!requireLombokOnClasspath || isAvailable(getCursor()));
         }
 
         private J.MethodInvocation dispatchByMethodName(final J.MethodInvocation visited) {
@@ -124,7 +128,7 @@ public class SystemOutToSlf4j extends Recipe {
         private J.MethodInvocation replacePrintln(final J.MethodInvocation method, final boolean isError) {
             final List<Expression> args = method.getArguments();
             if (hasNoRealArg(args)) {
-                return applyTemplate(method, "log." + LogCallTemplate.logLevel(isError) + "(\"\")");
+                return applyTemplate(method, "log." + logLevel(isError) + "(\"\")");
             }
             if (args.size() == 1) {
                 return handleSingleArgument(method, args.get(0), isError);
@@ -146,28 +150,28 @@ public class SystemOutToSlf4j extends Recipe {
                 return method;
             }
             if (args.get(0) instanceof J.Literal literal && literal.getValue() instanceof String printfFormat) {
-                final String log4jFormat = PrintfToSlf4jFormatConverter.convert(printfFormat);
+                final String log4jFormat = convert(printfFormat);
                 final List<Expression> rest = args.subList(1, args.size());
                 return applyTemplate(method,
-                        LogCallTemplate.parameterized(log4jFormat, rest.size(), isError),
+                        parameterized(log4jFormat, rest.size(), isError),
                         rest.toArray());
             }
             return applyTemplate(method,
-                    LogCallTemplate.argsOnly(args.size(), isError),
+                    argsOnly(args.size(), isError),
                     args.toArray());
         }
 
         private J.MethodInvocation handleSingleArgument(final J.MethodInvocation method, final Expression arg, final boolean isError) {
             if (arg instanceof J.Binary binary && binary.getOperator() == J.Binary.Type.Addition) {
-                final List<Expression> parts = StringConcatDecomposer.flatten(binary);
-                final String format = StringConcatDecomposer.formatString(parts);
-                final List<Expression> logArgs = StringConcatDecomposer.nonLiterals(parts);
+                final List<Expression> parts = flatten(binary);
+                final String format = formatString(parts);
+                final List<Expression> logArgs = nonLiterals(parts);
                 return applyTemplate(method,
-                        LogCallTemplate.parameterized(format, logArgs.size(), isError),
+                        parameterized(format, logArgs.size(), isError),
                         logArgs.toArray());
             }
             return applyTemplate(method,
-                    "log." + LogCallTemplate.logLevel(isError) + "(#{any()})",
+                    "log." + logLevel(isError) + "(#{any()})",
                     arg);
         }
 

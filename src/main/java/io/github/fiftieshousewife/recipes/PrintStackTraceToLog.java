@@ -14,6 +14,8 @@ import org.openrewrite.java.tree.J;
 import java.util.Objects;
 import java.util.Optional;
 
+import static io.github.fiftieshousewife.recipes.LombokClasspathGate.isAvailable;
+
 /**
  * Replaces {@code exception.printStackTrace()} calls with {@code log.error(...)} statements.
  * Assumes the class has been annotated with {@code @Slf4j} (apply
@@ -83,13 +85,10 @@ public class PrintStackTraceToLog extends Recipe {
             }
 
             private Optional<Expression> exceptionExpressionIfRewritable(final J.MethodInvocation method) {
-                if (!PRINT_STACK_TRACE.matches(method) || method.getSelect() == null) {
-                    return Optional.empty();
-                }
-                if (requireLombokOnClasspath && !LombokClasspathGate.isAvailable(getCursor())) {
-                    return Optional.empty();
-                }
-                return Optional.of(method.getSelect());
+                return Optional.of(method)
+                        .filter(PRINT_STACK_TRACE::matches)
+                        .filter(m -> !requireLombokOnClasspath || isAvailable(getCursor()))
+                        .map(J.MethodInvocation::getSelect);
             }
 
             private J.MethodInvocation rewriteAsLogError(final J.MethodInvocation original,

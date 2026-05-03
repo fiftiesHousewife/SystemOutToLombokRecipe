@@ -102,67 +102,78 @@ public final class AddVersionCatalogEntry extends Recipe {
                                         final String versionValue,
                                         final String libraryAlias,
                                         final String module) {
-        final boolean hasVersion = tableHasKey(document, "versions", versionAlias);
-        final boolean hasLibrary = tableHasKey(document, "libraries", libraryAlias);
-        if (hasVersion && hasLibrary) {
-            return document;
-        }
-        List<TomlValue> values = new ArrayList<>(document.getValues());
-        if (!hasVersion) {
-            values = addRow(values, "versions", versionAlias + " = \"" + versionValue + "\"");
-        }
-        if (!hasLibrary) {
-            final String row = libraryAlias
-                    + " = { module = \"" + module + "\", version.ref = \"" + versionAlias + "\" }";
-            values = addRow(values, "libraries", row);
-        }
-        return document.withValues(values);
+        List<TomlValue> values = document.getValues();
+        values = addIfMissing(values, CatalogTable.VERSIONS, versionAlias,
+                "%s = \"%s\"".formatted(versionAlias, versionValue));
+        values = addIfMissing(values, CatalogTable.LIBRARIES, libraryAlias,
+                "%s = { module = \"%s\", version.ref = \"%s\" }".formatted(libraryAlias, module, versionAlias));
+        return values == document.getValues() ? document : document.withValues(values);
     }
 
-    static boolean tableHasKey(final Toml.Document doc, final String tableName, final String key) {
-        return doc.getValues().stream()
+    private static List<TomlValue> addIfMissing(final List<TomlValue> values, final CatalogTable table,
+                                                final String key, final String rowSource) {
+        return tableHasKey(values, table, key) ? values : addRow(values, table, rowSource);
+    }
+
+    static boolean tableHasKey(final List<TomlValue> values, final CatalogTable table, final String key) {
+        return values.stream()
                 .filter(Toml.Table.class::isInstance)
                 .map(Toml.Table.class::cast)
-                .filter(table -> tableNameMatches(table, tableName))
-                .flatMap(table -> table.getValues().stream())
+                .filter(t -> tableNameMatches(t, table))
+                .flatMap(t -> t.getValues().stream())
                 .filter(Toml.KeyValue.class::isInstance)
                 .map(Toml.KeyValue.class::cast)
                 .anyMatch(kv -> kv.getKey() instanceof Toml.Identifier id && id.getName().equals(key));
     }
 
-    private static boolean tableNameMatches(final Toml.Table table, final String name) {
-        final Toml.Identifier tableName = table.getName();
-        return tableName != null && name.equals(tableName.getName());
+    private static boolean tableNameMatches(final Toml.Table tomlTable, final CatalogTable table) {
+        final Toml.Identifier name = tomlTable.getName();
+        return name != null && table.tomlName().equals(name.getName());
     }
 
     private static List<TomlValue> addRow(final List<TomlValue> values,
-                                          final String tableName,
+                                          final CatalogTable table,
                                           final String rowSource) {
         final List<TomlValue> mapped = values.stream()
-                .map(value -> appendRowIfMatchingTable(value, tableName, rowSource))
+                .map(value -> appendRowIfMatchingTable(value, table, rowSource))
                 .toList();
-        if (containsTableNamed(values, tableName)) {
+        if (containsTableNamed(values, table)) {
             return mapped;
         }
         final List<TomlValue> withNewTable = new ArrayList<>(mapped);
-        withNewTable.add(parseTable("[" + tableName + "]\n" + rowSource + "\n").withPrefix(leadingNewline()));
+        withNewTable.add(parseTable("[" + table.tomlName() + "]\n" + rowSource + "\n").withPrefix(leadingNewline()));
         return withNewTable;
     }
 
-    private static boolean containsTableNamed(final List<TomlValue> values, final String tableName) {
+    private static boolean containsTableNamed(final List<TomlValue> values, final CatalogTable table) {
         return values.stream()
-                .anyMatch(value -> value instanceof Toml.Table table && tableNameMatches(table, tableName));
+                .anyMatch(value -> value instanceof Toml.Table tomlTable && tableNameMatches(tomlTable, table));
     }
 
     private static TomlValue appendRowIfMatchingTable(final TomlValue value,
-                                                      final String tableName,
+                                                      final CatalogTable table,
                                                       final String rowSource) {
-        if (!(value instanceof Toml.Table table) || !tableNameMatches(table, tableName)) {
+        if (!(value instanceof Toml.Table tomlTable) || !tableNameMatches(tomlTable, table)) {
             return value;
         }
-        final List<Toml> children = new ArrayList<>(table.getValues());
+        final List<Toml> children = new ArrayList<>(tomlTable.getValues());
         children.add(parseKeyValue(rowSource).withPrefix(leadingNewline()));
-        return table.withValues(children);
+        return tomlTable.withValues(children);
+    }
+
+    enum CatalogTable {
+        VERSIONS("versions"),
+        LIBRARIES("libraries");
+
+        private final String tomlName;
+
+        CatalogTable(final String tomlName) {
+            this.tomlName = tomlName;
+        }
+
+        String tomlName() {
+            return tomlName;
+        }
     }
 
     private static Space leadingNewline() {

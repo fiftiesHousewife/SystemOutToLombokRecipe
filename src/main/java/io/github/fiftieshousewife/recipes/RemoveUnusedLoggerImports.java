@@ -28,7 +28,7 @@ final class RemoveUnusedLoggerImports {
     private RemoveUnusedLoggerImports() {
     }
 
-    static List<J.Import> filter(final J.CompilationUnit compilationUnit) {
+    static List<J.Import> stillUsedImports(final J.CompilationUnit compilationUnit) {
         final String nonImportCode = IMPORT_LINE.matcher(compilationUnit.printAll()).replaceAll("");
         return compilationUnit.getImports().stream()
                 .filter(imp -> isStillUsed(imp.getTypeName(), nonImportCode))
