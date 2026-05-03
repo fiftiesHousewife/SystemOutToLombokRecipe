@@ -29,6 +29,7 @@ import static io.github.fiftieshousewife.recipes.LombokClasspathGate.isAvailable
 public class PrintStackTraceToLog extends Recipe {
 
     private static final MethodMatcher PRINT_STACK_TRACE = new MethodMatcher("java.lang.Throwable printStackTrace(..)");
+    private static final String LOG_ERROR_TEMPLATE = "log.error(\"Exception occurred\", #{any()})";
 
     @Option(displayName = "Require Lombok on classpath",
             description = "When true, only rewrite printStackTrace calls in source files where " +
@@ -93,7 +94,7 @@ public class PrintStackTraceToLog extends Recipe {
 
             private J.MethodInvocation rewriteAsLogError(final J.MethodInvocation original,
                                                          final Expression exception) {
-                return JavaTemplate.builder("log.error(\"Exception occurred\", #{any()})")
+                return JavaTemplate.builder(LOG_ERROR_TEMPLATE)
                         .build()
                         .apply(getCursor(), original.getCoordinates().replace(), exception);
             }

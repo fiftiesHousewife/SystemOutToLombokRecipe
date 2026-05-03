@@ -24,6 +24,7 @@ final class RemoveUnusedLoggerImports {
             LOG4J2_LOG_MANAGER.fqn());
 
     private static final Pattern IMPORT_LINE = Pattern.compile("(?m)^import\\s+[^;]+;\\s*$");
+    private static final String WORD_BOUNDARY_TEMPLATE = "\\b%s\\b";
 
     private RemoveUnusedLoggerImports() {
     }
@@ -45,7 +46,7 @@ final class RemoveUnusedLoggerImports {
     }
 
     private static boolean referencedIn(String code, String simpleName) {
-        return Pattern.compile("\\b" + Pattern.quote(simpleName) + "\\b")
+        return Pattern.compile(WORD_BOUNDARY_TEMPLATE.formatted(Pattern.quote(simpleName)))
                 .matcher(code).find();
     }
 }

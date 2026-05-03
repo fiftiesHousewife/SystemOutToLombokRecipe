@@ -17,8 +17,6 @@
 
 - **Expand integration coverage further** — currently covered: `AddLombokDependency` (inline + catalog), `AddSlf4jDependencies` (inline dedup-ordering regression guard + catalog seeding), `MigrateToSlf4jRecipe` (mixed-pattern end-to-end including XML seeding), `CreateLog4j2Config` (fresh project + `overwriteExisting=false` idempotency), `JavaTransformsClasspathGated` negative case. Still bootstrap-only: `SystemOutToSlf4jRecipe` (likely covered transitively by `MigrateToSlf4jRecipe`); multi-module / `includeBuild` shapes (the harness only models a single `forProjectDirectory`).
 
-- **Smoke-test automation Phase 4: §3 mavenLocal coordinates round-trip** — only manual smoke step remaining. Phase 1 (single-module §2), Phase 2 (multi-module / build-logic / composite §2a), and Phase 3 (publish-task gating) all shipped. ~1 hr if a release-shaped consumer project is bootstrapped from a template; less if it reuses `ProjectShapeScaffolder`.
-
 - **Re-enable Java 25 in integration tests** — re-bisected 2026-05-02 (originally conflated JDK 25 and Gradle 9; the third cell isolated the trigger). Catalog regression is a **Gradle 9.x daemon** behaviour change in `org.openrewrite.gradle.AddDependency`, **independent of JDK launcher version**. `openrewrite-core 8.81.3` throughout, JDK 21 launcher throughout:
 
   | Gradle daemon | inline | catalog |

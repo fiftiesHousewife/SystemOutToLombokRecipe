@@ -17,10 +17,8 @@ final class LombokClasspathGate {
     // drop @Slf4j into a module whose classpath won't compile it.
     static boolean isAvailable(final Cursor cursor) {
         final J.CompilationUnit compilationUnit = cursor.firstEnclosing(J.CompilationUnit.class);
-        if (compilationUnit == null) {
-            return false;
-        }
-        return compilationUnit.getMarkers().findFirst(JavaSourceSet.class)
+        return compilationUnit != null
+                && compilationUnit.getMarkers().findFirst(JavaSourceSet.class)
                 .map(sourceSet -> sourceSet.getClasspath().stream()
                         .anyMatch(type -> SLF4J.fqn().equals(type.getFullyQualifiedName())))
                 .orElse(false);

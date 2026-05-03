@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Objects;
 
 import static io.github.fiftieshousewife.recipes.LogCallTemplate.argsOnly;
-import static io.github.fiftieshousewife.recipes.LogCallTemplate.logLevel;
+import static io.github.fiftieshousewife.recipes.LogCallTemplate.emptyMessage;
 import static io.github.fiftieshousewife.recipes.LogCallTemplate.parameterized;
 import static io.github.fiftieshousewife.recipes.LombokClasspathGate.isAvailable;
 import static io.github.fiftieshousewife.recipes.PrintfToSlf4jFormatConverter.convert;
@@ -128,7 +128,7 @@ public class SystemOutToSlf4j extends Recipe {
         private J.MethodInvocation replacePrintln(final J.MethodInvocation method, final boolean isError) {
             final List<Expression> args = method.getArguments();
             if (hasNoRealArg(args)) {
-                return applyTemplate(method, "log." + logLevel(isError) + "(\"\")");
+                return applyTemplate(method, emptyMessage(isError));
             }
             if (args.size() == 1) {
                 return handleSingleArgument(method, args.get(0), isError);
@@ -170,9 +170,7 @@ public class SystemOutToSlf4j extends Recipe {
                         parameterized(format, logArgs.size(), isError),
                         logArgs.toArray());
             }
-            return applyTemplate(method,
-                    "log." + logLevel(isError) + "(#{any()})",
-                    arg);
+            return applyTemplate(method, argsOnly(1, isError), arg);
         }
 
         private J.MethodInvocation applyTemplate(final J.MethodInvocation method, final String template, final Object... args) {

@@ -10,7 +10,6 @@ import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.MethodMatcher;
 import org.openrewrite.java.tree.J;
-import org.openrewrite.java.tree.JavaType;
 import org.openrewrite.java.tree.Statement;
 import org.openrewrite.java.tree.TypeTree;
 import org.openrewrite.java.tree.TypeUtils;
@@ -72,8 +71,11 @@ public class JulToSlf4j extends Recipe {
             "finer", "trace",
             "finest", "trace");
 
+    private static final String MATCHER_TEMPLATE = "%s %s(..)";
+    private static final String CALL_TEMPLATE = "log.%s(#{any()})";
+
     private static MethodMatcher matcher(final String methodName) {
-        return new MethodMatcher(JUL_LOGGER.fqn() + " " + methodName + "(..)");
+        return new MethodMatcher(MATCHER_TEMPLATE.formatted(JUL_LOGGER.fqn(), methodName));
     }
 
     @Option(displayName = "Require Lombok on classpath",
@@ -165,7 +167,7 @@ public class JulToSlf4j extends Recipe {
 
             private J.MethodInvocation rewriteAsSlf4jCall(final J.MethodInvocation original,
                                                           final String targetMethod) {
-                return JavaTemplate.builder("log." + targetMethod + "(#{any()})")
+                return JavaTemplate.builder(CALL_TEMPLATE.formatted(targetMethod))
                         .build()
                         .apply(getCursor(), original.getCoordinates().replace(),
                                 original.getArguments().get(0));
@@ -212,34 +214,6 @@ public class JulToSlf4j extends Recipe {
         final JulLoggerTypeDetector detector = new JulLoggerTypeDetector();
         detector.visit(compilationUnit, 0);
         return detector.found;
-    }
-
-    private static final class IdentifierUsageCounter extends JavaIsoVisitor<Integer> {
-        private final String fieldName;
-        private final J.VariableDeclarations declaringField;
-        int usages;
-
-        IdentifierUsageCounter(final String fieldName, final J.VariableDeclarations declaringField) {
-            this.fieldName = fieldName;
-            this.declaringField = declaringField;
-        }
-
-        @Override
-        public J.VariableDeclarations visitVariableDeclarations(final J.VariableDeclarations varDecl,
-                                                                 final Integer p) {
-            if (varDecl == declaringField) {
-                return varDecl;
-            }
-            return super.visitVariableDeclarations(varDecl, p);
-        }
-
-        @Override
-        public J.Identifier visitIdentifier(final J.Identifier identifier, final Integer p) {
-            if (fieldName.equals(identifier.getSimpleName())) {
-                usages++;
-            }
-            return super.visitIdentifier(identifier, p);
-        }
     }
 
     private static final class JulLoggerTypeDetector extends JavaIsoVisitor<Integer> {

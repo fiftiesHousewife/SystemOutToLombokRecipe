@@ -24,6 +24,9 @@ import java.util.Objects;
 @NullMarked
 public final class AddVersionCatalogEntry extends Recipe {
 
+    private static final String VERSION_ROW_TEMPLATE = "%s = \"%s\"";
+    private static final String LIBRARY_ROW_TEMPLATE = "%s = { module = \"%s\", version.ref = \"%s\" }";
+
     @Option(displayName = "Version alias",
             description = "Alias used as the key in the [versions] table.",
             example = "lombok")
@@ -104,14 +107,14 @@ public final class AddVersionCatalogEntry extends Recipe {
                                         final String module) {
         List<TomlValue> values = document.getValues();
         values = addIfMissing(values, CatalogTable.VERSIONS, versionAlias,
-                "%s = \"%s\"".formatted(versionAlias, versionValue));
+                VERSION_ROW_TEMPLATE.formatted(versionAlias, versionValue));
         values = addIfMissing(values, CatalogTable.LIBRARIES, libraryAlias,
-                "%s = { module = \"%s\", version.ref = \"%s\" }".formatted(libraryAlias, module, versionAlias));
+                LIBRARY_ROW_TEMPLATE.formatted(libraryAlias, module, versionAlias));
         return values == document.getValues() ? document : document.withValues(values);
     }
 
-    private static List<TomlValue> addIfMissing(final List<TomlValue> values, final CatalogTable table,
-                                                final String key, final String rowSource) {
+    static List<TomlValue> addIfMissing(final List<TomlValue> values, final CatalogTable table,
+                                        final String key, final String rowSource) {
         return tableHasKey(values, table, key) ? values : addRow(values, table, rowSource);
     }
 
@@ -126,14 +129,14 @@ public final class AddVersionCatalogEntry extends Recipe {
                 .anyMatch(kv -> kv.getKey() instanceof Toml.Identifier id && id.getName().equals(key));
     }
 
-    private static boolean tableNameMatches(final Toml.Table tomlTable, final CatalogTable table) {
+    static boolean tableNameMatches(final Toml.Table tomlTable, final CatalogTable table) {
         final Toml.Identifier name = tomlTable.getName();
         return name != null && table.tomlName().equals(name.getName());
     }
 
-    private static List<TomlValue> addRow(final List<TomlValue> values,
-                                          final CatalogTable table,
-                                          final String rowSource) {
+    static List<TomlValue> addRow(final List<TomlValue> values,
+                                  final CatalogTable table,
+                                  final String rowSource) {
         final List<TomlValue> mapped = values.stream()
                 .map(value -> appendRowIfMatchingTable(value, table, rowSource))
                 .toList();
@@ -145,14 +148,14 @@ public final class AddVersionCatalogEntry extends Recipe {
         return withNewTable;
     }
 
-    private static boolean containsTableNamed(final List<TomlValue> values, final CatalogTable table) {
+    static boolean containsTableNamed(final List<TomlValue> values, final CatalogTable table) {
         return values.stream()
                 .anyMatch(value -> value instanceof Toml.Table tomlTable && tableNameMatches(tomlTable, table));
     }
 
-    private static TomlValue appendRowIfMatchingTable(final TomlValue value,
-                                                      final CatalogTable table,
-                                                      final String rowSource) {
+    static TomlValue appendRowIfMatchingTable(final TomlValue value,
+                                              final CatalogTable table,
+                                              final String rowSource) {
         if (!(value instanceof Toml.Table tomlTable) || !tableNameMatches(tomlTable, table)) {
             return value;
         }
@@ -176,17 +179,17 @@ public final class AddVersionCatalogEntry extends Recipe {
         }
     }
 
-    private static Space leadingNewline() {
+    static Space leadingNewline() {
         return Space.build("\n", Collections.emptyList());
     }
 
-    private static Toml.KeyValue parseKeyValue(final String source) {
+    static Toml.KeyValue parseKeyValue(final String source) {
         final Toml.Document doc = (Toml.Document) TomlParser.builder().build()
                 .parse(source).findFirst().orElseThrow();
         return (Toml.KeyValue) doc.getValues().get(0);
     }
 
-    private static Toml.Table parseTable(final String source) {
+    static Toml.Table parseTable(final String source) {
         final Toml.Document doc = (Toml.Document) TomlParser.builder().build()
                 .parse(source).findFirst().orElseThrow();
         return (Toml.Table) doc.getValues().get(0);
