@@ -1,6 +1,8 @@
 # Claude Code session notes
 
-Project-specific guidance for this repo. **Generic patterns live in the four skills at `.claude/skills/` — invoke those instead of duplicating their content here.**
+Project-specific guidance for this repo. **Generic patterns live in the skills at `.claude/skills/` — invoke those instead of duplicating their content here.**
+
+## Domain skills (committed)
 
 | Skill | When to invoke |
 | --- | --- |
@@ -10,6 +12,25 @@ Project-specific guidance for this repo. **Generic patterns live in the four ski
 | `smoke-test` | Designing or extending the pre-release smoke-test procedure: `/tmp` project bootstrap, dryRun/Run/compile cycle, project-shape matrix, expected-outcomes tables, mavenLocal resolution check. |
 
 If you're asked to do any of those things, invoke the skill — don't re-derive the patterns inline.
+
+## Clean Code skills (installed by `./gradlew installSkills`, not committed)
+
+When the cleancode plugin (`./gradlew analyseCleanCode`, or the live report at `localhost:7070` via `./gradlew cleanCodeServe`) fires a finding, invoke the matching skill before fixing. Each skill captures the *shape* of the right fix for that family, not just "silence the warning."
+
+| Skill | Codes covered |
+| --- | --- |
+| `clean-code-functions` | F1, F2, F3, G5, G30, G34, Ch3.1–3.3 |
+| `clean-code-naming` | N1, N5, N6, N7, G11, G16 |
+| `clean-code-classes` | Ch10.1, Ch10.2, G8, G14, G17, G18 |
+| `clean-code-conditionals-and-expressions` | G19, G23, G28, G29, G33 |
+| `clean-code-java-idioms` | J1, J2, J3, G1, G4, G25, G26 |
+| `clean-code-null-handling` | Ch7.2 |
+| `clean-code-exception-handling` | Ch7.1 |
+| `clean-code-comments-and-clutter` | C3, C5, G9, G10, G12, G24 |
+| `clean-code-test-quality` | T1, T3, T4 |
+| `clean-code-project-conventions` | project-specific conventions not covered by a single heuristic |
+
+Some findings are false positives — see `CLEANCODE_PLUGIN_FEEDBACK.md` for the catalogue we've identified (G18 inheritance + method-reference blind spots, G19 over-eager firing after extraction, G5 sensitivity to OpenRewrite framework boilerplate). The skill's first job is to triage real-vs-noise.
 
 ## Project structure
 
