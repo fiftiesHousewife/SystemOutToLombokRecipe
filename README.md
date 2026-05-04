@@ -38,6 +38,8 @@ The default recipe, `SystemOutToSlf4jRecipe`, takes a project that's using some 
 
 A companion recipe, `ConvertManualLoggerToSlf4jRecipe`, handles the separate case of codebases that are **already on Log4j2** but declare their `Logger` fields by hand (`private static final Logger log = LogManager.getLogger(X.class);`). It replaces that boilerplate with `@Slf4j`, renames references (`logger`/`LOG`/`LOGGER` → `log`), and cleans up the now-unused `org.apache.logging.log4j.Logger`/`LogManager` imports. See "Migrating existing Log4j2 code" below.
 
+A second companion recipe, `DirectSlf4jLoggerFieldToLombokRecipe`, handles the SLF4J version of the same situation: codebases that are **already on SLF4J** but declare `private static final Logger log = LoggerFactory.getLogger(X.class);` by hand. The transform is the same shape — drop the field, add `@Slf4j`, rename references, prune the `org.slf4j.Logger`/`LoggerFactory` imports — just one step shorter than the Log4j2 case since the call sites already use SLF4J. See "Migrating existing SLF4J code" below.
+
 ## Prerequisites
 
 - JDK 17 or later (JDK 25 supported)
@@ -180,6 +182,26 @@ rewrite {
 ```
 
 A `NoDeps` variant (`ConvertManualLoggerToSlf4jRecipeNoDeps`) exists for projects that manage Lombok separately. If you have both this *and* `System.out` / JUL patterns to migrate, see `MigrateToSlf4jRecipe` above.
+
+## Migrating existing SLF4J code
+
+If your codebase is already on SLF4J but declares `Logger` fields by hand (`private static final Logger log = LoggerFactory.getLogger(X.class);`), `DirectSlf4jLoggerFieldToLombokRecipe` removes that boilerplate:
+
+- Adds `@Slf4j` to each affected class.
+- Deletes the manual field.
+- Renames any references to the old field (`logger.info(...)`, `LOG.error(...)`) to `log.xxx(...)`.
+- Drops now-unused `org.slf4j.Logger` / `org.slf4j.LoggerFactory` imports.
+- Adds the Lombok `compileOnly` + `annotationProcessor` deps so `@Slf4j` expansion compiles. Catalog-aware (same auto-detect as above).
+
+```kotlin
+rewrite {
+    activeRecipe("io.github.fiftieshousewife.DirectSlf4jLoggerFieldToLombokRecipe")
+}
+```
+
+A `NoDeps` variant (`DirectSlf4jLoggerFieldToLombokRecipeNoDeps`) exists for projects that manage Lombok separately — typical for multi-module projects where Lombok lives at a parent level. The `NoDeps` variant only converts source files whose classpath actually contains `lombok.extern.slf4j.Slf4j`, so modules without Lombok are skipped rather than rewritten into uncompilable code.
+
+The recipe only touches classes with **exactly one** eligible field — `private` or package-private, `static final Logger`, initialised from `LoggerFactory.getLogger(...)`. Public/protected fields, classes that already carry a Lombok logging annotation, classes with no field, and classes with multiple eligible fields are all skipped.
 
 ## Logging configuration
 
