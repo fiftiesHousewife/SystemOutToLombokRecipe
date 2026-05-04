@@ -40,6 +40,16 @@
 
   No recipe surface change. Cut as 0.8.1 (or fold into next minor) when ready.
 
+- **DirectSlf4jLoggerFieldToLombok keystone (v1.0 step 1)** (2026-05-04) — first Tier 1 recipe from `RECIPE_AUDIT.md` is in the tree, tests green. Converts a directly-declared `private/package-private static final Logger log = LoggerFactory.getLogger(...)` field into Lombok `@Slf4j`: drops the field, adds the annotation, renames references to `log`, prunes the `org.slf4j.Logger`/`LoggerFactory` imports. Skips when classpath lacks `lombok.extern.slf4j.Slf4j` (gated by `requireLombokOnClasspath` option, threaded through the `*NoDeps` YAML composition). Two YAML composed recipes shipped: `DirectSlf4jLoggerFieldToLombokRecipe` (adds Lombok deps) and `…NoDeps` (multi-module-friendly). 15 `RewriteTest` cases cover happy path, rename variants (`logger`/`LOG`), package-private field, both `LoggerFactory.getLogger` overloads, all five skip conditions (already-annotated, no field, public/protected, non-static, non-final, non-`LoggerFactory` initialiser, multi-eligible), and both `requireLombokOnClasspath` branches. Visitor is 100% covered; recipe class 85% (3 partial branches on short-circuited type-filter chains, low-value to chase).
+
+  Reuse pattern: the rename-references step extracted to a shared top-level `LoggerFieldRenameToLogVisitor`. `ConvertManualLoggerToSlf4j` now uses it too — its previous private inner `RenameFieldReferenceVisitor` deleted along with the unused `Tree` / `JavaIsoVisitor` imports. Cleared the cleancode G5 ×2 finding on the 101-token block. Any future "Logger field → @Slf4j" recipe (JBoss Logger, Commons Logging, etc.) drops onto the same visitor.
+
+  Also: `analyseCleanCode` wired into the `check` lifecycle in `build.gradle.kts` (no more "remembered to run cleancode separately"). `LoggerNames` enum extended with `SLF4J_LOGGER` + `SLF4J_LOGGER_FACTORY`; `RemoveUnusedLoggerImports` extended to prune the SLF4J pair too.
+
+  Verified end-to-end: full `./gradlew check` green (167 unit tests + 7 integration tests passing).
+
+  Cleancode noise unchanged from prior baseline: G18 ×2 (`SystemOutVisitor.replacePrint`/`replacePrintf`), G19 ×1 (`withoutJulLoggerImport`), G5 ×4 (`@Option` framework boilerplate), G30 ×2 (rename visitor's two guard clauses) — all FPs catalogued in `CLEANCODE_PLUGIN_FEEDBACK.md`. Folds into the v0.9 deprecation-aliases release alongside the next Tier 1 piece.
+
 ## Active
 
 - **Move publishAndReleaseToMavenCentral into CI** — currently runs from the operator's laptop. Operator discipline is the wrong place to enforce "publish only after CI is green", and the 2026-05-03 incident (where I claimed the publish task was stopped while it was actually still running and shipped 0.8 to Central) showed why. Move into a `workflow_dispatch` (or tag-trigger) GitHub Actions job that runs `./gradlew check smokeTest publishAndReleaseToMavenCentral`. Requires migrating publish-time credentials from local to GH Actions secrets — the real work is the credential migration, not the workflow file.
@@ -72,7 +82,7 @@
 
   This project's actual differentiation is three things upstream doesn't do: Lombok `@Slf4j` as the destination for every Logger-field-bearing recipe, version-catalog awareness in Gradle, and `requireLombokOnClasspath` gating for multi-module projects. `DirectSlf4jLoggerFieldToLombok` is the keystone that lets us ride on upstream and finish the job at `@Slf4j` instead of a direct field.
 
-  Recommended v1.0 ordering in `RECIPE_AUDIT.md`: build `DirectSlf4jLoggerFieldToLombok` first, then `ConcatThrowableMessage` (genuine upstream gap), then upstream wrappers, then rename. Smoke-test policy: **no smoke cells get deleted when adopting upstream — they get enhanced**, since correctness now depends on upstream behaviour matching our published contract; pin upstream version intentionally and bump deliberately.
+  v1.0 ordering in `RECIPE_AUDIT.md`: ~~step 1 `DirectSlf4jLoggerFieldToLombok`~~ landed 2026-05-04 (see Queued). Remaining steps: `ConcatThrowableMessage` (genuine upstream gap) → wrap `PrintStackTraceToLog` around upstream `PrintStackTraceToLogError` → recompose `JulToSlf4j` to chain upstream `o.o.j.l.slf4j.JulToSlf4j` + the new `DirectSlf4jLoggerFieldToLombok` keystone → delete `ParameterizeStringConcat` (fully duplicated by upstream `ParameterizedLogging`) → rename to `clean-logging` with v0.9 deprecation aliases. Smoke-test policy: **no smoke cells get deleted when adopting upstream — they get enhanced**, since correctness now depends on upstream behaviour matching our published contract; pin upstream version intentionally and bump deliberately.
 
 ## Parked (re-open on request)
 
