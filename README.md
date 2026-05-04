@@ -203,6 +203,34 @@ A `NoDeps` variant (`DirectSlf4jLoggerFieldToLombokRecipeNoDeps`) exists for pro
 
 The recipe only touches classes with **exactly one** eligible field — `private` or package-private, `static final Logger`, initialised from `LoggerFactory.getLogger(...)`. Public/protected fields, classes that already carry a Lombok logging annotation, classes with no field, and classes with multiple eligible fields are all skipped.
 
+## SLF4J cleanup recipes
+
+Pure transformations on existing SLF4J code — no dependency changes. Useful on their own, or compose them after the migration recipes above.
+
+### `ConcatThrowableMessage`
+
+Rewrites SLF4J log calls of the form
+
+```java
+log.error("failed: " + e.getMessage());
+```
+
+into
+
+```java
+log.error("failed: ", e);
+```
+
+— peels the trailing `+ e.getMessage()` off the message string and passes the throwable as a separate argument so SLF4J appends the stack trace. Multi-part LHS chains (`"a " + b + ": " + e.getMessage()`) preserve the leading text verbatim.
+
+```kotlin
+rewrite {
+    activeRecipe("io.github.fiftieshousewife.recipes.ConcatThrowableMessage")
+}
+```
+
+Skipped when the call already has more than one argument (already correct), the right-hand side isn't `Throwable.getMessage()`, or the receiver isn't an `org.slf4j.Logger`. Throwable subtypes (`Exception`, `RuntimeException`, `IOException`, …) all match.
+
 ## Logging configuration
 
 The recipes create two files:
