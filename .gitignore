@@ -63,3 +63,6 @@ src/main/resources/META-INF/rewrite/*.jar
 
 ### Clean Code plugin: cleanCodeSummary report output ###
 docs/reports/
+
+### Claude Code: proxy-aware gradlew wrapper (only useful inside Claude Code) ###
+gradlew-claude
