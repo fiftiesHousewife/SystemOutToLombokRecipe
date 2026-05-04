@@ -192,9 +192,22 @@ val integrationTest = tasks.register<Test>("integrationTest") {
     // because the build.gradle.kts parse aborts mid-flight under memory pressure.
     maxHeapSize = "2g"
 
+    val jdk21Home = javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }.map { it.metadata.installationPath.asFile.absolutePath }
+
     javaLauncher.set(javaToolchains.launcherFor {
         languageVersion.set(JavaLanguageVersion.of(21))
     })
+
+    // The fork itself runs on JDK 21 via the launcher above, but the embedded
+    // Gradle 8.14.3 daemon spawned by withToolingApi() reads org.gradle.java.home
+    // from the calling JVM's system properties to decide which JDK to start its
+    // daemon on. Without this, it inherits JDK 25 from the outer build's toolchain
+    // and v69 system classes blow up its bundled Groovy 4.0.21 / ASM 9.6.
+    doFirst {
+        systemProperty("org.gradle.java.home", jdk21Home.get())
+    }
 
     testClassesDirs = sourceSets["integrationTest"].output.classesDirs
     classpath = sourceSets["integrationTest"].runtimeClasspath
