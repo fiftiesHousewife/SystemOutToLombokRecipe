@@ -60,3 +60,6 @@ src/main/resources/META-INF/rewrite/*.jar
 .claude/skills/SKILLS.md
 .claude/skills/.thresholds-hash
 .claude/skills/clean-code-*/
+
+### Clean Code plugin: cleanCodeSummary report output ###
+docs/reports/

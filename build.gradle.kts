@@ -146,18 +146,33 @@ java {
 // daemon on 21 via BuildLauncher.setJavaHome) was considered and rejected
 // in 2026-05: would require a custom withToolingApi() shim that becomes
 // dead code the moment upstream lands the catalog fix. Not worth it.
+// integrationTest's classpath deliberately excludes sourceSets.test.output:
+// test classes compile at release=25 (class file v69), which the embedded
+// Gradle 8.14.3's bundled Groovy/ASM cannot read. Including them poisons
+// the parser when withToolingApi() walks the classpath. Nothing in
+// integrationTest references test/ helpers, so dropping the link is safe.
 sourceSets {
     create("integrationTest") {
         java.srcDir("src/integrationTest/java")
         resources.srcDir("src/integrationTest/resources")
-        compileClasspath += sourceSets.main.get().output + sourceSets.test.get().output
-        runtimeClasspath += sourceSets.main.get().output + sourceSets.test.get().output
+        compileClasspath += sourceSets.main.get().output
+        runtimeClasspath += sourceSets.main.get().output
     }
 }
 
 configurations {
     named("integrationTestImplementation") { extendsFrom(configurations.testImplementation.get()) }
     named("integrationTestRuntimeOnly") { extendsFrom(configurations.testRuntimeOnly.get()) }
+}
+
+// rewrite-java-25 is compiled at JDK 25 bytecode (class file v69). When
+// withToolingApi() spins up the embedded Gradle 8.14.3 in-process, its
+// bundled Groovy 4.0.21 / ASM 9.6 walks the test JVM's classpath during
+// _BuildScript_ semantic analysis and bombs on the first v69 class.
+// Production users still ship with rewrite-java-25 (it's runtimeOnly on
+// main), but the integration tests don't exercise Java 25 source parsing.
+configurations.named("integrationTestRuntimeClasspath") {
+    exclude(group = "org.openrewrite", module = "rewrite-java-25")
 }
 
 tasks.named<JavaCompile>("compileIntegrationTestJava") {

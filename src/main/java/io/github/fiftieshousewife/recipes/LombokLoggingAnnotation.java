@@ -14,15 +14,15 @@ enum LombokLoggingAnnotation {
     CUSTOM_LOG("CustomLog", "lombok.CustomLog");
 
     private final String simpleName;
-    private final String fqn;
+    private final String qualifiedName;
 
-    LombokLoggingAnnotation(final String simpleName, final String fqn) {
+    LombokLoggingAnnotation(final String simpleName, final String qualifiedName) {
         this.simpleName = simpleName;
-        this.fqn = fqn;
+        this.qualifiedName = qualifiedName;
     }
 
     String fqn() {
-        return fqn;
+        return qualifiedName;
     }
 
     static boolean matchesSimpleName(final String name) {
@@ -30,6 +30,6 @@ enum LombokLoggingAnnotation {
     }
 
     static boolean matchesTypeFragment(final String typeName) {
-        return Arrays.stream(values()).anyMatch(a -> typeName.contains(a.fqn));
+        return Arrays.stream(values()).anyMatch(a -> typeName.contains(a.qualifiedName));
     }
 }

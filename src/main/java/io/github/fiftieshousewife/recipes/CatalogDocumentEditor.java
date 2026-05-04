@@ -89,14 +89,14 @@ final class CatalogDocumentEditor {
         VERSIONS("versions"),
         LIBRARIES("libraries");
 
-        private final String tomlName;
+        private final String tableName;
 
-        CatalogTable(final String tomlName) {
-            this.tomlName = tomlName;
+        CatalogTable(final String tableName) {
+            this.tableName = tableName;
         }
 
         String tomlName() {
-            return tomlName;
+            return tableName;
         }
     }
 

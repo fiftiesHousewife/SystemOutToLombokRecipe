@@ -49,14 +49,9 @@ class SystemOutVisitor extends JavaIsoVisitor<ExecutionContext> {
     }
 
     J.MethodInvocation replacePrintln(final J.MethodInvocation method, final boolean isError) {
-        final List<Expression> args = method.getArguments();
-        if (hasNoRealArg(args)) {
-            return applyTemplate(method, emptyMessage(isError));
-        }
-        if (args.size() == 1) {
-            return handleSingleArgument(method, args.get(0), isError);
-        }
-        return method;
+        return hasNoRealArg(method.getArguments())
+                ? applyTemplate(method, emptyMessage(isError))
+                : replacePrint(method, isError);
     }
 
     J.MethodInvocation replacePrint(final J.MethodInvocation method, final boolean isError) {

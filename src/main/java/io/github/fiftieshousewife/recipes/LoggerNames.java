@@ -6,13 +6,13 @@ enum LoggerNames {
     LOG4J2_LOG_MANAGER("org.apache.logging.log4j.LogManager"),
     JUL_LOGGER("java.util.logging.Logger");
 
-    private final String fqn;
+    private final String qualifiedName;
 
-    LoggerNames(final String fqn) {
-        this.fqn = fqn;
+    LoggerNames(final String qualifiedName) {
+        this.qualifiedName = qualifiedName;
     }
 
     String fqn() {
-        return fqn;
+        return qualifiedName;
     }
 }

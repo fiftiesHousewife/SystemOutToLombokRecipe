@@ -21,6 +21,7 @@ import static io.github.fiftieshousewife.recipes.LombokClasspathGate.isAvailable
 class JulToSlf4jVisitor extends JavaIsoVisitor<ExecutionContext> {
 
     private static final String CALL_TEMPLATE = "log.%s(#{any()})";
+    private static final String JUL_LOGGER_FQN = JUL_LOGGER.fqn();
 
     private final boolean requireLombokOnClasspath;
 
@@ -31,12 +32,14 @@ class JulToSlf4jVisitor extends JavaIsoVisitor<ExecutionContext> {
     @Override
     public J.CompilationUnit visitCompilationUnit(final J.CompilationUnit compilationUnit, final ExecutionContext ctx) {
         final J.CompilationUnit visited = super.visitCompilationUnit(compilationUnit, ctx);
-        if (!julLoggerTypeReferencedIn(visited)) {
-            return visited.withImports(visited.getImports().stream()
-                    .filter(imp -> !JUL_LOGGER.fqn().equals(imp.getTypeName()))
-                    .toList());
-        }
-        return visited;
+        final boolean julLoggerImportUnused = !julLoggerTypeReferencedIn(visited);
+        return julLoggerImportUnused ? withoutJulLoggerImport(visited) : visited;
+    }
+
+    private static J.CompilationUnit withoutJulLoggerImport(final J.CompilationUnit cu) {
+        return cu.withImports(cu.getImports().stream()
+                .filter(imp -> !JUL_LOGGER_FQN.equals(imp.getTypeName()))
+                .toList());
     }
 
     @Override
@@ -79,7 +82,7 @@ class JulToSlf4jVisitor extends JavaIsoVisitor<ExecutionContext> {
     }
 
     private static boolean isJulLoggerType(final @Nullable TypeTree typeExpression) {
-        return typeExpression != null && TypeUtils.isOfClassType(typeExpression.getType(), JUL_LOGGER.fqn());
+        return typeExpression != null && TypeUtils.isOfClassType(typeExpression.getType(), JUL_LOGGER_FQN);
     }
 
     private static boolean fieldReferenced(final J.ClassDeclaration classDecl, final J.VariableDeclarations field) {
@@ -112,7 +115,7 @@ class JulToSlf4jVisitor extends JavaIsoVisitor<ExecutionContext> {
 
         @Override
         public J.Identifier visitIdentifier(final J.Identifier identifier, final Integer p) {
-            if (!found && TypeUtils.isOfClassType(identifier.getType(), JUL_LOGGER.fqn())) {
+            if (!found && TypeUtils.isOfClassType(identifier.getType(), JUL_LOGGER_FQN)) {
                 found = true;
             }
             return super.visitIdentifier(identifier, p);
