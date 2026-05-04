@@ -38,8 +38,12 @@ class JulToSlf4jVisitor extends JavaIsoVisitor<ExecutionContext> {
 
     private static J.CompilationUnit withoutJulLoggerImport(final J.CompilationUnit cu) {
         return cu.withImports(cu.getImports().stream()
-                .filter(imp -> !JUL_LOGGER_FQN.equals(imp.getTypeName()))
+                .filter(imp -> !isJulLoggerFqn(imp.getTypeName()))
                 .toList());
+    }
+
+    static boolean isJulLoggerFqn(final @Nullable String typeName) {
+        return JUL_LOGGER_FQN.equals(typeName);
     }
 
     @Override
