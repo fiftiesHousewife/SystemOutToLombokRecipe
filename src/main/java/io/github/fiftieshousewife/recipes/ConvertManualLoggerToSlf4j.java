@@ -8,9 +8,7 @@ import org.openrewrite.ExecutionContext;
 import org.openrewrite.Option;
 import org.openrewrite.Preconditions;
 import org.openrewrite.Recipe;
-import org.openrewrite.Tree;
 import org.openrewrite.TreeVisitor;
-import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.search.UsesType;
 import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.Statement;
@@ -105,7 +103,7 @@ public class ConvertManualLoggerToSlf4j extends Recipe {
         if ("log".equals(oldName)) {
             return classDecl;
         }
-        return (J.ClassDeclaration) new RenameFieldReferenceVisitor(oldName).visitNonNull(classDecl, 0);
+        return (J.ClassDeclaration) new LoggerFieldRenameToLogVisitor(oldName).visitNonNull(classDecl, 0);
     }
 
     static J.ClassDeclaration removeField(final J.ClassDeclaration classDecl, final J.VariableDeclarations toRemove) {
@@ -116,26 +114,5 @@ public class ConvertManualLoggerToSlf4j extends Recipe {
     }
 
     record ManualField(J.VariableDeclarations varDecl, String name) {
-    }
-
-    private static final class RenameFieldReferenceVisitor extends JavaIsoVisitor<Integer> {
-        private final String oldName;
-
-        RenameFieldReferenceVisitor(final String oldName) {
-            this.oldName = oldName;
-        }
-
-        @Override
-        public J.Identifier visitIdentifier(final J.Identifier identifier, final Integer p) {
-            final J.Identifier visited = super.visitIdentifier(identifier, p);
-            if (!oldName.equals(visited.getSimpleName())) {
-                return visited;
-            }
-            final Tree parent = getCursor().getParentTreeCursor().getValue();
-            if (parent instanceof J.VariableDeclarations.NamedVariable) {
-                return visited;
-            }
-            return visited.withSimpleName("log");
-        }
     }
 }
