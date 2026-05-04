@@ -94,6 +94,10 @@ tasks.withType<Checkstyle>().configureEach {
     maxWarnings = 0
 }
 
+tasks.named("check") {
+    dependsOn("analyseCleanCode")
+}
+
 // signAllPublications() pulls signing into every publishToMavenLocal, including
 // the one smokeTest depends on. In CI there's no GPG key, so signing fails and
 // smokeTest never runs. Throwaway smoke projects resolve unsigned artifacts
