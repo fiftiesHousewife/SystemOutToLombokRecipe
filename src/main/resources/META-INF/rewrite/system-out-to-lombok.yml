@@ -344,6 +344,50 @@ recipeList:
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
+name: io.github.fiftieshousewife.DirectSlf4jLoggerFieldToLombokRecipe
+displayName: Convert direct SLF4J Logger fields to Lombok @Slf4j
+description: >-
+  For SLF4J codebases that already declare Logger fields manually
+  (`private static final Logger log = LoggerFactory.getLogger(X.class);`):
+  replaces each manual field with Lombok's @Slf4j annotation, renames
+  references to the old field so they use the Lombok-generated `log`,
+  and prunes the now-unused `org.slf4j.Logger` / `org.slf4j.LoggerFactory`
+  imports. Adds the Lombok compileOnly + annotationProcessor dependencies
+  so the @Slf4j expansion compiles. Catalog-aware: the entry lands in
+  `gradle/libs.versions.toml` and the build uses `libs.lombok` when a
+  Gradle version catalog is present.
+tags:
+  - logging
+  - lombok
+  - slf4j
+
+recipeList:
+  - io.github.fiftieshousewife.AddLombokDependency
+  - io.github.fiftieshousewife.recipes.DirectSlf4jLoggerFieldToLombok
+
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.github.fiftieshousewife.DirectSlf4jLoggerFieldToLombokRecipeNoDeps
+displayName: Convert direct SLF4J Logger fields to Lombok @Slf4j (no dependency management)
+description: >-
+  Same transformation as DirectSlf4jLoggerFieldToLombokRecipe but without
+  adding Lombok dependencies to the build. Use when you manage dependencies
+  yourself (e.g. in a multi-module project where Lombok is already declared
+  at a parent level).
+
+  The conversion is only applied in source files whose classpath actually
+  contains lombok.extern.slf4j.Slf4j, so modules without Lombok are skipped.
+tags:
+  - logging
+  - lombok
+  - slf4j
+
+recipeList:
+  - io.github.fiftieshousewife.recipes.DirectSlf4jLoggerFieldToLombok:
+      requireLombokOnClasspath: true
+
+---
+type: specs.openrewrite.org/v1beta/recipe
 name: io.github.fiftieshousewife.MigrateToSlf4jRecipe
 displayName: Migrate all logging patterns to Lombok @Slf4j (all-in-one)
 description: >-

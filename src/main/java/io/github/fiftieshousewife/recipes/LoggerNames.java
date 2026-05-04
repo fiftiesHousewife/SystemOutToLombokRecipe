@@ -4,7 +4,9 @@ enum LoggerNames {
 
     LOG4J2_LOGGER("org.apache.logging.log4j.Logger"),
     LOG4J2_LOG_MANAGER("org.apache.logging.log4j.LogManager"),
-    JUL_LOGGER("java.util.logging.Logger");
+    JUL_LOGGER("java.util.logging.Logger"),
+    SLF4J_LOGGER("org.slf4j.Logger"),
+    SLF4J_LOGGER_FACTORY("org.slf4j.LoggerFactory");
 
     private final String qualifiedName;
 
