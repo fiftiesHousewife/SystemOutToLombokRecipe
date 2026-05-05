@@ -1,17 +1,13 @@
 ---
 name: new-recipe
-description: Use this skill when the user wants to author a new OpenRewrite recipe — either in an existing recipe project or bootstrapping a new recipe project from scratch. Covers the idiomatic visitor structure, `MethodMatcher` usage, YAML composition, the correct location for the recipe manifest, and tree-editing patterns (argument-level replacement that preserves Groovy/Kotlin markers). For anything test-related, see the companion `recipe-testing` skill. For generic Gradle project setup, see the `new-gradle-project` skill. Invoke when phrases like "add a new recipe", "start a recipe project", "scaffold a recipe", "write an OpenRewrite visitor", or a reference to the moderneinc/rewrite-recipe-starter shows up.
+description: Use this skill when the user wants to author a new OpenRewrite recipe — either in an existing recipe project or bootstrapping a new recipe project from scratch. Covers the idiomatic visitor structure, `MethodMatcher` usage, YAML composition, the correct location for the recipe manifest, and tree-editing patterns (argument-level replacement that preserves Groovy/Kotlin markers). For anything test-related, see the companion `recipe-testing` skill. Invoke when phrases like "add a new recipe", "start a recipe project", "scaffold a recipe", "write an OpenRewrite visitor", or a reference to the moderneinc/rewrite-recipe-starter shows up.
 ---
 
 # Authoring a new OpenRewrite recipe
 
-For testing, see the `recipe-testing` skill. For Gradle project setup, see `new-gradle-project`. This skill is the recipe-code side only.
+For testing, see the `recipe-testing` skill. This skill is the recipe-code side only.
 
-## Bootstrapping a new recipe project
-
-Start from the official template: https://github.com/moderneinc/rewrite-recipe-starter
-
-Apply the `new-gradle-project` conventions (version catalog, condensed JUnit, Ben-Manes, gradle.properties), plus the recipe-specific items below.
+If you're bootstrapping a new recipe project from scratch, start from the official template: https://github.com/moderneinc/rewrite-recipe-starter — then apply the patterns below on top.
 
 ## Recipe manifest location
 
