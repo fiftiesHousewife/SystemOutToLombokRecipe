@@ -440,16 +440,15 @@ These transforms are motivated by a few principles from Robert C. Martin's *Clea
 - [Lombok @Slf4j](https://projectlombok.org/features/log)
 - [Apache Log4j2](https://logging.apache.org/log4j/2.x/)
 
-## For maintainers (and any agent working in this repo)
+## For maintainers (and any AI coding agent working in this repo)
 
-**IMPORTANT**: this repo ships four Claude Code skills under `.claude/skills/`. They capture the patterns we've converged on and should be invoked rather than re-derived in any future development work. They are:
+**IMPORTANT**: this repo ships four agent skills under `.claude/skills/` (the directory name is a Claude Code convention; other AI coding agents — Cursor, Codex, OpenCode — should be pointed at the same path). They capture the patterns we've converged on and should be invoked rather than re-derived in any future development work. They are:
 
-- **`.claude/skills/new-gradle-project/`** — **IMPORTANT** when bootstrapping a new Gradle build. Covers TOML version catalog layout, condensed JUnit dependency block, Ben-Manes versions plugin wiring, `gradle.properties` JVM args that silence Java 21+ native-access warnings, and a current `build.gradle.kts` skeleton with split `release` targets.
 - **`.claude/skills/new-recipe/`** — **IMPORTANT** when authoring a new OpenRewrite recipe. Covers the `moderneinc/rewrite-recipe-starter` template, the correct `src/main/resources/META-INF/rewrite/` manifest location, visitor structure with package-private helpers, `MethodMatcher` usage, marker-preserving argument-level tree edits (the pattern that keeps Groovy DSL paren-less), YAML composition, and `@Option(required = false)` patterns.
 - **`.claude/skills/recipe-testing/`** — **IMPORTANT** when writing or restructuring tests. Covers the two-layer integration + unit test split, `RewriteTest` / `TypeValidation.none()` for Lombok-aware recipes, multi-source `rewriteRun` with `java()` + `buildGradle[Kts]()` + `toml()` + `properties()`, `GradleProject` marker injection for multi-module simulation, and the project-shape matrix-test pattern.
 - **`.claude/skills/smoke-test/`** — **IMPORTANT** when designing or extending the pre-release smoke-test procedure. Covers the `/tmp` throwaway-project bootstrap, the `rewriteDryRun` → inspect → `rewriteRun` → `compileJava` cycle, the `include` vs. `includeBuild` distinction, the expected-outcomes table format, and the resolve-by-mavenLocal-coordinates check.
 
-`CLAUDE.md` is the entry point for anything that's specific to this particular repo (project structure, the publication workflow, the coding standards SpotBugs doesn't catch). If you're tempted to add generic recipe / testing / Gradle / smoke-test guidance to `CLAUDE.md`, stop — that content belongs in the corresponding skill.
+`AGENTS.md` (with `CLAUDE.md` symlinked to it for Claude Code back-compat) is the entry point for anything that's specific to this particular repo (project structure, the publication workflow, the coding standards SpotBugs doesn't catch). If you're tempted to add generic recipe / testing / Gradle / smoke-test guidance to `AGENTS.md`, stop — that content belongs in the corresponding skill.
 
 ---
 
