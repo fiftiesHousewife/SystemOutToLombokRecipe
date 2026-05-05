@@ -45,11 +45,11 @@ short of where this project promises to land.
 | `PrintStackTraceToLog` | `o.o.j.l.PrintStackTraceToLogError` | **REPLACE with thin wrapper** | Upstream is more capable (handles `printStackTrace(System.err/out)` for free, supports `addLogger`/`loggerName`/`loggingFramework`). Wrap with `loggingFramework=SLF4J, loggerName=log, addLogger=false` plus the classpath gate. Picks up Tier 1's `PrintStackTraceWithStream` for free. |
 | `JulToSlf4j` | `o.o.j.l.slf4j.JulToSlf4j` (composite of 7+ recipes incl. `JulGetLoggerToLoggerFactory`, `JulParameterizedArguments`, `JulToSlf4jSimpleCallsWithThrowableRecipes`) | **COMPOSE wrapper** | Upstream is more thorough (lambda suppliers, isLoggable). Upstream lands SLF4J `Logger` field, **not `@Slf4j`**. Run upstream → then our new `DirectSlf4jLoggerFieldToLombok`. Drop our hand-rolled level mapping. |
 | `ConvertManualLoggerToSlf4j` | None directly. | **KEEP** as Log4j2-Logger-field special case | Reframe as a special case of `DirectSlf4jLoggerFieldToLombok` once that exists. |
-| `ParameterizeStringConcat` (just written, **deleted in this audit**) | `o.o.j.l.ParameterizedLogging` | **DELETED** | Upstream handles concat, preserves trailing Throwable, refuses Throwable-inside-concat, has `methodPattern` + `removeToString` options. Use upstream with `methodPattern: "org.slf4j.Logger *(..)"`. |
+| `ParameterizeStringConcat` (planned but never landed) | `o.o.j.l.ParameterizedLogging` | **N/A** — file was never checked in; audit referred to it as if deleted but git history confirms it never existed. Use upstream `ParameterizedLogging` directly with `methodPattern: "org.slf4j.Logger *(..)"` if needed. |
 
 ---
 
-## Tier 1 (was 6 from-scratch recipes — becomes 2 from-scratch + 3 wrappers + 1 deletion)
+## Tier 1 (was 6 from-scratch recipes — planned: 2 from-scratch + 3 wrappers + 1 deletion. Actual landed: 2 from-scratch; wrappers blocked on upstream precondition gap; deletion was N/A — file never existed)
 
 | Planned recipe | Upstream | Verdict |
 |---|---|---|
@@ -108,28 +108,22 @@ references, Lombok @Slf4j integration.
 
 ## Recommended ordering for v1.0
 
-1. **Build `DirectSlf4jLoggerFieldToLombok`** — the keystone. Until this
-   exists, no upstream wrapping pays off because the result lands on a direct
-   `Logger` field instead of `@Slf4j`.
-2. **Build `ConcatThrowableMessage`** — genuine gap, highest-bug-frequency
-   addition.
-3. **Replace `PrintStackTraceToLog`** with a thin wrapper around upstream
-   `PrintStackTraceToLogError`. Adopts `PrintStackTraceWithStream` for free.
-4. **Refactor `JulToSlf4j`** to compose upstream `o.o.j.l.slf4j.JulToSlf4j` +
-   `DirectSlf4jLoggerFieldToLombok`. Drop hand-rolled level mappings.
-5. **Add `ThrowableLastArgumentNoPlaceholder`** as a thin wrapper around
-   upstream `CompleteExceptionLogging`.
-6. **Add `CommonsLoggingToSlf4j`** as a wrapper composing upstream
-   `CommonsLogging1ToSlf4j1` + `DirectSlf4jLoggerFieldToLombok`.
-7. **Wire `ParameterizedLogging`** (upstream) into the composed YAML for
-   `MigrateToSlf4j` so `log.info("a " + b)` shapes get parameterized after our
-   conversions run.
-8. **Reframe `ConvertManualLoggerToSlf4j`** as a Log4j2-specific special case
-   of `DirectSlf4jLoggerFieldToLombok` — keep the recipe ID for backward
-   compat; share visitor code.
+1. ~~**Build `DirectSlf4jLoggerFieldToLombok`**~~ — **landed** 2026-05-04. Keystone primitive, two YAML composed recipes (`Recipe` + `…NoDeps`), 15 RewriteTest cases, integration test against real Maven Central. Until this existed, no upstream wrapping paid off because the result landed on a direct `Logger` field instead of `@Slf4j`.
+2. ~~**Build `ConcatThrowableMessage`**~~ — **landed** 2026-05-04. Genuine gap, highest-bug-frequency addition. 13 RewriteTest cases covering all five log levels + multi-part LHS + Throwable subtype matching + 5 no-op skip conditions. Integration test against real Maven Central.
+3. **Replace `PrintStackTraceToLog`** with a thin wrapper around upstream `PrintStackTraceToLogError`. **BLOCKED** on upstream precondition gap (see `UPSTREAM_ISSUE_DRAFT.md` at repo root): upstream's `Preconditions.or(UsesType<framework.loggerType>, UsesType<lombok.extern..*>)` short-circuits when `@Slf4j` is inserted mid-pipeline. Hand-rolled equivalent already covers the same surface (System.err/out overload behaviour documented + tested). Wrap was about reducing maintenance burden, not adding capability.
+4. **Refactor `JulToSlf4j`** to compose upstream `o.o.j.l.slf4j.JulToSlf4j` + `DirectSlf4jLoggerFieldToLombok`. **BLOCKED** on the same upstream precondition gap. Upstream's extras (lambda suppliers, `isLoggable` rewriting) are non-trivial but achievable in our hand-rolled visitor if we choose to fill the gap ourselves rather than wait.
+5. **Add `ThrowableLastArgumentNoPlaceholder`** as a thin wrapper around upstream `CompleteExceptionLogging`. **BLOCKED** on the same upstream precondition gap.
+6. **Add `CommonsLoggingToSlf4j`** as a wrapper composing upstream `CommonsLogging1ToSlf4j1` + `DirectSlf4jLoggerFieldToLombok`. **BLOCKED** on the same upstream precondition gap.
+7. **Wire `ParameterizedLogging`** (upstream) into the composed YAML for `MigrateToSlf4j` so `log.info("a " + b)` shapes get parameterized after our conversions run. Likely also affected by the upstream precondition gap (`log.info(...)` calls inserted by our `SystemOutToSlf4j` carry no resolved type info on the freshly-inserted `log` reference). Verify before assuming unblocked.
+8. **Reframe `ConvertManualLoggerToSlf4j`** as a Log4j2-specific special case of `DirectSlf4jLoggerFieldToLombok` — pure refactor of our own code, no upstream dependency. Unblocked. Keep the recipe ID for backward compat; share visitor code (the rename half is already shared via `LoggerFieldRenameToLogVisitor`).
 
-After all eight steps land cleanly with smoke tests green, do the rename to
-`clean-logging:1.0`.
+**Path forward given the upstream gap.** Two options:
+
+(a) **Wait for upstream.** File the issue (draft ready in `UPSTREAM_ISSUE_DRAFT.md`), pause steps 3–7. Resume the wrapping plan once upstream ships one of the suggested fixes.
+
+(b) **Fill the gaps in-house.** Extend our hand-rolled recipes with the capabilities upstream would have given us. Higher maintenance burden long-term, but unblocked today. PrintStackTraceToLog is already there (see step 3). JulToSlf4j needs lambda-supplier handling. CommonsLoggingToSlf4j is entirely from-scratch.
+
+After steps 3–7 are resolved (either way) and step 8 lands, do the rename to `clean-logging:1.0`.
 
 Tier 2 and Tier 3 follow in v1.x and v2.0 — they're almost entirely
 from-scratch because upstream doesn't cover that ground.

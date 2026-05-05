@@ -88,7 +88,15 @@
 
   This project's actual differentiation is three things upstream doesn't do: Lombok `@Slf4j` as the destination for every Logger-field-bearing recipe, version-catalog awareness in Gradle, and `requireLombokOnClasspath` gating for multi-module projects. `DirectSlf4jLoggerFieldToLombok` is the keystone that lets us ride on upstream and finish the job at `@Slf4j` instead of a direct field.
 
-  v1.0 ordering in `RECIPE_AUDIT.md`: ~~step 1 `DirectSlf4jLoggerFieldToLombok`~~ landed 2026-05-04 (see Queued). Remaining steps: `ConcatThrowableMessage` (genuine upstream gap) → wrap `PrintStackTraceToLog` around upstream `PrintStackTraceToLogError` → recompose `JulToSlf4j` to chain upstream `o.o.j.l.slf4j.JulToSlf4j` + the new `DirectSlf4jLoggerFieldToLombok` keystone → delete `ParameterizeStringConcat` (fully duplicated by upstream `ParameterizedLogging`) → rename to `clean-logging` with v0.9 deprecation aliases. Smoke-test policy: **no smoke cells get deleted when adopting upstream — they get enhanced**, since correctness now depends on upstream behaviour matching our published contract; pin upstream version intentionally and bump deliberately.
+  v1.0 ordering in `RECIPE_AUDIT.md` — current status (2026-05-05):
+  - ~~Step 1 `DirectSlf4jLoggerFieldToLombok`~~ — **landed** 2026-05-04 (see Queued, commit `6988557` plus parity work).
+  - ~~Step 2 `ConcatThrowableMessage`~~ — **landed** 2026-05-04 (commit `d7d6038` plus parity work).
+  - Step 3 wrap `PrintStackTraceToLog` around upstream `PrintStackTraceToLogError` — **BLOCKED** on upstream precondition gap. Upstream's `Preconditions.or(UsesType<framework.loggerType>, UsesType<lombok.extern..*>)` short-circuits when `@Slf4j` is inserted mid-pipeline by an earlier recipe — verified at both unit and integration test level (real Maven Central). See `UPSTREAM_ISSUE_DRAFT.md` for repro + suggested fixes. Hand-rolled equivalent already covers the same surface (System.err/out overload behaviour documented + tested in commit `0bdb32c`); the wrap was about *reducing maintenance burden*, not adding capability. Skip the wrap and keep the hand-rolled recipe until upstream addresses the precondition gap.
+  - Step 4 recompose `JulToSlf4j` around upstream `o.o.j.l.slf4j.JulToSlf4j` + keystone — **BLOCKED**, same upstream precondition gap. Upstream's extras (lambda suppliers, `isLoggable` rewriting) are non-trivial but achievable in-house if we choose to fill the gap ourselves rather than wait — the recipe is in the tree and works on the most common shapes today.
+  - Step 5 delete `ParameterizeStringConcat` — **N/A**. Never checked in; the audit referred to it as if deleted but no such file ever existed in git history.
+  - Step 6 rename to `clean-logging` with v0.9 deprecation aliases — **unblocked**. Largest piece of remaining v1.0 work; affects artifact coordinates, every YAML composition, every smoke-test cell, the README's "Using in Your Project" section. Warrants its own scoping pass before code.
+
+  Smoke-test policy when/if we adopt upstream later: **no smoke cells get deleted when adopting upstream — they get enhanced**, since correctness now depends on upstream behaviour matching our published contract; pin upstream version intentionally and bump deliberately.
 
 ## Parked (re-open on request)
 
