@@ -26,6 +26,11 @@ import static io.github.fiftieshousewife.recipes.LombokClasspathGate.isAvailable
  * Assumes the class has been annotated with {@code @Slf4j} (apply
  * {@link AddLombokSlf4jAnnotation} first).
  *
+ * <p>The {@code printStackTrace(System.err)} and {@code printStackTrace(System.out)}
+ * overloads are matched too; the stream argument is dropped — the rewritten
+ * {@code log.error("Exception occurred", e)} routes to stderr via the level alone
+ * (production {@code log4j2.xml} maps {@code ERROR} to {@code SYSTEM_ERR}).
+ *
  * <p>When {@code requireLombokOnClasspath} is set, the rewrite is skipped in
  * source files whose classpath doesn't contain {@code lombok.extern.slf4j.Slf4j}
  * — without {@code @Slf4j} there is no {@code log} field for the rewrite to land on.

@@ -66,6 +66,10 @@ class MigrateToSlf4jRecipeIntegrationTest implements RewriteTest {
                                     public void legacy() {
                                         System.out.println("legacy");
                                     }
+
+                                    public void boom(Exception e) {
+                                        e.printStackTrace();
+                                    }
                                 }
                                 """,
                         """
@@ -82,6 +86,10 @@ class MigrateToSlf4jRecipeIntegrationTest implements RewriteTest {
 
                                     public void legacy() {
                                         log.info("legacy");
+                                    }
+
+                                    public void boom(Exception e) {
+                                        log.error("Exception occurred", e);
                                     }
                                 }
                                 """

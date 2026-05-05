@@ -180,6 +180,102 @@ class PrintStackTraceToLogTest implements RewriteTest {
     }
 
     @Test
+    void convertsPrintStackTraceWithSystemErr() {
+        rewriteRun(
+                java(
+                        """
+                        package com.example;
+
+                        import lombok.extern.slf4j.Slf4j;
+
+                        @Slf4j
+                        public class MyClass {
+                            public void handleError() {
+                                try {
+                                    riskyOperation();
+                                } catch (Exception e) {
+                                    e.printStackTrace(System.err);
+                                }
+                            }
+
+                            private void riskyOperation() throws Exception {
+                                throw new Exception("error");
+                            }
+                        }
+                        """,
+                        """
+                        package com.example;
+
+                        import lombok.extern.slf4j.Slf4j;
+
+                        @Slf4j
+                        public class MyClass {
+                            public void handleError() {
+                                try {
+                                    riskyOperation();
+                                } catch (Exception e) {
+                                    log.error("Exception occurred", e);
+                                }
+                            }
+
+                            private void riskyOperation() throws Exception {
+                                throw new Exception("error");
+                            }
+                        }
+                        """
+                )
+        );
+    }
+
+    @Test
+    void convertsPrintStackTraceWithSystemOut() {
+        rewriteRun(
+                java(
+                        """
+                        package com.example;
+
+                        import lombok.extern.slf4j.Slf4j;
+
+                        @Slf4j
+                        public class MyClass {
+                            public void handleError() {
+                                try {
+                                    riskyOperation();
+                                } catch (Exception e) {
+                                    e.printStackTrace(System.out);
+                                }
+                            }
+
+                            private void riskyOperation() throws Exception {
+                                throw new Exception("error");
+                            }
+                        }
+                        """,
+                        """
+                        package com.example;
+
+                        import lombok.extern.slf4j.Slf4j;
+
+                        @Slf4j
+                        public class MyClass {
+                            public void handleError() {
+                                try {
+                                    riskyOperation();
+                                } catch (Exception e) {
+                                    log.error("Exception occurred", e);
+                                }
+                            }
+
+                            private void riskyOperation() throws Exception {
+                                throw new Exception("error");
+                            }
+                        }
+                        """
+                )
+        );
+    }
+
+    @Test
     void doesNotConvertNonPrintStackTraceMethods() {
         rewriteRun(
                 java(

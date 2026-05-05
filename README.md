@@ -25,7 +25,7 @@ The default recipe, `SystemOutToSlf4jRecipe`, takes a project that's using some 
    - `System.out.printf("Name: %s, Age: %d%n", ...)` → `log.info("Name: {}, Age: {}", ...)` — printf specifiers become parameterized `{}` placeholders so the log framework can do structured formatting (and skip it when the level is disabled).
    - `System.out.println("x = " + x)` → `log.info("x = {}", x)` — string-concatenated messages are decomposed into a format string plus args, so the logger isn't paying for string-building on disabled levels.
 
-   **`Throwable.printStackTrace()`** — the other popular "logging by accident" pattern. Replaced with `log.error("Exception occurred", exception)` so the trace goes through the configured appenders, with the exception properly attached rather than dumped to stderr.
+   **`Throwable.printStackTrace()`** — the other popular "logging by accident" pattern. Replaced with `log.error("Exception occurred", exception)` so the trace goes through the configured appenders, with the exception properly attached rather than dumped to stderr. The `printStackTrace(System.err)` and `printStackTrace(System.out)` overloads are handled the same way (the stream argument is dropped — the rewritten `log.error` call routes to stderr via the level alone).
 
    **`java.util.logging.Logger` (JUL)** — the JDK's built-in logging framework is awkward (static `Level` values, no parameterized messages, minimal out-of-the-box config). Migrating to Log4j2 gives you the same features as the rest of the code base. The recipe maps JUL levels to the closest Log4j2 equivalent:
    - `severe` → `error`
