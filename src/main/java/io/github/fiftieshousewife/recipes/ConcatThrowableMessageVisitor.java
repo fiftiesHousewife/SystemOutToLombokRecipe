@@ -15,11 +15,12 @@ import java.util.Optional;
 @NullMarked
 class ConcatThrowableMessageVisitor extends JavaIsoVisitor<ExecutionContext> {
 
-    private static final MethodMatcher SLF4J_TRACE = new MethodMatcher("org.slf4j.Logger trace(..)");
-    private static final MethodMatcher SLF4J_DEBUG = new MethodMatcher("org.slf4j.Logger debug(..)");
-    private static final MethodMatcher SLF4J_INFO = new MethodMatcher("org.slf4j.Logger info(..)");
-    private static final MethodMatcher SLF4J_WARN = new MethodMatcher("org.slf4j.Logger warn(..)");
-    private static final MethodMatcher SLF4J_ERROR = new MethodMatcher("org.slf4j.Logger error(..)");
+    private static final List<MethodMatcher> SLF4J_LOG_MATCHERS = List.of(
+            new MethodMatcher("org.slf4j.Logger trace(..)"),
+            new MethodMatcher("org.slf4j.Logger debug(..)"),
+            new MethodMatcher("org.slf4j.Logger info(..)"),
+            new MethodMatcher("org.slf4j.Logger warn(..)"),
+            new MethodMatcher("org.slf4j.Logger error(..)"));
 
     private static final MethodMatcher THROWABLE_GET_MESSAGE =
             new MethodMatcher("java.lang.Throwable getMessage()", true);
@@ -37,9 +38,7 @@ class ConcatThrowableMessageVisitor extends JavaIsoVisitor<ExecutionContext> {
         if (method.getArguments().size() != 1) {
             return false;
         }
-        return SLF4J_TRACE.matches(method) || SLF4J_DEBUG.matches(method)
-                || SLF4J_INFO.matches(method) || SLF4J_WARN.matches(method)
-                || SLF4J_ERROR.matches(method);
+        return SLF4J_LOG_MATCHERS.stream().anyMatch(matcher -> matcher.matches(method));
     }
 
     static Optional<J.MethodInvocation> peelThrowableFromConcat(final J.MethodInvocation method) {

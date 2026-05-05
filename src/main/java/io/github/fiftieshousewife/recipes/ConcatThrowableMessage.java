@@ -12,6 +12,8 @@ import org.openrewrite.java.search.UsesType;
 import java.time.Duration;
 import java.util.Set;
 
+import static io.github.fiftieshousewife.recipes.LoggerNames.SLF4J_LOGGER;
+
 /**
  * Rewrites SLF4J log calls of the form
  * {@code log.error("failed: " + e.getMessage())} into
@@ -61,7 +63,7 @@ public class ConcatThrowableMessage extends Recipe {
 
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
-        return Preconditions.check(new UsesType<>("org.slf4j.Logger", false),
+        return Preconditions.check(new UsesType<>(SLF4J_LOGGER.fqn(), false),
                 new ConcatThrowableMessageVisitor());
     }
 }

@@ -352,7 +352,7 @@ class DirectSlf4jLoggerFieldToLombokTest implements RewriteTest {
     }
 
     @Test
-    void skipsConversion_whenRequireLombokIsTrueAndClasspathLacksLombok() {
+    void skipsConversionWhenRequireLombokIsTrueAndClasspathLacksLombok() {
         rewriteRun(
                 spec -> spec.recipe(new DirectSlf4jLoggerFieldToLombok(true)),
                 java(
@@ -374,7 +374,7 @@ class DirectSlf4jLoggerFieldToLombokTest implements RewriteTest {
     }
 
     @Test
-    void convertsLogger_whenRequireLombokIsTrueAndClasspathContainsLombok() {
+    void convertsLoggerWhenRequireLombokIsTrueAndClasspathContainsLombok() {
         rewriteRun(
                 spec -> spec.recipe(new DirectSlf4jLoggerFieldToLombok(true)),
                 java(
@@ -406,7 +406,7 @@ class DirectSlf4jLoggerFieldToLombokTest implements RewriteTest {
         );
     }
 
-    private static JavaSourceSet sourceSetWith(String... fqTypes) {
+    static JavaSourceSet sourceSetWith(String... fqTypes) {
         return new JavaSourceSet(Tree.randomId(), "main",
                 java.util.Arrays.stream(fqTypes)
                         .<JavaType.FullyQualified>map(JavaType.ShallowClass::build)
