@@ -1,12 +1,11 @@
-# Claude Code session notes
+# AI agent session notes
 
-Project-specific guidance for this repo. **Generic patterns live in the skills at `.claude/skills/` — invoke those instead of duplicating their content here.**
+Project-specific guidance for this repo, intended for any AI coding agent working on the codebase (Claude Code, Cursor, Codex, OpenCode, etc.). **Generic patterns live in the skills at `.claude/skills/` — invoke those instead of duplicating their content here.**
 
 ## Domain skills (committed)
 
 | Skill | When to invoke |
 | --- | --- |
-| `new-gradle-project` | Bootstrapping a fresh Gradle build: TOML version catalog, condensed JUnit, Ben-Manes, `gradle.properties` JVM args, build-file skeleton. |
 | `new-recipe` | Authoring a new OpenRewrite recipe: visitor structure, `MethodMatcher`, YAML composition, manifest location, marker-preserving tree edits, `@Option` patterns. |
 | `recipe-testing` | Writing tests for a recipe: integration vs. unit split, `RewriteTest` / `TypeValidation.none()`, multi-source `rewriteRun`, `GradleProject` marker injection, matrix-test layout. |
 | `smoke-test` | Designing or extending the pre-release smoke-test procedure: `/tmp` project bootstrap, dryRun/Run/compile cycle, project-shape matrix, expected-outcomes tables, mavenLocal resolution check. |
