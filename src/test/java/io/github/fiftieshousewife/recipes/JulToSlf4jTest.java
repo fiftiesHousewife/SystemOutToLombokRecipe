@@ -168,7 +168,7 @@ class JulToSlf4jTest implements RewriteTest {
     }
 
     @Test
-    void julFieldKeptWhenStillReferenced() {
+    void julFieldRemovedWhenIsLoggableAlsoConverted() {
         rewriteRun(
                 java(
                         """
@@ -187,17 +187,201 @@ class JulToSlf4jTest implements RewriteTest {
                                 }
                                 """,
                         """
+
+
+
+                                public class Service {
+
+                                    void run() {
+                                        log.info("standard");
+                                        if (log.isDebugEnabled()) {
+                                            log.debug("expensive");
+                                        }
+                                    }
+                                }
+                                """
+                )
+        );
+    }
+
+    @Test
+    void julFieldKeptWhenIsLoggableUsesUnknownLevelVariable() {
+        rewriteRun(
+                java(
+                        """
                                 import java.util.logging.Level;
                                 import java.util.logging.Logger;
 
                                 public class Service {
                                     private static final Logger logger = Logger.getLogger(Service.class.getName());
 
-                                    void run() {
+                                    void run(Level level) {
+                                        logger.info("standard");
+                                        if (logger.isLoggable(level)) {
+                                            logger.fine("expensive");
+                                        }
+                                    }
+                                }
+                                """,
+                        """
+                                import java.util.logging.Level;
+                                import java.util.logging.Logger;
+
+                                public class Service {
+                                    private static final Logger logger = Logger.getLogger(Service.class.getName());
+
+                                    void run(Level level) {
                                         log.info("standard");
-                                        if (logger.isLoggable(Level.FINE)) {
+                                        if (logger.isLoggable(level)) {
                                             log.debug("expensive");
                                         }
+                                    }
+                                }
+                                """
+                )
+        );
+    }
+
+    @Test
+    void supplierLambdaUnwrappedToBodyExpression() {
+        rewriteRun(
+                java(
+                        """
+                                import java.util.logging.Logger;
+
+                                public class Service {
+                                    private static final Logger logger = Logger.getLogger(Service.class.getName());
+
+                                    void run(String value) {
+                                        logger.fine(() -> "value=" + value);
+                                    }
+                                }
+                                """,
+                        """
+
+
+
+                                public class Service {
+
+                                    void run(String value) {
+                                        log.debug("value=" + value);
+                                    }
+                                }
+                                """
+                )
+        );
+    }
+
+    @Test
+    void supplierLambdaWithBlockBodyIsLeftAlone() {
+        rewriteRun(
+                java(
+                        """
+                                import java.util.logging.Logger;
+                                import java.util.function.Supplier;
+
+                                public class Service {
+                                    private static final Logger logger = Logger.getLogger(Service.class.getName());
+
+                                    void run(String value) {
+                                        Supplier<String> supplier = () -> {
+                                            String prefix = "value=";
+                                            return prefix + value;
+                                        };
+                                        logger.fine(supplier);
+                                    }
+                                }
+                                """
+                )
+        );
+    }
+
+    @Test
+    void isLoggableLevelInfoBecomesIsInfoEnabled() {
+        rewriteRun(
+                java(
+                        """
+                                import java.util.logging.Level;
+                                import java.util.logging.Logger;
+
+                                public class Service {
+                                    private static final Logger logger = Logger.getLogger(Service.class.getName());
+
+                                    boolean check() {
+                                        return logger.isLoggable(Level.INFO);
+                                    }
+                                }
+                                """,
+                        """
+
+
+
+                                public class Service {
+
+                                    boolean check() {
+                                        return log.isInfoEnabled();
+                                    }
+                                }
+                                """
+                )
+        );
+    }
+
+    @Test
+    void isLoggableLevelSevereBecomesIsErrorEnabled() {
+        rewriteRun(
+                java(
+                        """
+                                import java.util.logging.Level;
+                                import java.util.logging.Logger;
+
+                                public class Service {
+                                    private static final Logger logger = Logger.getLogger(Service.class.getName());
+
+                                    boolean check() {
+                                        return logger.isLoggable(Level.SEVERE);
+                                    }
+                                }
+                                """,
+                        """
+
+
+
+                                public class Service {
+
+                                    boolean check() {
+                                        return log.isErrorEnabled();
+                                    }
+                                }
+                                """
+                )
+        );
+    }
+
+    @Test
+    void isLoggableLevelFinestBecomesIsTraceEnabled() {
+        rewriteRun(
+                java(
+                        """
+                                import java.util.logging.Level;
+                                import java.util.logging.Logger;
+
+                                public class Service {
+                                    private static final Logger logger = Logger.getLogger(Service.class.getName());
+
+                                    boolean check() {
+                                        return logger.isLoggable(Level.FINEST);
+                                    }
+                                }
+                                """,
+                        """
+
+
+
+                                public class Service {
+
+                                    boolean check() {
+                                        return log.isTraceEnabled();
                                     }
                                 }
                                 """

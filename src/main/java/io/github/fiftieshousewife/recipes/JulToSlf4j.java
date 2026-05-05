@@ -71,6 +71,18 @@ public class JulToSlf4j extends Recipe {
             "finer", "trace",
             "finest", "trace");
 
+    static final MethodMatcher IS_LOGGABLE =
+            new MethodMatcher("java.util.logging.Logger isLoggable(java.util.logging.Level)");
+
+    static final Map<String, String> JUL_LEVEL_TO_SLF4J_IS_ENABLED = Map.of(
+            "SEVERE", "isErrorEnabled",
+            "WARNING", "isWarnEnabled",
+            "INFO", "isInfoEnabled",
+            "CONFIG", "isDebugEnabled",
+            "FINE", "isDebugEnabled",
+            "FINER", "isTraceEnabled",
+            "FINEST", "isTraceEnabled");
+
     private static MethodMatcher matcher(final String methodName) {
         return new MethodMatcher(MATCHER_TEMPLATE.formatted(JUL_LOGGER.fqn(), methodName));
     }

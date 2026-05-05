@@ -5,14 +5,17 @@ import org.jspecify.annotations.Nullable;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaTemplate;
+import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.Statement;
-import org.openrewrite.java.tree.TypeTree;
 import org.openrewrite.java.tree.TypeUtils;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
+import static io.github.fiftieshousewife.recipes.JulToSlf4j.IS_LOGGABLE;
+import static io.github.fiftieshousewife.recipes.JulToSlf4j.JUL_LEVEL_TO_SLF4J_IS_ENABLED;
 import static io.github.fiftieshousewife.recipes.JulToSlf4j.JUL_TO_LOG4J;
 import static io.github.fiftieshousewife.recipes.LoggerNames.JUL_LOGGER;
 import static io.github.fiftieshousewife.recipes.LombokClasspathGate.isAvailable;
@@ -22,6 +25,8 @@ class JulToSlf4jVisitor extends JavaIsoVisitor<ExecutionContext> {
 
     private static final String CALL_TEMPLATE = "log.%s(#{any()})";
     private static final String JUL_LOGGER_FQN = JUL_LOGGER.fqn();
+    private static final String JUL_PACKAGE_PREFIX = "java.util.logging.";
+    private static final String SUPPLIER_FQN = "java.util.function.Supplier";
 
     private final boolean requireLombokOnClasspath;
 
@@ -32,18 +37,14 @@ class JulToSlf4jVisitor extends JavaIsoVisitor<ExecutionContext> {
     @Override
     public J.CompilationUnit visitCompilationUnit(final J.CompilationUnit compilationUnit, final ExecutionContext ctx) {
         final J.CompilationUnit visited = super.visitCompilationUnit(compilationUnit, ctx);
-        final boolean julLoggerImportUnused = !julLoggerTypeReferencedIn(visited);
-        return julLoggerImportUnused ? withoutJulLoggerImport(visited) : visited;
-    }
-
-    private static J.CompilationUnit withoutJulLoggerImport(final J.CompilationUnit cu) {
-        return cu.withImports(cu.getImports().stream()
-                .filter(imp -> !isJulLoggerFqn(imp.getTypeName()))
+        final Set<String> referenced = JulLoggerTypeDetector.referencedJulFqnsIn(visited);
+        return visited.withImports(visited.getImports().stream()
+                .filter(imp -> !isJulImport(imp.getTypeName()) || referenced.contains(imp.getTypeName()))
                 .toList());
     }
 
-    static boolean isJulLoggerFqn(final @Nullable String typeName) {
-        return JUL_LOGGER_FQN.equals(typeName);
+    static boolean isJulImport(final @Nullable String typeName) {
+        return typeName != null && typeName.startsWith(JUL_PACKAGE_PREFIX);
     }
 
     @Override
@@ -58,35 +59,77 @@ class JulToSlf4jVisitor extends JavaIsoVisitor<ExecutionContext> {
     @Override
     public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method, final ExecutionContext ctx) {
         final J.MethodInvocation visited = super.visitMethodInvocation(method, ctx);
-        return targetSlf4jMethodFor(visited)
-                .map(targetMethod -> rewriteAsSlf4jCall(visited, targetMethod))
+        if (requireLombokOnClasspath && !isAvailable(getCursor())) {
+            return visited;
+        }
+        return rewriteIsLoggable(visited)
+                .or(() -> rewriteLevelMethodCall(visited))
                 .orElse(visited);
     }
 
-    private Optional<String> targetSlf4jMethodFor(final J.MethodInvocation method) {
-        return Optional.of(method)
-                .filter(m -> m.getArguments().size() == 1)
-                .filter(m -> !requireLombokOnClasspath || isAvailable(getCursor()))
-                .flatMap(JulToSlf4j::julLevelOf)
-                .map(JUL_TO_LOG4J::get);
+    private Optional<J.MethodInvocation> rewriteLevelMethodCall(final J.MethodInvocation method) {
+        if (method.getArguments().size() != 1) {
+            return Optional.empty();
+        }
+        if (cannotRewriteSupplierArgument(method.getArguments().get(0))) {
+            return Optional.empty();
+        }
+        return JulToSlf4j.julLevelOf(method)
+                .map(JUL_TO_LOG4J::get)
+                .map(targetMethod -> rewriteAsSlf4jCall(method, targetMethod));
+    }
+
+    static boolean cannotRewriteSupplierArgument(final Expression arg) {
+        if (arg instanceof J.Lambda lambda) {
+            return !(lambda.getBody() instanceof Expression);
+        }
+        return TypeUtils.isOfClassType(arg.getType(), SUPPLIER_FQN);
     }
 
     private J.MethodInvocation rewriteAsSlf4jCall(final J.MethodInvocation original, final String targetMethod) {
+        final Expression arg = unwrapSupplierLambda(original.getArguments().get(0));
         return JavaTemplate.builder(CALL_TEMPLATE.formatted(targetMethod))
                 .build()
-                .apply(getCursor(), original.getCoordinates().replace(), original.getArguments().get(0));
+                .apply(getCursor(), original.getCoordinates().replace(), arg);
+    }
+
+    static Expression unwrapSupplierLambda(final Expression arg) {
+        if (arg instanceof J.Lambda lambda && lambda.getBody() instanceof Expression body) {
+            return body;
+        }
+        return arg;
+    }
+
+    private Optional<J.MethodInvocation> rewriteIsLoggable(final J.MethodInvocation method) {
+        if (!IS_LOGGABLE.matches(method)) {
+            return Optional.empty();
+        }
+        return julLevelConstantNameFrom(method.getArguments().get(0))
+                .map(JUL_LEVEL_TO_SLF4J_IS_ENABLED::get)
+                .map(slf4jIsEnabled -> JavaTemplate.builder("log.%s()".formatted(slf4jIsEnabled))
+                        .build()
+                        .apply(getCursor(), method.getCoordinates().replace()));
+    }
+
+    static Optional<String> julLevelConstantNameFrom(final Expression arg) {
+        if (arg instanceof J.FieldAccess fieldAccess
+                && JUL_LEVEL_TO_SLF4J_IS_ENABLED.containsKey(fieldAccess.getName().getSimpleName())) {
+            return Optional.of(fieldAccess.getName().getSimpleName());
+        }
+        if (arg instanceof J.Identifier identifier
+                && JUL_LEVEL_TO_SLF4J_IS_ENABLED.containsKey(identifier.getSimpleName())) {
+            return Optional.of(identifier.getSimpleName());
+        }
+        return Optional.empty();
     }
 
     private static Optional<J.VariableDeclarations> findJulLoggerField(final J.ClassDeclaration classDecl) {
         return classDecl.getBody().getStatements().stream()
                 .filter(J.VariableDeclarations.class::isInstance)
                 .map(J.VariableDeclarations.class::cast)
-                .filter(varDecl -> isJulLoggerType(varDecl.getTypeExpression()))
+                .filter(varDecl -> varDecl.getTypeExpression() != null
+                        && TypeUtils.isOfClassType(varDecl.getTypeExpression().getType(), JUL_LOGGER_FQN))
                 .findFirst();
-    }
-
-    private static boolean isJulLoggerType(final @Nullable TypeTree typeExpression) {
-        return typeExpression != null && TypeUtils.isOfClassType(typeExpression.getType(), JUL_LOGGER_FQN);
     }
 
     private static boolean fieldReferenced(final J.ClassDeclaration classDecl, final J.VariableDeclarations field) {
@@ -103,26 +146,4 @@ class JulToSlf4jVisitor extends JavaIsoVisitor<ExecutionContext> {
         return classDecl.withBody(classDecl.getBody().withStatements(keep));
     }
 
-    private static boolean julLoggerTypeReferencedIn(final J.CompilationUnit compilationUnit) {
-        final JulLoggerTypeDetector detector = new JulLoggerTypeDetector();
-        detector.visit(compilationUnit, 0);
-        return detector.found;
-    }
-
-    private static final class JulLoggerTypeDetector extends JavaIsoVisitor<Integer> {
-        boolean found;
-
-        @Override
-        public J.Import visitImport(final J.Import imp, final Integer p) {
-            return imp;
-        }
-
-        @Override
-        public J.Identifier visitIdentifier(final J.Identifier identifier, final Integer p) {
-            if (!found && TypeUtils.isOfClassType(identifier.getType(), JUL_LOGGER_FQN)) {
-                found = true;
-            }
-            return super.visitIdentifier(identifier, p);
-        }
-    }
 }
