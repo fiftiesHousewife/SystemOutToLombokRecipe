@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import static io.github.fiftieshousewife.recipes.LoggerNames.COMMONS_LOG;
+import static io.github.fiftieshousewife.recipes.LoggerNames.COMMONS_LOG_FACTORY;
 import static io.github.fiftieshousewife.recipes.LoggerNames.LOG4J2_LOGGER;
 import static io.github.fiftieshousewife.recipes.LoggerNames.LOG4J2_LOG_MANAGER;
 import static io.github.fiftieshousewife.recipes.LoggerNames.SLF4J_LOGGER;
@@ -14,8 +16,9 @@ import static io.github.fiftieshousewife.recipes.LoggerNames.SLF4J_LOGGER_FACTOR
 
 /**
  * After a class body has been rewritten to no longer reference Log4j2's
- * {@code Logger} / {@code LogManager} or SLF4J's {@code Logger} /
- * {@code LoggerFactory}, removes those imports from the compilation unit.
+ * {@code Logger} / {@code LogManager}, SLF4J's {@code Logger} /
+ * {@code LoggerFactory}, or Apache Commons Logging's {@code Log} /
+ * {@code LogFactory}, removes those imports from the compilation unit.
  * Returns a new import list; leaves the unit unchanged if nothing to remove.
  */
 @NullMarked
@@ -25,7 +28,9 @@ final class RemoveUnusedLoggerImports {
             LOG4J2_LOGGER.fqn(),
             LOG4J2_LOG_MANAGER.fqn(),
             SLF4J_LOGGER.fqn(),
-            SLF4J_LOGGER_FACTORY.fqn());
+            SLF4J_LOGGER_FACTORY.fqn(),
+            COMMONS_LOG.fqn(),
+            COMMONS_LOG_FACTORY.fqn());
 
     private static final Pattern IMPORT_LINE = Pattern.compile("(?m)^import\\s+[^;]+;\\s*$");
     private static final String WORD_BOUNDARY_TEMPLATE = "\\b%s\\b";

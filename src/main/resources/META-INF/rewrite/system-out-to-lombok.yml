@@ -388,6 +388,54 @@ recipeList:
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
+name: io.github.fiftieshousewife.CommonsLoggingToSlf4jRecipe
+displayName: Convert Apache Commons Logging to Lombok @Slf4j
+description: >-
+  For codebases that use Apache Commons Logging
+  (`private static final Log log = LogFactory.getLog(X.class);`):
+  replaces each Commons Log field with Lombok's @Slf4j annotation, renames
+  references to the old field so they use the Lombok-generated `log`,
+  rewrites `fatal` / `isFatalEnabled` calls to the SLF4J `error` /
+  `isErrorEnabled` equivalents (SLF4J has no `fatal` level), and prunes the
+  now-unused `org.apache.commons.logging.Log` / `LogFactory` imports.
+  Adds the Lombok compileOnly + annotationProcessor dependencies so the
+  @Slf4j expansion compiles. Catalog-aware: the entry lands in
+  `gradle/libs.versions.toml` and the build uses `libs.lombok` when a
+  Gradle version catalog is present.
+tags:
+  - logging
+  - lombok
+  - slf4j
+  - commons-logging
+
+recipeList:
+  - io.github.fiftieshousewife.AddLombokDependency
+  - io.github.fiftieshousewife.recipes.CommonsLoggingToSlf4j
+
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.github.fiftieshousewife.CommonsLoggingToSlf4jRecipeNoDeps
+displayName: Convert Apache Commons Logging to Lombok @Slf4j (no dependency management)
+description: >-
+  Same transformation as CommonsLoggingToSlf4jRecipe but without adding
+  Lombok dependencies to the build. Use when you manage dependencies
+  yourself (e.g. in a multi-module project where Lombok is already declared
+  at a parent level).
+
+  The conversion is only applied in source files whose classpath actually
+  contains lombok.extern.slf4j.Slf4j, so modules without Lombok are skipped.
+tags:
+  - logging
+  - lombok
+  - slf4j
+  - commons-logging
+
+recipeList:
+  - io.github.fiftieshousewife.recipes.CommonsLoggingToSlf4j:
+      requireLombokOnClasspath: true
+
+---
+type: specs.openrewrite.org/v1beta/recipe
 name: io.github.fiftieshousewife.MigrateToSlf4jRecipe
 displayName: Migrate all logging patterns to Lombok @Slf4j (all-in-one)
 description: >-
