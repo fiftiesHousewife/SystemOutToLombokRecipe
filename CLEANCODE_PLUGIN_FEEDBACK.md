@@ -106,6 +106,132 @@ A cheaper proxy: don't fire G19 on lambdas whose body is a single method
 call (negated or not). The risk of missing a real G19 here is low —
 single-call lambdas almost never benefit from further extraction.
 
+### G19 update 2026-05-05 — two more variants from `ConcatThrowableMessage`
+
+**G19.2 — multi-line `getDescription` string literal flagged.**
+
+```java
+@Override
+public String getDescription() {
+    return "Rewrites SLF4J log calls of the form `log.error(\"failed: \" + e.getMessage())` "
+            + "into `log.error(\"failed: \", e)`. Peels the trailing `+ e.getMessage()` off "
+            + "the message and passes the throwable as a separate argument so SLF4J can "
+            + "append the stack trace. Multi-part LHS chains (`\"a \" + b + \": \" + "
+            + "e.getMessage()`) are preserved verbatim.";
+}
+```
+
+`ConcatThrowableMessage.java:44`. Heuristic flags the long string literal
+as "complex expression should be extracted to a named variable". But
+extracting `getDescription`'s body to a `private static final String
+DESCRIPTION = "..."` then `return DESCRIPTION;` adds a level of
+indirection without explanatory benefit — the method *is* the named
+variable, and OpenRewrite's recipe-discovery surface depends on these
+strings being directly returned from a getter.
+
+**Suggested fix.** Don't fire G19 on string-only return statements where
+the method itself is named like an explanatory accessor (e.g. matches
+`get[A-Z].*`). The accessor-name *is* the explanation.
+
+**G19.3 — chained matcher OR is not a candidate for extraction.**
+
+```java
+// ConcatThrowableMessageVisitor.java:36
+return SLF4J_TRACE.matches(method) || SLF4J_DEBUG.matches(method)
+        || SLF4J_INFO.matches(method) || SLF4J_WARN.matches(method)
+        || SLF4J_ERROR.matches(method);
+```
+
+Five `MethodMatcher.matches(...)` calls joined by `||`. Heuristic flags
+"complex expression should be extracted to a named variable". Extracting
+to `boolean isLogMethod = ...` would add one line and zero clarity — the
+expression already reads as "is this an SLF4J log call". Same family
+as G19.1 (lambda after extraction) — heuristic treats syntactic
+complexity as proxy for cognitive complexity.
+
+**Suggested fix.** Don't fire G19 on a sequence of identical-shape calls
+joined by the same operator. Five `X.matches(y)` calls joined by `||` is
+visually structured by repetition and the operator does the explaining.
+
+## G30 Functions Should Do One Thing — first false-positive firing
+
+**G30.1 — guard-clause early returns flagged as multi-purpose method.**
+
+```java
+// ConcatThrowableMessageVisitor.java:49
+static Optional<J.MethodInvocation> peelThrowableFromConcat(final J.MethodInvocation method) {
+    final Expression arg = method.getArguments().get(0);
+    if (!(arg instanceof J.Binary binary) || binary.getOperator() != J.Binary.Type.Addition) {
+        return Optional.empty();
+    }
+    if (!(binary.getRight() instanceof J.MethodInvocation getMessageCall)
+            || !THROWABLE_GET_MESSAGE.matches(getMessageCall)) {
+        return Optional.empty();
+    }
+    final Expression throwable = getMessageCall.getSelect();
+    if (throwable == null) {
+        return Optional.empty();
+    }
+    // ... single transformation ...
+}
+```
+
+Heuristic counts three `if (!matches) return empty()` guards and
+concludes the method does several things. But the method does *one*
+thing — peel a Throwable off a concatenation, returning empty when any
+shape precondition fails. Guard-clause early returns are exactly what
+*Clean Code* Ch3 recommends as an alternative to nested ifs.
+
+This is the first time G30 has fired on this project on idiomatic guard
+style — every prior G30 hit (e.g. `SystemOutVisitor.replacePrintln`,
+catalogued under "What worked well" below) was a genuine multi-purpose
+method that benefited from splitting.
+
+**Suggested fix.** When counting "things this method does", treat
+sequential `if (precondition fails) return earlyExit;` blocks as a
+single composite precondition, not as separate operations. The signal
+to look for is whether the early returns all return the same value (or
+shape) — if yes, they're a guard chain, not separate behaviours.
+
+## J3 Constants Versus Enums — overengineering for single-use matchers
+
+**J3.1 — five static-final `MethodMatcher` constants flagged "should be
+an enum".**
+
+```java
+// ConcatThrowableMessageVisitor.java:18
+private static final MethodMatcher SLF4J_TRACE = new MethodMatcher("org.slf4j.Logger trace(..)");
+private static final MethodMatcher SLF4J_DEBUG = new MethodMatcher("org.slf4j.Logger debug(..)");
+private static final MethodMatcher SLF4J_INFO  = new MethodMatcher("org.slf4j.Logger info(..)");
+private static final MethodMatcher SLF4J_WARN  = new MethodMatcher("org.slf4j.Logger warn(..)");
+private static final MethodMatcher SLF4J_ERROR = new MethodMatcher("org.slf4j.Logger error(..)");
+```
+
+Heuristic spots five fields with a common prefix and suggests an enum.
+The enum *would* be valid (the five SLF4J log levels are conceptually
+enumerable), but here it would add structure without payoff: the five
+matchers are each used exactly once, in a single `||` chain three
+lines below. An enum requires `values()`, a constructor, a holder
+field, and a lookup method — for a one-call site that's net-negative.
+
+This is the first J3 firing in this project. The rule is sound; the
+case here is just at the wrong end of the cost/benefit curve.
+
+**Suggested fix.** Skip J3 when:
+1. The constants are all package-private or `private` (not part of an
+   API surface that users iterate over), AND
+2. Each constant is referenced exactly once in the same compilation
+   unit, AND
+3. The references are in a single expression (a chain of `||`/`&&`,
+   or arguments to one method call).
+
+Together these signal "this is a flat list of literals used once
+inline" — exactly the case where the enum overhead doesn't pay back.
+For `LoggerNames.java` and `LombokLoggingAnnotation.java` (both real
+enums in this project) those preconditions don't hold — multiple usage
+sites, lookup methods, dispatch by name — so the rule still fires
+correctly there.
+
 ## G5 Duplication — sensitivity to framework boilerplate
 
 Four findings firing on the OpenRewrite recipe-as-value-object idiom:
