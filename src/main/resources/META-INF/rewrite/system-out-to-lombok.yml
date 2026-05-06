@@ -471,6 +471,13 @@ recipeList:
   # see hasExplicitLoggerField() and skip the class entirely.
   - io.github.fiftieshousewife.recipes.ConvertManualLoggerToSlf4j
   - io.github.fiftieshousewife.JavaTransforms
+  # After all conversions land on `log.X(...)` calls, parameterize any
+  # remaining concatenated message strings (`log.info("user " + name)` →
+  # `log.info("user {}", name)`). Hand-rolled (not upstream's
+  # ParameterizedLogging) because upstream's UsesMethod precondition matches
+  # by bound type — and our converted calls still carry the pre-conversion
+  # logger type since OpenRewrite doesn't re-parse the LST mid-pipeline.
+  - io.github.fiftieshousewife.recipes.Slf4jConcatToParameterized
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
