@@ -131,6 +131,81 @@ class MigrateToSlf4jRecipeIntegrationTest implements RewriteTest {
     }
 
     @Test
+    @DisplayName("Throwable consumed by trailing placeholder is moved to stack-trace slot after conversion")
+    void dropsTrailingThrowablePlaceholderAfterConversion() {
+        rewriteRun(
+                java(
+                        """
+                                package com.example;
+
+                                import org.apache.logging.log4j.LogManager;
+                                import org.apache.logging.log4j.Logger;
+
+                                public class Buggy {
+                                    private static final Logger logger = LogManager.getLogger(Buggy.class);
+
+                                    public void boom() {
+                                        try { risky(); } catch (Exception e) {
+                                            logger.error("failed: {}", e);
+                                        }
+                                    }
+
+                                    private void risky() throws Exception { throw new Exception(); }
+                                }
+                                """,
+                        """
+                                package com.example;
+
+                                import lombok.extern.slf4j.Slf4j;
+
+                                @Slf4j
+                                public class Buggy {
+
+                                    public void boom() {
+                                        try { risky(); } catch (Exception e) {
+                                            log.error("failed", e);
+                                        }
+                                    }
+
+                                    private void risky() throws Exception { throw new Exception(); }
+                                }
+                                """
+                ),
+                buildGradleKts(
+                        """
+                                plugins {
+                                    java
+                                }
+                                repositories {
+                                    mavenCentral()
+                                }
+                                """,
+                        """
+                                plugins {
+                                    java
+                                }
+                                repositories {
+                                    mavenCentral()
+                                }
+
+                                dependencies {
+                                    annotationProcessor("org.projectlombok:lombok:1.18.44")
+
+                                    compileOnly("org.projectlombok:lombok:1.18.44")
+
+                                    implementation("org.slf4j:slf4j-api:2.0.17")
+
+                                    runtimeOnly("org.apache.logging.log4j:log4j-core:2.25.4")
+                                    runtimeOnly("org.apache.logging.log4j:log4j-slf4j2-impl:2.25.4")
+                                }
+                                """
+                ),
+                text(null, MAIN_LOG4J2_XML, spec -> spec.path("src/main/resources/log4j2.xml")),
+                text(null, TEST_LOG4J2_XML, spec -> spec.path("src/test/resources/log4j2-test.xml"))
+        );
+    }
+
+    @Test
     @DisplayName("concatenated SLF4J calls get parameterised after conversion")
     void parameterisesConcatenatedSlf4jCallsAfterConversion() {
         rewriteRun(

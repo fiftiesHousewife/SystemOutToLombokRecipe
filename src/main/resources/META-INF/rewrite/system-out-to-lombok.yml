@@ -478,6 +478,12 @@ recipeList:
   # by bound type — and our converted calls still carry the pre-conversion
   # logger type since OpenRewrite doesn't re-parse the LST mid-pipeline.
   - io.github.fiftieshousewife.recipes.Slf4jConcatToParameterized
+  # Then drop trailing `{}` placeholders that consumed a Throwable arg —
+  # `log.error("failed: {}", e)` → `log.error("failed", e)`. Without this
+  # the throwable's stack trace is silently swallowed by SLF4J's toString
+  # substitution. Runs after the parameterizer so concat-then-throwable
+  # patterns get normalised first.
+  - io.github.fiftieshousewife.recipes.ThrowableLastArgumentNoPlaceholder
 
 ---
 type: specs.openrewrite.org/v1beta/recipe

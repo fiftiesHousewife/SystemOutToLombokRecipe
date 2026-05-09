@@ -89,16 +89,16 @@ project) and stays. But its `tests/ci-smoke.sh` example cell references
 
 ## Part B — scope expansion (what justifies the rename)
 
-### Tier 1 — core "clean logging" recipes (v1.0 must-have)
+### Tier 1 — core "clean logging" recipes (v1.0 must-have) — **COMPLETE 2026-05-09**
 
-| Recipe | Behaviour | Notes |
+| Recipe | Behaviour | Status |
 |---|---|---|
-| **ParameterizeStringConcat** | `log.info("User " + id + " created")` → `log.info("User {} created", id)` | Reuses `StringConcatDecomposer` + `LogCallTemplate`. Highest-value addition. |
-| **ThrowableLastArgumentNoPlaceholder** | `log.error("failed: {}", e)` → `log.error("failed", e)`; also Log4j-style `log.error(e, "msg")` | Detects Throwable used as substitution arg. Real bug, easy detection. |
-| **ConcatThrowableMessage** | `log.error("failed: " + e.getMessage())` → `log.error("failed", e)` | Highest "real bug" frequency in the wild — drops stack trace silently today. |
-| **CommonsLoggingToSlf4j** | Same shape as `JulToSlf4j`, different source framework | Lots of legacy commons-logging out there. |
-| **DirectSlf4jLoggerFieldToLombok** | `private static final Logger log = LoggerFactory.getLogger(...)` → `@Slf4j` | Generalizes `ConvertManualLoggerToSlf4j` beyond Log4j2. |
-| **PrintStackTraceWithStream** | `e.printStackTrace(System.err)` → `log.error(throwable)` | Sibling of existing `PrintStackTraceToLog`. |
+| **Slf4jConcatToParameterized** (was ParameterizeStringConcat) | `log.info("User " + id + " created")` → `log.info("User {} created", id)` | Shipped (commit `ca3c973`). Hand-rolled, not upstream's `ParameterizedLogging` — upstream's `UsesMethod` precondition matches by bound type and skips post-conversion calls whose LST type info is stale. Wired into `MigrateToSlf4jRecipe`. |
+| **ThrowableLastArgumentNoPlaceholder** | `log.error("failed: {}", e)` → `log.error("failed", e)` | Shipped (commit pending). Drops the trailing `{}` when SLF4J would otherwise consume the Throwable via `toString()` and silently drop the stack trace. Receiver detection structural (`log` name) so it composes after `@Slf4j`-adding recipes. Wired into `MigrateToSlf4jRecipe` after the parameterizer. |
+| **ConcatThrowableMessage** | `log.error("failed: " + e.getMessage())` → `log.error("failed", e)` | Shipped (commit `d7d6038`). |
+| **CommonsLoggingToSlf4j** | Same shape as `JulToSlf4j`, different source framework | Shipped (commit `c32269e`). Includes `fatal`/`isFatalEnabled` rename to `error`/`isErrorEnabled` (SLF4J has no fatal level). |
+| **DirectSlf4jLoggerFieldToLombok** | `private static final Logger log = LoggerFactory.getLogger(...)` → `@Slf4j` | Shipped (commit `6988557`). Plus shared-base extraction (`dbec180`) consolidates this with `ConvertManualLoggerToSlf4j` and `CommonsLoggingToSlf4j`. |
+| **PrintStackTraceWithStream** | `e.printStackTrace(System.err)` → `log.error(throwable)` | **Already covered by `PrintStackTraceToLog`** — its matcher is `printStackTrace(..)` so the stream overloads are caught and the stream argument is dropped. Tests `convertsPrintStackTraceWithSystemErr` and `convertsPrintStackTraceWithSystemOut` already pass. No separate recipe needed. |
 
 ### Tier 2 — logger hygiene (v1.x, additive)
 
