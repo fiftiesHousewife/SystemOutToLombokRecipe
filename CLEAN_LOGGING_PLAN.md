@@ -1,5 +1,212 @@
 # Clean Logging — rename + scope expansion plan
 
+---
+
+## Status snapshot — 2026-05-09
+
+**Tier 1 complete and shipped as 0.9** (commits up to `1ebf501` on `main`,
+8 ahead of `origin/main`, not yet pushed/published).
+
+**Decisions locked for the v1.0 rename** (operator confirmation 2026-05-09):
+
+1. Group ID stays at `io.github.fiftieshousewife`.
+2. **No backwards compatibility / no deprecation aliases.** Old artifact
+   `system-out-to-lombok-log4j:0.9` stays published on Central (Maven
+   Central is immutable); it just stops getting updates. New artifact
+   `clean-logging:1.0` ships with the new package + recipe IDs only.
+   Migration cost for existing users: change two strings in their build
+   (`rewrite("…:system-out-to-lombok-log4j:0.9")` →
+   `rewrite("…:clean-logging:1.0")` plus
+   `activeRecipe("io.github.fiftieshousewife.X")` →
+   `activeRecipe("io.github.fiftieshousewife.cleanlogging.X")`).
+3. Naming casing locked: `clean-logging` (artifact / YAML manifest) /
+   `cleanlogging` (Java package) / `CleanLogging` (Java class prefix
+   where needed) / "Clean Logging" (prose).
+4. Ship a `MigrateToCleanLoggingRecipe` one-shot composed recipe
+   covering Tier 1 + the existing `MigrateToSlf4j` chain.
+
+**Operator prerequisites BEFORE the rename starts** (Phase 0 below):
+
+- Push 0.9 commits + publish 0.9 to Maven Central + tag `v0.9`. The
+  rename should land on top of a published 0.9 so users on the old
+  artifact have a stable terminal version to target.
+- Confirm Sonatype namespace `io.github.fiftieshousewife` accepts the
+  new `clean-logging` artifact name (no separate Central setup needed
+  since the group ID isn't changing).
+
+---
+
+## Detailed execution plan
+
+### Phase 0 — Operator: ship 0.9, then green-light v1.0 rename
+
+```
+git push origin main
+./gradlew publishAndReleaseToMavenCentral
+git tag v0.9 && git push origin v0.9
+```
+
+Verify on Central before kicking off Phase 1. The publish task
+`dependsOn("smokeTest")` so the structural gate fires automatically.
+
+### Phase 1 — Mechanical rename (Claude, one or two commits)
+
+The rename is purely textual but spans ~80 files. Audit (run
+2026-05-09) returned the full list — every file under
+`src/{main,test,integrationTest,smokeTest}/java/io/github/fiftieshousewife/recipes/`
+plus the YAML manifest, build files, and docs.
+
+Order matters because a partial rename breaks compilation:
+
+1. **Java package move + import rewrite** — the largest mechanical step.
+   - Move `src/{main,test,integrationTest}/java/io/github/fiftieshousewife/recipes/**`
+     → `…/cleanlogging/**` (file moves preserving directory structure).
+   - Sed (or IDE rename) every `import io.github.fiftieshousewife.recipes.X;`
+     → `import io.github.fiftieshousewife.cleanlogging.X;` across all .java files
+     (main, test, integrationTest, smokeTest, matrix subdir).
+   - Sed `package io.github.fiftieshousewife.recipes;` → `package io.github.fiftieshousewife.cleanlogging;`
+     in every moved file.
+   - Sed every `io.github.fiftieshousewife.recipes.X` (FQN string references —
+     YAML, integration-test recipe-ID strings, smoke scaffolders) → `…cleanlogging.X`.
+   - Smoke scaffolders (`SmokeProject.java`, `ProjectShapeScaffolder.java`,
+     `RecipeResolutionSmokeTest.java`) hardcode the artifact name in the
+     scaffolded `build.gradle.kts` — `system-out-to-lombok-log4j` → `clean-logging`.
+2. **Top-level recipe IDs in YAML** — `io.github.fiftieshousewife.SystemOutToSlf4jRecipe`
+   etc. → `io.github.fiftieshousewife.cleanlogging.SystemOutToSlf4jRecipe`. The
+   YAML's `recipeList:` entries that reference leaf recipe FQNs all flip too.
+   Test files' `activateRecipes(...)` calls use these IDs — sweep them in the
+   same commit.
+3. **YAML manifest rename** —
+   `src/main/resources/META-INF/rewrite/system-out-to-lombok.yml`
+   → `src/main/resources/META-INF/rewrite/clean-logging.yml`. Also use
+   `git mv` so the rename shows as such, not as delete + add.
+4. **Build files**:
+   - `settings.gradle.kts:1` — `rootProject.name = "system-out-to-lombok-log4j"` →
+     `rootProject.name = "clean-logging"`.
+   - `build.gradle.kts:313` — `coordinates(group.toString(), "system-out-to-lombok-log4j", version.toString())`
+     → `coordinates(group.toString(), "clean-logging", version.toString())`.
+   - `build.gradle.kts:10` — `version = "0.9"` → `version = "1.0"`.
+   - `build.gradle.kts:286` (and surrounding `pom { url, scm.connection }`) —
+     update GitHub URLs from `SystemOutToLombokRecipe` → `clean-logging`.
+5. **README** — full headline + intro rewrite. Drop "System.out to Lombok @Slf4j"
+   in favour of "Clean Logging — automated SLF4J/Lombok hygiene for Java
+   codebases" (or similar). Lead the intro with the spectrum of patterns now
+   that Tier 1 is shipped. Update the at-a-glance table to use new recipe IDs.
+6. **BACKLOG.md** — add a 1.0 entry under Shipped with the rename + Tier 1
+   summary; remove the "clean-logging v1.0 rename" item from "Queued for next
+   release" since it's done.
+7. **CLEAN_LOGGING_PLAN.md** — mark Phase 1 done in this status snapshot;
+   add a final 1.0-shipped status entry.
+8. **SMOKE_TEST.md §2a project-shape templates** — every reference to
+   `system-out-to-lombok-log4j` artifact → `clean-logging`.
+9. **AGENTS.md** — only references the artifact in the publication-workflow
+   §; verify with grep, update if hit.
+
+### Phase 2 — `MigrateToCleanLoggingRecipe` (Claude, one commit)
+
+Compose `MigrateToSlf4jRecipe` + the Tier 1 SLF4J cleanups (`Slf4jConcatToParameterized`,
+`ThrowableLastArgumentNoPlaceholder`, `ConcatThrowableMessage`) into a single
+top-level YAML recipe. `MigrateToSlf4jRecipe` already has the parameterizer +
+throwable-placeholder cleanup wired into its pipeline (commits `ca3c973` /
+`0050d8f`), so `MigrateToCleanLoggingRecipe` is `MigrateToSlf4jRecipe` plus
+the `CommonsLoggingToSlf4j` step prepended (so legacy Commons Logging gets
+folded onto `@Slf4j` before the rest of the chain runs).
+
+Tags: `logging`, `lombok`, `slf4j`, `log4j2`, `jul`, `commons-logging`.
+
+A `NoDeps` variant for multi-module projects.
+
+### Phase 3 — Verification (Claude)
+
+```
+./gradlew-claude check          # unit + integration
+./gradlew-claude smokeTest      # 17 cells
+```
+
+Both must be green. The smoke env fix in commit `a177aa2` keeps the
+operator-laptop JDK 25 quirk from biting smokeTest. The smoke
+scaffolders now reference `clean-logging`, so the publish-to-mavenLocal
++ resolve cycle exercises the new artifact end-to-end.
+
+### Phase 4 — Operator: publish v1.0
+
+```
+git push origin main
+./gradlew publishAndReleaseToMavenCentral
+git tag v1.0 && git push origin v1.0
+```
+
+### Phase 5 — Operator: GitHub repo rename
+
+GitHub Settings → repo rename `SystemOutToLombokRecipe` → `clean-logging`.
+Auto-redirect preserved by GitHub for the old URL. Update `pom.url` /
+`scm.connection` already done in Phase 1 step 4.
+
+### Phase 6 — Operator: local working tree
+
+```
+mv ~/Claude ~/clean-logging
+```
+
+Knock-on effects:
+- IDE workspace path needs re-pointing.
+- Claude Code session memory at
+  `~/.claude/projects/-Users-pippanewbold-Claude/...` — Claude Code
+  will auto-create a new path (`-Users-pippanewbold-clean-logging`)
+  on next session start. The existing memory at the old path won't be
+  visible to the new session unless the directory is symlinked or
+  contents are migrated.
+- `gradlew-claude` wrapper at the repo root keeps working (relative paths).
+
+### Phase 7 — Operator: JBang template repo
+
+`~/openrewrite-recipe-template-fhw/tests/ci-smoke.sh` references
+`system-out-to-lombok` as an example cell — update to `clean-logging`
+or replace with a different exemplar.
+
+---
+
+## Audit results — files touched by Phase 1 (run 2026-05-09)
+
+86 files reference `system-out-to-lombok` and/or `fiftieshousewife.recipes`:
+
+- 1 YAML manifest (`system-out-to-lombok.yml`) — renamed.
+- 50 main + test + integrationTest .java files under `…/recipes/` — moved
+  to `…/cleanlogging/` with package + imports updated.
+- 4 smokeTest .java files — `…/smoketest/` package stays (smoke scaffolders
+  aren't part of the recipe library); only the hardcoded artifact name
+  changes inside them.
+- 3 matrix test files (`matrix/GroovyDslMatrixTest`, `matrix/KotlinDslMatrixTest`,
+  `matrix/MatrixTestSupport`) — moved + imports updated.
+- 2 build files (`build.gradle.kts`, `settings.gradle.kts`).
+- 5 docs (README.md, BACKLOG.md, CLEAN_LOGGING_PLAN.md, SMOKE_TEST.md, AGENTS.md).
+
+The rename can land in either one large commit (single mental unit, easier
+git history) or two (Java package move; everything else). Single commit
+recommended unless review pressure dictates otherwise.
+
+## Risks / known gotchas
+
+- **Don't restart the session mid-rename** — Phase 1 has to complete
+  in one pass or the codebase is left non-compiling.
+- **Run `./gradlew check` after the package move and BEFORE renaming
+  the YAML manifest / recipe IDs** — catches package-level breakage
+  early, separate from precondition / activeRecipe-ID resolution
+  failures that surface later.
+- **Smoke test scaffolders compile against runtime classpath** — the
+  new artifact name in their hardcoded `rewrite("…:clean-logging:%s")`
+  line must match the build's `coordinates(...)` exactly or the
+  smoke project fails resolution.
+- **`MigrateToCleanLoggingRecipe` precondition gap** — same risk as
+  the parameterizer / throwable-placeholder recipes: hand-roll
+  detection structurally on `log` receiver name; don't rely on
+  `UsesType<org.slf4j.Logger>` post-conversion.
+- **GitHub repo rename redirect** — works for `git remote` URLs
+  (auto-redirect for ~1 year per GitHub policy), but Sonatype's
+  scm-connection metadata in published 1.0 POMs is locked at publish
+  time. Phase 1 step 4 must update `scm.connection` before publish or
+  the published POM points at the dead old URL.
+
 ## Why
 
 Currently published as `system-out-to-lombok-log4j` v0.8. The artifact name
