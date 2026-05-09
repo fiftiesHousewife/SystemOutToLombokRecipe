@@ -60,6 +60,7 @@ final class GradleRunner {
         command.add(projectDir.resolve("gradlew").toString());
         command.add("--no-daemon");
         command.add("--stacktrace");
+        command.add("-Dorg.gradle.java.home=" + config.jdk21Home());
         for (final String task : gradleTasks) {
             command.add(task);
         }

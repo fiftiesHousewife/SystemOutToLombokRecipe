@@ -32,6 +32,7 @@ final class SmokeProject {
         try {
             Files.createDirectories(projectDir);
             copyWrapper();
+            writeGradleProperties();
             writeSettings();
             writeBuild();
             writeFixtures();
@@ -39,6 +40,11 @@ final class SmokeProject {
         } catch (final IOException e) {
             throw new UncheckedIOException("Failed to scaffold smoke project at " + projectDir, e);
         }
+    }
+
+    private void writeGradleProperties() throws IOException {
+        Files.writeString(projectDir.resolve("gradle.properties"),
+                "org.gradle.java.home=" + config.jdk21Home().toString().replace("\\", "\\\\") + "\n");
     }
 
     private void copyWrapper() throws IOException {

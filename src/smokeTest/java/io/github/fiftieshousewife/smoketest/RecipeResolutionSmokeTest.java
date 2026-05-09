@@ -53,6 +53,8 @@ class RecipeResolutionSmokeTest {
         try {
             Files.createDirectories(projectDir);
             copyWrapper(projectDir);
+            Files.writeString(projectDir.resolve("gradle.properties"),
+                    "org.gradle.java.home=" + config.jdk21Home().toString().replace("\\", "\\\\") + "\n");
             Files.writeString(projectDir.resolve("settings.gradle.kts"),
                     "rootProject.name = \"resolution\"\n");
             Files.writeString(projectDir.resolve("build.gradle.kts"), """

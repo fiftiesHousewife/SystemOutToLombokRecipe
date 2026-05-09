@@ -58,6 +58,7 @@ final class ProjectShapeScaffolder {
         try {
             Files.createDirectories(projectDir);
             copyWrapper(projectDir);
+            writeGradleProperties(projectDir);
             switch (variant.topology()) {
                 case MULTI_MODULE -> scaffoldMultiModule();
                 case BUILD_LOGIC_INCLUDE -> scaffoldBuildLogicInclude();
@@ -67,6 +68,11 @@ final class ProjectShapeScaffolder {
         } catch (final IOException e) {
             throw new UncheckedIOException("Failed to scaffold project at " + projectDir, e);
         }
+    }
+
+    private void writeGradleProperties(final Path dir) throws IOException {
+        Files.writeString(dir.resolve("gradle.properties"),
+                "org.gradle.java.home=" + config.jdk21Home().toString().replace("\\", "\\\\") + "\n");
     }
 
     private void scaffoldMultiModule() throws IOException {
@@ -155,6 +161,7 @@ final class ProjectShapeScaffolder {
         final Path included = projectDir.resolve("build-logic");
         Files.createDirectories(included);
         copyWrapper(included);
+        writeGradleProperties(included);
         writeSettings(included, "build-logic", "", "");
         writeStandaloneRootBuild(included);
         writeEmptyCatalog(included);
