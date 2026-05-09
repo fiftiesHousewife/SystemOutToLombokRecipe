@@ -5,10 +5,13 @@ import org.openrewrite.ExecutionContext;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
+import org.openrewrite.java.tree.JContainer;
 import org.openrewrite.java.tree.TypeUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import static io.github.fiftieshousewife.recipes.LogCallTemplate.escape;
 import static io.github.fiftieshousewife.recipes.Slf4jConcatToParameterizedVisitor.isSlf4jLogCall;
 
 @NullMarked
@@ -93,10 +96,10 @@ class ThrowableLastArgumentNoPlaceholderVisitor extends JavaIsoVisitor<Execution
         final J.Literal originalLiteral = (J.Literal) original.getArguments().get(0);
         final J.Literal newLiteral = originalLiteral
                 .withValue(trimmed)
-                .withValueSource("\"" + trimmed.replace("\\", "\\\\").replace("\"", "\\\"") + "\"");
-        final List<Expression> newArgs = new java.util.ArrayList<>(original.getArguments());
+                .withValueSource("\"" + escape(trimmed) + "\"");
+        final List<Expression> newArgs = new ArrayList<>(original.getArguments());
         newArgs.set(0, newLiteral);
         return original.getPadding().withArguments(
-                org.openrewrite.java.tree.JContainer.withElements(original.getPadding().getArguments(), newArgs));
+                JContainer.withElements(original.getPadding().getArguments(), newArgs));
     }
 }

@@ -35,6 +35,10 @@ final class JulLoggerTypeDetector extends JavaIsoVisitor<Integer> {
     }
 
     static Set<String> referencedJulFqnsIn(final J.CompilationUnit compilationUnit) {
+        if (compilationUnit.getImports().stream()
+                .noneMatch(imp -> imp.getTypeName() != null && imp.getTypeName().startsWith(JUL_PACKAGE_PREFIX))) {
+            return java.util.Collections.emptySet();
+        }
         final JulLoggerTypeDetector detector = new JulLoggerTypeDetector();
         detector.visit(compilationUnit, 0);
         return detector.referencedJulFqns;
