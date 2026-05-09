@@ -3,7 +3,6 @@ package io.github.fiftieshousewife.recipes;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Option;
 import org.openrewrite.Preconditions;
@@ -11,12 +10,8 @@ import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.search.UsesType;
 import org.openrewrite.java.tree.J;
-import org.openrewrite.java.tree.Statement;
-import org.openrewrite.java.tree.TypeTree;
-import org.openrewrite.java.tree.TypeUtils;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -85,34 +80,7 @@ public class ConvertManualLoggerToSlf4j extends Recipe {
                 new ConvertManualLoggerToSlf4jVisitor(requireLombokOnClasspath));
     }
 
-    static Optional<ManualField> findManualLog4j2Field(final J.ClassDeclaration classDecl) {
-        return classDecl.getBody().getStatements().stream()
-                .filter(J.VariableDeclarations.class::isInstance)
-                .map(J.VariableDeclarations.class::cast)
-                .filter(varDecl -> isLog4j2LoggerType(varDecl.getTypeExpression()))
-                .filter(varDecl -> varDecl.getVariables().size() == 1)
-                .findFirst()
-                .map(varDecl -> new ManualField(varDecl, varDecl.getVariables().get(0).getSimpleName()));
-    }
-
-    private static boolean isLog4j2LoggerType(final @Nullable TypeTree typeExpression) {
-        return typeExpression != null && TypeUtils.isOfClassType(typeExpression.getType(), LOG4J2_LOGGER.fqn());
-    }
-
-    static J.ClassDeclaration renameReferences(final J.ClassDeclaration classDecl, final String oldName) {
-        if ("log".equals(oldName)) {
-            return classDecl;
-        }
-        return (J.ClassDeclaration) new LoggerFieldRenameToLogVisitor(oldName).visitNonNull(classDecl, 0);
-    }
-
-    static J.ClassDeclaration removeField(final J.ClassDeclaration classDecl, final J.VariableDeclarations toRemove) {
-        final List<Statement> keep = classDecl.getBody().getStatements().stream()
-                .filter(statement -> statement != toRemove)
-                .toList();
-        return classDecl.withBody(classDecl.getBody().withStatements(keep));
-    }
-
-    record ManualField(J.VariableDeclarations varDecl, String name) {
+    static Optional<LoggerField> findManualLog4j2Field(final J.ClassDeclaration classDecl) {
+        return LoggerFieldFinders.findFirstSingleVariableFieldOfType(classDecl, LOG4J2_LOGGER.fqn());
     }
 }

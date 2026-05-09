@@ -3,7 +3,6 @@ package io.github.fiftieshousewife.recipes;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Option;
 import org.openrewrite.Preconditions;
@@ -11,14 +10,9 @@ import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.MethodMatcher;
 import org.openrewrite.java.search.UsesType;
-import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
-import org.openrewrite.java.tree.Statement;
-import org.openrewrite.java.tree.TypeTree;
-import org.openrewrite.java.tree.TypeUtils;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -81,64 +75,8 @@ public class CommonsLoggingToSlf4j extends Recipe {
                 new CommonsLoggingToSlf4jVisitor(requireLombokOnClasspath));
     }
 
-    static Optional<CommonsField> findCommonsLogField(final J.ClassDeclaration classDecl) {
-        final List<J.VariableDeclarations> matches = classDecl.getBody().getStatements().stream()
-                .filter(J.VariableDeclarations.class::isInstance)
-                .map(J.VariableDeclarations.class::cast)
-                .filter(varDecl -> isCommonsLogType(varDecl.getTypeExpression()))
-                .filter(CommonsLoggingToSlf4j::isSingleVariable)
-                .filter(CommonsLoggingToSlf4j::hasRequiredModifiers)
-                .filter(CommonsLoggingToSlf4j::isLogFactoryInitialised)
-                .toList();
-        return matches.size() == 1
-                ? Optional.of(new CommonsField(matches.get(0), matches.get(0).getVariables().get(0).getSimpleName()))
-                : Optional.empty();
+    static Optional<LoggerField> findCommonsLogField(final J.ClassDeclaration classDecl) {
+        return LoggerFieldFinders.findExactlyOneEligibleField(
+                classDecl, COMMONS_LOG.fqn(), LOG_FACTORY_GET_LOG);
     }
-
-    private static boolean isCommonsLogType(final @Nullable TypeTree typeExpression) {
-        return typeExpression != null && TypeUtils.isOfClassType(typeExpression.getType(), COMMONS_LOG.fqn());
-    }
-
-    private static boolean isSingleVariable(final J.VariableDeclarations varDecl) {
-        return varDecl.getVariables().size() == 1;
-    }
-
-    private static boolean hasRequiredModifiers(final J.VariableDeclarations varDecl) {
-        boolean hasStatic = false;
-        boolean hasFinal = false;
-        for (final J.Modifier modifier : varDecl.getModifiers()) {
-            final J.Modifier.Type type = modifier.getType();
-            if (type == J.Modifier.Type.Public || type == J.Modifier.Type.Protected) {
-                return false;
-            }
-            if (type == J.Modifier.Type.Static) {
-                hasStatic = true;
-            } else if (type == J.Modifier.Type.Final) {
-                hasFinal = true;
-            }
-        }
-        return hasStatic && hasFinal;
-    }
-
-    private static boolean isLogFactoryInitialised(final J.VariableDeclarations varDecl) {
-        final Expression initializer = varDecl.getVariables().get(0).getInitializer();
-        return initializer instanceof J.MethodInvocation invocation
-                && LOG_FACTORY_GET_LOG.matches(invocation);
-    }
-
-    static J.ClassDeclaration renameReferences(final J.ClassDeclaration classDecl, final String oldName) {
-        if ("log".equals(oldName)) {
-            return classDecl;
-        }
-        return (J.ClassDeclaration) new LoggerFieldRenameToLogVisitor(oldName).visitNonNull(classDecl, 0);
-    }
-
-    static J.ClassDeclaration removeField(final J.ClassDeclaration classDecl, final J.VariableDeclarations toRemove) {
-        final List<Statement> keep = classDecl.getBody().getStatements().stream()
-                .filter(statement -> statement != toRemove)
-                .toList();
-        return classDecl.withBody(classDecl.getBody().withStatements(keep));
-    }
-
-    record CommonsField(J.VariableDeclarations varDecl, String name) { }
 }

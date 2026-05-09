@@ -3,7 +3,6 @@ package io.github.fiftieshousewife.recipes;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Option;
 import org.openrewrite.Preconditions;
@@ -11,14 +10,9 @@ import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.MethodMatcher;
 import org.openrewrite.java.search.UsesType;
-import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
-import org.openrewrite.java.tree.Statement;
-import org.openrewrite.java.tree.TypeTree;
-import org.openrewrite.java.tree.TypeUtils;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -81,65 +75,8 @@ public class DirectSlf4jLoggerFieldToLombok extends Recipe {
                 new DirectSlf4jLoggerFieldToLombokVisitor(requireLombokOnClasspath));
     }
 
-    static Optional<DirectField> findDirectSlf4jField(final J.ClassDeclaration classDecl) {
-        final List<J.VariableDeclarations> matches = classDecl.getBody().getStatements().stream()
-                .filter(J.VariableDeclarations.class::isInstance)
-                .map(J.VariableDeclarations.class::cast)
-                .filter(varDecl -> isSlf4jLoggerType(varDecl.getTypeExpression()))
-                .filter(DirectSlf4jLoggerFieldToLombok::isSingleVariable)
-                .filter(DirectSlf4jLoggerFieldToLombok::hasRequiredModifiers)
-                .filter(DirectSlf4jLoggerFieldToLombok::isLoggerFactoryInitialised)
-                .toList();
-        return matches.size() == 1
-                ? Optional.of(new DirectField(matches.get(0), matches.get(0).getVariables().get(0).getSimpleName()))
-                : Optional.empty();
-    }
-
-    private static boolean isSlf4jLoggerType(final @Nullable TypeTree typeExpression) {
-        return typeExpression != null && TypeUtils.isOfClassType(typeExpression.getType(), SLF4J_LOGGER.fqn());
-    }
-
-    private static boolean isSingleVariable(final J.VariableDeclarations varDecl) {
-        return varDecl.getVariables().size() == 1;
-    }
-
-    private static boolean hasRequiredModifiers(final J.VariableDeclarations varDecl) {
-        boolean hasStatic = false;
-        boolean hasFinal = false;
-        for (final J.Modifier modifier : varDecl.getModifiers()) {
-            final J.Modifier.Type type = modifier.getType();
-            if (type == J.Modifier.Type.Public || type == J.Modifier.Type.Protected) {
-                return false;
-            }
-            if (type == J.Modifier.Type.Static) {
-                hasStatic = true;
-            } else if (type == J.Modifier.Type.Final) {
-                hasFinal = true;
-            }
-        }
-        return hasStatic && hasFinal;
-    }
-
-    private static boolean isLoggerFactoryInitialised(final J.VariableDeclarations varDecl) {
-        final Expression initializer = varDecl.getVariables().get(0).getInitializer();
-        return initializer instanceof J.MethodInvocation invocation
-                && LOGGER_FACTORY_GET_LOGGER.matches(invocation);
-    }
-
-    static J.ClassDeclaration renameReferences(final J.ClassDeclaration classDecl, final String oldName) {
-        if ("log".equals(oldName)) {
-            return classDecl;
-        }
-        return (J.ClassDeclaration) new LoggerFieldRenameToLogVisitor(oldName).visitNonNull(classDecl, 0);
-    }
-
-    static J.ClassDeclaration removeField(final J.ClassDeclaration classDecl, final J.VariableDeclarations toRemove) {
-        final List<Statement> keep = classDecl.getBody().getStatements().stream()
-                .filter(statement -> statement != toRemove)
-                .toList();
-        return classDecl.withBody(classDecl.getBody().withStatements(keep));
-    }
-
-    record DirectField(J.VariableDeclarations varDecl, String name) {
+    static Optional<LoggerField> findDirectSlf4jField(final J.ClassDeclaration classDecl) {
+        return LoggerFieldFinders.findExactlyOneEligibleField(
+                classDecl, SLF4J_LOGGER.fqn(), LOGGER_FACTORY_GET_LOGGER);
     }
 }
