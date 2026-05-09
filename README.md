@@ -1,6 +1,11 @@
 # System.out to Lombok @Slf4j
 
-OpenRewrite recipes that migrate Java codebases onto Lombok `@Slf4j` + SLF4J logging (with Log4j2 as the backend). Converts ad-hoc `System.out` / `System.err` / `printStackTrace()` calls, `java.util.logging` (JUL) calls, and hand-rolled Log4j2 `Logger` fields into idiomatic `@Slf4j` + `log.xxx(...)` calls — with parameterized messages and proper stdout/stderr routing.
+OpenRewrite recipes that migrate Java codebases onto Lombok `@Slf4j` + SLF4J logging (with Log4j2 as the backend). Covers the full spectrum of "how Java code accidentally ended up emitting log lines":
+
+- **`System.out` / `System.err` / `printStackTrace()`** — the "poor man's logging" anti-patterns that drag console output into business code.
+- **`java.util.logging` (JUL)**, **Apache Commons Logging**, and **hand-rolled Log4j2** logger fields — pre-SLF4J framework migrations onto a single Lombok-generated `log` field.
+- **Hand-rolled SLF4J fields** — for codebases already on SLF4J that still spell out `private static final Logger log = LoggerFactory.getLogger(X.class);`.
+- **SLF4J usage cleanups** — concatenated message strings parameterised into `{}` placeholders; trailing-`{}` placeholders that silently consume a `Throwable` (and lose the stack trace) restored to the proper trailing-throwable slot; concatenated `getMessage()` chains peeled into a separate throwable arg.
 
 Your application code talks to SLF4J (the standard Java logging facade), so it's never coupled to a specific backend. Log4j2 handles the actual log routing and file rolling under the covers via the `log4j-slf4j2-impl` bridge.
 
@@ -126,6 +131,23 @@ Lombok `1.18.44`, SLF4J `2.0.17`, and Log4j2 `2.25.4` at the time of this releas
 
 ## Recipes
 
+### At a glance
+
+| Recipe | What it migrates | Adds deps? | Use when |
+| --- | --- | --- | --- |
+| **`SystemOutToSlf4jRecipe`** | `System.out`/`System.err`/`printStackTrace` + JUL → `@Slf4j` | yes (catalog-aware) | Default for projects on console output and/or JUL. |
+| **`SystemOutToSlf4jRecipeNoDeps`** | Same transforms, no dependency edits | no | Multi-module projects where deps live at a parent level. |
+| **`ConvertManualLoggerToSlf4jRecipe`** | Hand-rolled Log4j2 `Logger` field → `@Slf4j` | yes (catalog-aware) | Codebase already on Log4j2 with manual `LogManager.getLogger(...)` fields. |
+| **`ConvertManualLoggerToSlf4jRecipeNoDeps`** | Same, no dependency edits | no | Multi-module variant. |
+| **`DirectSlf4jLoggerFieldToLombokRecipe`** | Hand-rolled SLF4J `Logger` field → `@Slf4j` | yes (Lombok only) | Codebase already on SLF4J with manual `LoggerFactory.getLogger(...)` fields. |
+| **`DirectSlf4jLoggerFieldToLombokRecipeNoDeps`** | Same, no dependency edits | no | Multi-module variant. |
+| **`CommonsLoggingToSlf4jRecipe`** | Apache Commons Logging `Log` field → `@Slf4j`, plus `fatal`→`error` | yes (Lombok only) | Legacy codebases on `org.apache.commons.logging.Log` / `LogFactory`. |
+| **`CommonsLoggingToSlf4jRecipeNoDeps`** | Same, no dependency edits | no | Multi-module variant. |
+| **`MigrateToSlf4jRecipe`** | All of the above in one pass + SLF4J cleanups | yes (catalog-aware) | Mixed codebases that have several patterns at once. |
+| **`MigrateToSlf4jRecipeNoDeps`** | Same, no dependency edits | no | Multi-module variant. |
+
+The leaf-level `*` recipes (no `Recipe` suffix — `Slf4jConcatToParameterized`, `ThrowableLastArgumentNoPlaceholder`, `ConcatThrowableMessage`) are SLF4J cleanups that never touch dependencies. See [SLF4J cleanup recipes](#slf4j-cleanup-recipes).
+
 ### `SystemOutToSlf4jRecipe` — the one you usually want
 
 Runs all Java transforms, creates the log4j2 configs, and **auto-detects** your dependency setup:
@@ -203,9 +225,98 @@ A `NoDeps` variant (`DirectSlf4jLoggerFieldToLombokRecipeNoDeps`) exists for pro
 
 The recipe only touches classes with **exactly one** eligible field — `private` or package-private, `static final Logger`, initialised from `LoggerFactory.getLogger(...)`. Public/protected fields, classes that already carry a Lombok logging annotation, classes with no field, and classes with multiple eligible fields are all skipped.
 
+## Migrating Apache Commons Logging code
+
+If your codebase uses Apache Commons Logging (`private static final Log log = LogFactory.getLog(X.class);`), `CommonsLoggingToSlf4jRecipe` lifts it onto `@Slf4j`:
+
+- Adds `@Slf4j` to each affected class.
+- Deletes the manual `Log` field.
+- Renames any references to the old field to `log.xxx(...)`.
+- Drops now-unused `org.apache.commons.logging.Log` / `LogFactory` imports.
+- Rewrites `fatal`/`isFatalEnabled` to `error`/`isErrorEnabled` since SLF4J has no fatal level. Other Commons Logging level methods (`error`/`warn`/`info`/`debug`/`trace` and their `is*Enabled`) are name-compatible with SLF4J and pass through untouched.
+- Adds the Lombok `compileOnly` + `annotationProcessor` deps so `@Slf4j` expansion compiles. Catalog-aware (same auto-detect as above).
+
+```kotlin
+rewrite {
+    activeRecipe("io.github.fiftieshousewife.CommonsLoggingToSlf4jRecipe")
+}
+```
+
+| Commons Logging | SLF4J | Notes |
+| --- | --- | --- |
+| `log.fatal(msg)` | `log.error(msg)` | SLF4J has no fatal level. |
+| `log.fatal(msg, t)` | `log.error(msg, t)` | Throwable arg preserved. |
+| `log.isFatalEnabled()` | `log.isErrorEnabled()` | Same mapping. |
+| `log.error/warn/info/debug/trace(...)` | `log.error/warn/info/debug/trace(...)` | Names already match — no rewrite. |
+| `log.isErrorEnabled()` … `log.isTraceEnabled()` | (unchanged) | Already SLF4J-compatible. |
+
+A `NoDeps` variant (`CommonsLoggingToSlf4jRecipeNoDeps`) exists for multi-module projects where Lombok lives at a parent level.
+
 ## SLF4J cleanup recipes
 
-Pure transformations on existing SLF4J code — no dependency changes. Useful on their own, or compose them after the migration recipes above.
+Pure transformations on existing SLF4J code — no dependency changes. Useful on their own, or compose them after the migration recipes above (which is what `MigrateToSlf4jRecipe` does).
+
+| Recipe | Pattern fixed | Bug class |
+| --- | --- | --- |
+| **`Slf4jConcatToParameterized`** | `log.info("user " + id + " did " + a)` → `log.info("user {} did {}", id, a)` | Performance: assembles the message string even when the level is disabled. |
+| **`ThrowableLastArgumentNoPlaceholder`** | `log.error("failed: {}", e)` → `log.error("failed", e)` | **Stack trace silently lost.** SLF4J consumes `e` via `toString()` because the placeholder count matches the substitution-arg count. |
+| **`ConcatThrowableMessage`** | `log.error("failed: " + e.getMessage())` → `log.error("failed: ", e)` | **Stack trace silently lost.** The message includes only `e.getMessage()`, not the trace. |
+
+All three target SLF4J's `log.X(...)` API — they detect the receiver structurally (named `log`, the Lombok `@Slf4j` convention) so they're safe to compose after the `@Slf4j`-adding recipes whose post-conversion calls don't carry resolved SLF4J types.
+
+### `Slf4jConcatToParameterized`
+
+Rewrites SLF4J log calls whose single argument is a string concatenation into the parameterised form:
+
+```java
+log.info("user " + userId + " did " + action);
+```
+
+becomes
+
+```java
+log.info("user {} did {}", userId, action);
+```
+
+```kotlin
+rewrite {
+    activeRecipe("io.github.fiftieshousewife.recipes.Slf4jConcatToParameterized")
+}
+```
+
+| Skipped when | Reason |
+| --- | --- |
+| Receiver isn't named `log` | Heuristic guard — Lombok convention is `log`. |
+| Method name isn't an SLF4J level | Only `trace`/`debug`/`info`/`warn`/`error` are touched. |
+| Argument isn't a `+`-concatenation | Plain string literals and method calls pass through. |
+| Concat is all string literals | Nothing to parameterise (`"a" + "b"` has no substitution slot). |
+| Call has 2+ arguments | Already parameterised or already passes a throwable as a trailing arg. |
+
+Why hand-rolled instead of upstream's `org.openrewrite.java.logging.ParameterizedLogging`: upstream's `UsesMethod` precondition matches by bound method type and silently skips post-conversion calls whose LST type info is stale (OpenRewrite doesn't re-parse the LST mid-pipeline).
+
+### `ThrowableLastArgumentNoPlaceholder`
+
+When the placeholder count in an SLF4J message matches the substitution-arg count and the last argument is a `Throwable`, SLF4J binds the throwable to the placeholder via `toString()` instead of the trailing stack-trace slot — the stack trace is silently lost. The recipe drops the trailing `{}` so the throwable lands on the trailing-throwable slot:
+
+```java
+log.error("failed: {}", e);              // bug: stack trace lost
+log.error("user {} failed: {}", id, e);  // bug: stack trace lost
+```
+
+become
+
+```java
+log.error("failed", e);                  // stack trace logged
+log.error("user {} failed", id, e);      // stack trace logged
+```
+
+```kotlin
+rewrite {
+    activeRecipe("io.github.fiftieshousewife.recipes.ThrowableLastArgumentNoPlaceholder")
+}
+```
+
+Trailing ` `, `:`, `,` after the dropped placeholder are trimmed. Escaped `\{}` sequences are recognised and don't count as placeholders. If trimming would yield an empty message, the call is left alone (we'd have to guess at a default).
 
 ### `ConcatThrowableMessage`
 
@@ -342,6 +453,7 @@ public class Formatter {
 
 **Before**:
 ```java
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Service {
@@ -350,7 +462,10 @@ public class Service {
     public void run() {
         logger.info("starting");
         logger.severe("boom");
-        logger.fine("verbose");
+        logger.fine(() -> "verbose: " + heavyCompute());
+        if (logger.isLoggable(Level.FINE)) {
+            logger.fine("expensive");
+        }
     }
 }
 ```
@@ -359,23 +474,31 @@ public class Service {
 ```java
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.logging.Logger;
-
 @Slf4j
 public class Service {
-    private static final Logger logger = Logger.getLogger(Service.class.getName());
 
     public void run() {
         log.info("starting");
         log.error("boom");
-        log.debug("verbose");
+        log.debug("verbose: " + heavyCompute());
+        if (log.isDebugEnabled()) {
+            log.debug("expensive");
+        }
     }
 }
 ```
 
-Level mapping: `severe` → `error`, `warning` → `warn`, `info` → `info`, `config`/`fine` → `debug`, `finer`/`finest` → `trace`.
+| JUL → SLF4J level | Method | `isLoggable` |
+| --- | --- | --- |
+| `severe` | `error` | `Level.SEVERE` → `isErrorEnabled()` |
+| `warning` | `warn` | `Level.WARNING` → `isWarnEnabled()` |
+| `info` | `info` | `Level.INFO` → `isInfoEnabled()` |
+| `config` | `debug` | `Level.CONFIG` → `isDebugEnabled()` |
+| `fine` | `debug` | `Level.FINE` → `isDebugEnabled()` |
+| `finer` | `trace` | `Level.FINER` → `isTraceEnabled()` |
+| `finest` | `trace` | `Level.FINEST` → `isTraceEnabled()` |
 
-The old `Logger logger = Logger.getLogger(...)` field and its `java.util.logging.Logger` import are left in place — remove them yourself once you've confirmed the conversion. (The `ConvertManualLoggerToSlf4jRecipe` family removes hand-rolled Log4j2 fields, but not JUL fields.)
+The hand-rolled `Logger logger = Logger.getLogger(...)` field is removed once nothing else in the class references it, and unused `java.util.logging.*` imports (including `Level` after `isLoggable` is rewritten) are pruned. Lambda-supplier overloads (`logger.fine(() -> "v=" + value)`) are unwrapped to their body expression — SLF4J doesn't take a `Supplier`, the lambda becomes the message string. Block-body lambdas and bare `Supplier` references are left alone (we can't safely flatten them).
 
 ### Exception printStackTrace
 
@@ -407,6 +530,99 @@ public class ErrorHandler {
     }
 }
 ```
+
+The `printStackTrace(System.err)` and `printStackTrace(System.out)` overloads are handled the same way — the stream argument is dropped because the rewritten `log.error` call routes via the level alone (production `log4j2.xml` maps `ERROR` to `SYSTEM_ERR`).
+
+### Apache Commons Logging
+
+**Before**:
+```java
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+public class Service {
+    private static final Log log = LogFactory.getLog(Service.class);
+
+    public void boom() {
+        try { risky(); } catch (Exception e) {
+            log.fatal("game over", e);
+        }
+        if (log.isFatalEnabled()) {
+            log.fatal("noisy");
+        }
+    }
+}
+```
+
+**After**:
+```java
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class Service {
+
+    public void boom() {
+        try { risky(); } catch (Exception e) {
+            log.error("game over", e);
+        }
+        if (log.isErrorEnabled()) {
+            log.error("noisy");
+        }
+    }
+}
+```
+
+### Concat → parameterised SLF4J
+
+**Before**:
+```java
+@Slf4j
+public class Audit {
+    public void access(String userId, String resource) {
+        log.info("user " + userId + " accessed " + resource);
+    }
+}
+```
+
+**After**:
+```java
+@Slf4j
+public class Audit {
+    public void access(String userId, String resource) {
+        log.info("user {} accessed {}", userId, resource);
+    }
+}
+```
+
+The parameterised form skips message assembly entirely when the level is disabled.
+
+### Throwable consumed by trailing placeholder
+
+**Before** (silent bug — stack trace is dropped):
+```java
+@Slf4j
+public class Worker {
+    public void boom() {
+        try { risky(); } catch (Exception e) {
+            log.error("failed: {}", e);
+        }
+    }
+}
+```
+
+**After** (stack trace logged):
+```java
+@Slf4j
+public class Worker {
+    public void boom() {
+        try { risky(); } catch (Exception e) {
+            log.error("failed", e);
+        }
+    }
+}
+```
+
+SLF4J binds the trailing `Throwable` to the stack-trace slot only when the placeholder count is **one less** than the substitution-arg count. When the counts match, the throwable falls into the `{}` and gets `toString()`-substituted — the trace is silently lost.
 
 ## Why This Recipe Exists (Clean Code Notes)
 
