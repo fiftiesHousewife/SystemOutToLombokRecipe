@@ -479,6 +479,7 @@ recipeList:
   # logger type since OpenRewrite doesn't re-parse the LST mid-pipeline.
   - io.github.fiftieshousewife.cleanlogging.StringFormatInLogCall
   - io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterized
+  - io.github.fiftieshousewife.cleanlogging.ExplicitToStringInLogCall
   # Then drop trailing `{}` placeholders that consumed a Throwable arg —
   # `log.error("failed: {}", e)` → `log.error("failed", e)`. Without this
   # the throwable's stack trace is silently swallowed by SLF4J's toString
@@ -552,6 +553,7 @@ recipeList:
   - io.github.fiftieshousewife.cleanlogging.JavaTransforms
   - io.github.fiftieshousewife.cleanlogging.StringFormatInLogCall
   - io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterized
+  - io.github.fiftieshousewife.cleanlogging.ExplicitToStringInLogCall
   - io.github.fiftieshousewife.cleanlogging.ThrowableLastArgumentNoPlaceholder
   - io.github.fiftieshousewife.cleanlogging.ThrowableGetMessageInPlaceholder
 
@@ -585,6 +587,7 @@ recipeList:
   - io.github.fiftieshousewife.cleanlogging.JavaTransformsClasspathGated
   - io.github.fiftieshousewife.cleanlogging.StringFormatInLogCall
   - io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterized
+  - io.github.fiftieshousewife.cleanlogging.ExplicitToStringInLogCall
   - io.github.fiftieshousewife.cleanlogging.ThrowableLastArgumentNoPlaceholder
   - io.github.fiftieshousewife.cleanlogging.ThrowableGetMessageInPlaceholder
 

@@ -24,6 +24,7 @@ Where the two projects differ in opinion:
 | **`System.out` / `System.err` / `printStackTrace`** | Has `PrintStackTraceToLogError` for `printStackTrace`; no `System.out` recipe. | Both. `SystemOutToSlf4j` covers `println`/`print`/`printf` (printf specifiers convert to `{}` placeholders); `PrintStackTraceToLog` covers `printStackTrace()` plus the `printStackTrace(System.err)` / `printStackTrace(System.out)` overloads. |
 | **Concat → parameterised SLF4J** | `ParameterizedLogging` (works on calls whose receiver type resolves to an SLF4J `Logger`). | `Slf4jConcatToParameterized` (structural detection on receiver name `log`, the `@Slf4j` convention). Works on calls inserted earlier in the same pipeline whose LST type info is stale — `rewrite-logging-frameworks`'s `UsesMethod` precondition silently skips those. |
 | **`String.format` inside a log call** | Not addressed. | `StringFormatInLogCall` rewrites `log.info(String.format("user %s did %s", a, b))` to `log.info("user {} did {}", a, b)` so the message string is only assembled when the log level is enabled. Printf specifiers convert to `{}` placeholders. |
+| **Explicit `.toString()` on substitution args** | Not addressed. | `ExplicitToStringInLogCall` drops `.toString()` on substitution arguments (`log.info("x = {}", obj.toString())` → `log.info("x = {}", obj)`) so SLF4J calls `toString()` lazily, only when the level is enabled. |
 | **Trailing-`{}` swallowing a `Throwable`** | Not addressed. | `ThrowableLastArgumentNoPlaceholder` detects `log.error("failed: {}", e)` (where the throwable falls into the placeholder via `toString()` and the stack trace is silently lost) and rewrites to `log.error("failed", e)`. |
 | **`getMessage()` in placeholder dropping the trace** | Not addressed. | `ThrowableGetMessageInPlaceholder` detects `log.error("oops: {}", e.getMessage())` (the throwable's message is substituted but the throwable itself is never passed, so SLF4J has nothing to bind to the stack-trace slot) and rewrites to `log.error("oops: {}", e.getMessage(), e)` — explicit message text preserved, throwable now logs in full. |
 | **Concat-getMessage** | Not addressed. | `ConcatThrowableMessage` rewrites `log.error("failed: " + e.getMessage())` to `log.error("failed: ", e)` so the stack trace gets logged. |
@@ -189,7 +190,7 @@ Lombok `1.18.44`, SLF4J `2.0.17`, and Log4j2 `2.25.4` at the time of this releas
 | **`MigrateToSlf4jRecipe`** | All `*ToSlf4j` paths *except* Commons Logging, in one pass + SLF4J cleanups | yes (catalog-aware) | Mixed codebases on JUL / Log4j2 / `System.out` (no Commons). |
 | **`MigrateToSlf4jRecipeNoDeps`** | Same, no dependency edits | no | Multi-module variant. |
 
-The leaf-level `*` recipes (no `Recipe` suffix — `Slf4jConcatToParameterized`, `StringFormatInLogCall`, `ThrowableLastArgumentNoPlaceholder`, `ThrowableGetMessageInPlaceholder`, `ConcatThrowableMessage`) are SLF4J cleanups that never touch dependencies. See [SLF4J cleanup recipes](#slf4j-cleanup-recipes).
+The leaf-level `*` recipes (no `Recipe` suffix — `Slf4jConcatToParameterized`, `StringFormatInLogCall`, `ExplicitToStringInLogCall`, `ThrowableLastArgumentNoPlaceholder`, `ThrowableGetMessageInPlaceholder`, `ConcatThrowableMessage`) are SLF4J cleanups that never touch dependencies. See [SLF4J cleanup recipes](#slf4j-cleanup-recipes).
 
 ### `MigrateToCleanLoggingRecipe` — the one you usually want
 
@@ -299,6 +300,7 @@ Pure transformations on existing SLF4J code — no dependency changes. Useful on
 | --- | --- | --- |
 | **`Slf4jConcatToParameterized`** | `log.info("user " + id + " did " + a)` → `log.info("user {} did {}", id, a)` | Performance: assembles the message string even when the level is disabled. |
 | **`StringFormatInLogCall`** | `log.info(String.format("user %s did %s", a, b))` → `log.info("user {} did {}", a, b)` | Performance: `String.format` runs unconditionally. Printf specifiers convert to `{}` placeholders. |
+| **`ExplicitToStringInLogCall`** | `log.info("x = {}", obj.toString())` → `log.info("x = {}", obj)` | Performance: `toString()` runs unconditionally. SLF4J calls it lazily when the level is enabled. |
 | **`ThrowableLastArgumentNoPlaceholder`** | `log.error("failed: {}", e)` → `log.error("failed", e)` | **Stack trace silently lost.** SLF4J consumes `e` via `toString()` because the placeholder count matches the substitution-arg count. |
 | **`ThrowableGetMessageInPlaceholder`** | `log.error("oops: {}", e.getMessage())` → `log.error("oops: {}", e.getMessage(), e)` | **Stack trace silently lost.** `e.getMessage()` fills the placeholder, but the throwable itself is never passed — nothing for SLF4J to bind to the stack-trace slot. |
 | **`ConcatThrowableMessage`** | `log.error("failed: " + e.getMessage())` → `log.error("failed: ", e)` | **Stack trace silently lost.** The message includes only `e.getMessage()`, not the trace. |
@@ -365,6 +367,39 @@ The printf specifiers (`%s` / `%d` / `%f` / `%n` / `%%` / width + precision flag
 | The format argument isn't a string literal | `String.format(varNamingTheFormat, args)` is left alone — we can't see what the format will be at recipe time. |
 
 The point isn't just stylistic: `String.format` runs unconditionally, so even at log levels where the message would be discarded the format work happens. The parameterised form lets SLF4J skip message assembly when the level is disabled.
+
+### `ExplicitToStringInLogCall`
+
+Drops explicit `.toString()` calls on substitution arguments:
+
+```java
+log.info("x = {}", obj.toString());
+log.warn("a={} b={}", a.toString(), b.toString());
+```
+
+becomes
+
+```java
+log.info("x = {}", obj);
+log.warn("a={} b={}", a, b);
+```
+
+```kotlin
+rewrite {
+    activeRecipe("io.github.fiftieshousewife.cleanlogging.ExplicitToStringInLogCall")
+}
+```
+
+SLF4J's parameterised API calls `toString()` on each non-string substitution argument *lazily* — only when the log level is enabled. Calling `toString()` explicitly at the call site defeats that, formatting the value unconditionally even on disabled levels.
+
+| Skipped when | Reason |
+| --- | --- |
+| Receiver isn't named `log` | Heuristic guard — Lombok convention is `log`. |
+| Method name isn't an SLF4J level | Only `trace`/`debug`/`info`/`warn`/`error` are touched. |
+| The format-string argument (position 0) | Always a string literal in well-formed calls; never a `toString()` invocation. |
+| The `toString` call has arguments | `Arrays.toString(arr)` and similar static `toString` overloads are different methods — they're left alone. |
+
+Pairs naturally with `Slf4jConcatToParameterized`, which peels `log.info("x = " + obj.toString())` into `log.info("x = {}", obj.toString())`; this recipe then drops the explicit call. Both are wired into `MigrateToCleanLoggingRecipe` so the full pipeline cleans up in one pass.
 
 ### `ThrowableLastArgumentNoPlaceholder`
 
