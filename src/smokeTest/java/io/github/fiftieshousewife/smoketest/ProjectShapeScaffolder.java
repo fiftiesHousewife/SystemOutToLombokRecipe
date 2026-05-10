@@ -116,7 +116,7 @@ final class ProjectShapeScaffolder {
                 }
 
                 dependencies {
-                    rewrite("%s:system-out-to-lombok-log4j:%s")
+                    rewrite("%s:clean-logging:%s")
 
                     compileOnly("org.projectlombok:lombok:1.18.44")
                     annotationProcessor("org.projectlombok:lombok:1.18.44")
@@ -196,7 +196,7 @@ final class ProjectShapeScaffolder {
                     }
 
                     dependencies {
-                        rewrite("%s:system-out-to-lombok-log4j:%s")
+                        rewrite("%s:clean-logging:%s")
                     }
 
                     rewrite {
@@ -227,7 +227,7 @@ final class ProjectShapeScaffolder {
                     }
 
                     dependencies {
-                        rewrite '%s:system-out-to-lombok-log4j:%s'
+                        rewrite '%s:clean-logging:%s'
                     }
 
                     rewrite {
@@ -263,7 +263,7 @@ final class ProjectShapeScaffolder {
                     }
 
                     dependencies {
-                        rewrite("%s:system-out-to-lombok-log4j:%s")
+                        rewrite("%s:clean-logging:%s")
                     }
 
                     rewrite {
@@ -287,7 +287,7 @@ final class ProjectShapeScaffolder {
                     }
 
                     dependencies {
-                        rewrite '%s:system-out-to-lombok-log4j:%s'
+                        rewrite '%s:clean-logging:%s'
                     }
 
                     rewrite {

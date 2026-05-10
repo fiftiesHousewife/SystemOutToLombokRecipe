@@ -18,7 +18,7 @@ Takes ~10 minutes.
 ./gradlew clean build jar
 ```
 
-Confirm `build/libs/system-out-to-lombok-log4j-<version>.jar` exists and `./gradlew test` shows all tests green.
+Confirm `build/libs/clean-logging-<version>.jar` exists and `./gradlew test` shows all tests green.
 
 ## 2. Smoke-test each top-level recipe variant
 
@@ -45,12 +45,12 @@ Catalog handling is auto-detected post-0.5: each non-`NoDeps` recipe checks whet
 
 | Recipe | Fixture | Catalog axis |
 | --- | --- | --- |
-| `io.github.fiftieshousewife.SystemOutToSlf4jRecipe` | Greeting.java | with + without |
-| `io.github.fiftieshousewife.SystemOutToSlf4jRecipeNoDeps` | Greeting.java | n/a (no dep management) |
-| `io.github.fiftieshousewife.ConvertManualLoggerToSlf4jRecipe` | OrderService.java | with + without |
-| `io.github.fiftieshousewife.ConvertManualLoggerToSlf4jRecipeNoDeps` | OrderService.java | n/a |
-| `io.github.fiftieshousewife.MigrateToSlf4jRecipe` | Greeting.java + OrderService.java | with + without |
-| `io.github.fiftieshousewife.MigrateToSlf4jRecipeNoDeps` | Greeting.java + OrderService.java | n/a |
+| `io.github.fiftieshousewife.cleanlogging.SystemOutToSlf4jRecipe` | Greeting.java | with + without |
+| `io.github.fiftieshousewife.cleanlogging.SystemOutToSlf4jRecipeNoDeps` | Greeting.java | n/a (no dep management) |
+| `io.github.fiftieshousewife.cleanlogging.ConvertManualLoggerToSlf4jRecipe` | OrderService.java | with + without |
+| `io.github.fiftieshousewife.cleanlogging.ConvertManualLoggerToSlf4jRecipeNoDeps` | OrderService.java | n/a |
+| `io.github.fiftieshousewife.cleanlogging.MigrateToSlf4jRecipe` | Greeting.java + OrderService.java | with + without |
+| `io.github.fiftieshousewife.cleanlogging.MigrateToSlf4jRecipeNoDeps` | Greeting.java + OrderService.java | n/a |
 
 For `*NoDeps` variants the throwaway project must declare Lombok / SLF4J / log4j2 itself before `compileJava` will pass — otherwise the rewrite produces uncompilable Java.
 
@@ -226,7 +226,7 @@ repositories {
 }
 
 dependencies {
-    rewrite("io.github.fiftieshousewife:system-out-to-lombok-log4j:<version>")
+    rewrite("io.github.fiftieshousewife:clean-logging:<version>")
 }
 ```
 
@@ -251,7 +251,7 @@ If a new OpenRewrite patch is out, consider bumping before the release.
 
 ### Refresh the pinned Lombok and log4j2 versions
 
-The recipe pins `Lombok` and `log4j2-api` / `log4j2-core` in `src/main/resources/META-INF/rewrite/system-out-to-lombok.yml`. These aren't build dependencies of this project, so `dependencyUpdates` won't flag them — check Maven Central by hand:
+The recipe pins `Lombok` and `log4j2-api` / `log4j2-core` in `src/main/resources/META-INF/rewrite/clean-logging.yml`. These aren't build dependencies of this project, so `dependencyUpdates` won't flag them — check Maven Central by hand:
 
 ```bash
 # Latest stable Lombok

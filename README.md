@@ -1,6 +1,6 @@
-# System.out to Lombok @Slf4j
+# Clean Logging
 
-OpenRewrite recipes that migrate Java codebases onto Lombok `@Slf4j` + SLF4J logging (with Log4j2 as the backend). Covers the full spectrum of "how Java code accidentally ended up emitting log lines":
+Automated SLF4J / Lombok hygiene for Java codebases. A suite of OpenRewrite recipes that take any legacy logging shape — `System.out`, `printStackTrace`, JUL, Apache Commons Logging, hand-rolled Log4j2 or SLF4J `Logger` fields, sloppy SLF4J usage — and converge it onto Lombok `@Slf4j` + parameterised SLF4J calls (with Log4j2 as the backend). Covers the full spectrum of "how Java code accidentally ended up emitting log lines":
 
 - **`System.out` / `System.err` / `printStackTrace()`** — the "poor man's logging" anti-patterns that drag console output into business code.
 - **`java.util.logging` (JUL)**, **Apache Commons Logging**, and **hand-rolled Log4j2** logger fields — pre-SLF4J framework migrations onto a single Lombok-generated `log` field.
@@ -9,9 +9,21 @@ OpenRewrite recipes that migrate Java codebases onto Lombok `@Slf4j` + SLF4J log
 
 Your application code talks to SLF4J (the standard Java logging facade), so it's never coupled to a specific backend. Log4j2 handles the actual log routing and file rolling under the covers via the `log4j-slf4j2-impl` bridge.
 
+## Why this project? (and why not just `rewrite-logging-frameworks`?)
+
+OpenRewrite ships an excellent [`rewrite-logging-frameworks`](https://docs.openrewrite.org/recipes/java/logging) module that converts between SLF4J / Log4j1 / Log4j2 / JUL / Commons Logging. If you're already comfortable with that, use it.
+
+What this project adds on top — and the only reason it exists — is the three things upstream doesn't do:
+
+1. **Lombok `@Slf4j` as the destination, not a hand-rolled `Logger` field.** Upstream's logger-introducing recipes write `private static final Logger log = LoggerFactory.getLogger(...)` via its `AddLogger` machinery. We finish the job at `@Slf4j`, so the class body never carries the boilerplate field at all.
+2. **Gradle version-catalog awareness.** When `gradle/libs.versions.toml` is present, dependency additions land in the catalog and `build.gradle.kts` references go through `libs.lombok` / `libs.slf4jApi` / `libs.log4jSlf4jImpl` / `libs.log4jCore`. Upstream's `AddDependency` only writes inline `"group:artifact:version"` strings.
+3. **Per-module Lombok-classpath gating.** The `*NoDeps` variants and the `requireLombokOnClasspath` option skip `@Slf4j` insertion in modules that don't actually have Lombok on the classpath, so multi-module projects where Lombok lives on a parent don't get rewritten into uncompilable code.
+
+If your codebase is on JUL or Log4j2 and you're happy with a directly-declared `Logger` field, prefer upstream. If you want `@Slf4j` everywhere, catalog-aware deps, and multi-module gating, this project is what fills that gap.
+
 ## What It Does
 
-The default recipe, `SystemOutToSlf4jRecipe`, takes a project that's using some mix of `System.out`/`System.err`, `printStackTrace()`, and/or `java.util.logging` and moves it onto Lombok `@Slf4j` logging. On any given class it will:
+The default recipe, `MigrateToCleanLoggingRecipe`, takes any Java project — whatever mix of legacy logging it has — and converges it onto Lombok `@Slf4j` + parameterised SLF4J calls in a single pass. On any given class it will:
 
 1. **Add the right dependencies to your build.**
    Lombok (`compileOnly` + `annotationProcessor`), SLF4J (`slf4j-api`), the SLF4J-to-Log4j2 bridge (`log4j-slf4j2-impl`), and the Log4j2 backend (`log4j-core`). The recipe auto-detects whether the project uses a Gradle version catalog: if `gradle/libs.versions.toml` exists, entries land in the catalog and your `build.gradle.kts` gets `libs.lombok`/`libs.slf4jApi`/`libs.log4jSlf4jImpl`/`libs.log4jCore`; otherwise inline `"group:artifact:version"` declarations are added.
@@ -20,9 +32,11 @@ The default recipe, `SystemOutToSlf4jRecipe`, takes a project that's using some 
    `src/main/resources/log4j2.xml` — production-ready: non-error levels to stdout, errors to stderr (respecting the `System.out` vs `System.err` split), plus a rolling file appender under `./logs/` (daily + 10 MB gzip rollover, keeps 10 files).
    `src/test/resources/log4j2-test.xml` — console only, so unit tests don't spam `./logs/`.
 
-3. **Add `@Slf4j`** to every class that needs a logger — whether it has `System.out`/`System.err` calls, `printStackTrace()` calls, or a `java.util.logging.Logger` field.
+3. **Replace every legacy logger field** — Apache Commons Logging `Log`, hand-rolled Log4j2 `Logger`, hand-rolled SLF4J `Logger` — with `@Slf4j`, dropping the field and renaming references (`logger`/`LOG`/`LOGGER` → `log`), and cleaning up the now-unused framework imports.
 
-4. **Rewrite the call sites:**
+4. **Add `@Slf4j`** to every class that emits log lines but doesn't yet have a logger — whether via `System.out`/`System.err`, `printStackTrace()`, or a `java.util.logging.Logger` field.
+
+5. **Rewrite the call sites:**
 
    **`System.out` / `System.err`** — stops the "poor man's logging" anti-pattern of writing straight to the console:
    - `System.out.println(...)` → `log.info(...)`
@@ -41,9 +55,13 @@ The default recipe, `SystemOutToSlf4jRecipe`, takes a project that's using some 
 
    After the call conversion, the hand-rolled `Logger logger = Logger.getLogger(...)` field and the `java.util.logging.Logger` import are removed if nothing else in the class still references them.
 
-A companion recipe, `ConvertManualLoggerToSlf4jRecipe`, handles the separate case of codebases that are **already on Log4j2** but declare their `Logger` fields by hand (`private static final Logger log = LogManager.getLogger(X.class);`). It replaces that boilerplate with `@Slf4j`, renames references (`logger`/`LOG`/`LOGGER` → `log`), and cleans up the now-unused `org.apache.logging.log4j.Logger`/`LogManager` imports. See "Migrating existing Log4j2 code" below.
+   **Apache Commons Logging** — `fatal` / `isFatalEnabled` are rewritten to `error` / `isErrorEnabled` (SLF4J has no fatal level). Other Commons Logging level methods (`error` / `warn` / `info` / `debug` / `trace` and their `is*Enabled`) are name-compatible with SLF4J and pass through.
 
-A second companion recipe, `DirectSlf4jLoggerFieldToLombokRecipe`, handles the SLF4J version of the same situation: codebases that are **already on SLF4J** but declare `private static final Logger log = LoggerFactory.getLogger(X.class);` by hand. The transform is the same shape — drop the field, add `@Slf4j`, rename references, prune the `org.slf4j.Logger`/`LoggerFactory` imports — just one step shorter than the Log4j2 case since the call sites already use SLF4J. See "Migrating existing SLF4J code" below.
+6. **Tidy up the SLF4J calls** that result, plus any pre-existing ones:
+   - Concatenated messages → parameterised `{}` placeholders so the message string is only assembled when the level is enabled.
+   - Trailing `{}` placeholders that silently consume a `Throwable` (and lose the stack trace) are dropped so the throwable lands on the trailing-throwable slot.
+
+If you only have one source pattern, focused recipes (`SystemOutToSlf4jRecipe`, `ConvertManualLoggerToSlf4jRecipe`, `DirectSlf4jLoggerFieldToLombokRecipe`, `CommonsLoggingToSlf4jRecipe`) are still published and run faster — see [Recipes → At a glance](#at-a-glance) below.
 
 ## Prerequisites
 
@@ -65,7 +83,7 @@ Supports transforming source code written in Java 8 through Java 25.
 
 ## Supported project shapes
 
-Exercised by the matrix tests under `src/test/java/io/github/fiftieshousewife/recipes/matrix/` and pre-release smoke-tested against real Gradle projects (`SMOKE_TEST.md` §2a).
+Exercised by the matrix tests under `src/test/java/io/github/fiftieshousewife/cleanlogging/matrix/` and pre-release smoke-tested against real Gradle projects (`SMOKE_TEST.md` §2a).
 
 | Dimension | Supported | Notes |
 | --- | --- | --- |
@@ -93,10 +111,10 @@ If you hit a shape that's not listed, please open an issue with a minimal reprod
 ```toml
 [versions]
 openrewrite = "7.30.0"
-fifties-recipes = "0.7"
+clean-logging = "1.0"
 
 [libraries]
-fifties-systemout = { module = "io.github.fiftieshousewife:system-out-to-lombok-log4j", version.ref = "fifties-recipes" }
+clean-logging = { module = "io.github.fiftieshousewife:clean-logging", version.ref = "clean-logging" }
 
 [plugins]
 openrewrite = { id = "org.openrewrite.rewrite", version.ref = "openrewrite" }
@@ -109,11 +127,11 @@ plugins {
 }
 
 dependencies {
-    rewrite(libs.fifties.systemout)
+    rewrite(libs.clean.logging)
 }
 
 rewrite {
-    activeRecipe("io.github.fiftieshousewife.SystemOutToSlf4jRecipe")
+    activeRecipe("io.github.fiftieshousewife.cleanlogging.MigrateToCleanLoggingRecipe")
 }
 ```
 
@@ -133,59 +151,59 @@ Lombok `1.18.44`, SLF4J `2.0.17`, and Log4j2 `2.25.4` at the time of this releas
 
 ### At a glance
 
+**Default**: `MigrateToCleanLoggingRecipe`. Targeted recipes are listed below for codebases with only one source pattern.
+
 | Recipe | What it migrates | Adds deps? | Use when |
 | --- | --- | --- | --- |
-| **`SystemOutToSlf4jRecipe`** | `System.out`/`System.err`/`printStackTrace` + JUL → `@Slf4j` | yes (catalog-aware) | Default for projects on console output and/or JUL. |
-| **`SystemOutToSlf4jRecipeNoDeps`** | Same transforms, no dependency edits | no | Multi-module projects where deps live at a parent level. |
-| **`ConvertManualLoggerToSlf4jRecipe`** | Hand-rolled Log4j2 `Logger` field → `@Slf4j` | yes (catalog-aware) | Codebase already on Log4j2 with manual `LogManager.getLogger(...)` fields. |
+| **`MigrateToCleanLoggingRecipe`** | **Everything**: Commons Logging + manual Log4j2 / SLF4J fields + JUL + `System.out` / `System.err` / `printStackTrace` + SLF4J cleanups, in one pass | yes (catalog-aware) | **Default.** Use this unless you specifically want a narrower scope. |
+| **`MigrateToCleanLoggingRecipeNoDeps`** | Same, no dependency edits | no | Multi-module projects where Lombok / SLF4J / Log4j2 deps live on a parent. |
+| **`SystemOutToSlf4jRecipe`** | `System.out`/`System.err`/`printStackTrace` + JUL → `@Slf4j` | yes (catalog-aware) | Targeted: codebase only has console output and/or JUL. |
+| **`SystemOutToSlf4jRecipeNoDeps`** | Same transforms, no dependency edits | no | Multi-module variant. |
+| **`ConvertManualLoggerToSlf4jRecipe`** | Hand-rolled Log4j2 `Logger` field → `@Slf4j` | yes (catalog-aware) | Targeted: codebase already on Log4j2 with manual `LogManager.getLogger(...)` fields. |
 | **`ConvertManualLoggerToSlf4jRecipeNoDeps`** | Same, no dependency edits | no | Multi-module variant. |
-| **`DirectSlf4jLoggerFieldToLombokRecipe`** | Hand-rolled SLF4J `Logger` field → `@Slf4j` | yes (Lombok only) | Codebase already on SLF4J with manual `LoggerFactory.getLogger(...)` fields. |
+| **`DirectSlf4jLoggerFieldToLombokRecipe`** | Hand-rolled SLF4J `Logger` field → `@Slf4j` | yes (Lombok only) | Targeted: codebase already on SLF4J with manual `LoggerFactory.getLogger(...)` fields. |
 | **`DirectSlf4jLoggerFieldToLombokRecipeNoDeps`** | Same, no dependency edits | no | Multi-module variant. |
-| **`CommonsLoggingToSlf4jRecipe`** | Apache Commons Logging `Log` field → `@Slf4j`, plus `fatal`→`error` | yes (Lombok only) | Legacy codebases on `org.apache.commons.logging.Log` / `LogFactory`. |
+| **`CommonsLoggingToSlf4jRecipe`** | Apache Commons Logging `Log` field → `@Slf4j`, plus `fatal`→`error` | yes (Lombok only) | Targeted: legacy codebases on `org.apache.commons.logging.Log` / `LogFactory`. |
 | **`CommonsLoggingToSlf4jRecipeNoDeps`** | Same, no dependency edits | no | Multi-module variant. |
-| **`MigrateToSlf4jRecipe`** | All of the above in one pass + SLF4J cleanups | yes (catalog-aware) | Mixed codebases that have several patterns at once. |
+| **`MigrateToSlf4jRecipe`** | All `*ToSlf4j` paths *except* Commons Logging, in one pass + SLF4J cleanups | yes (catalog-aware) | Mixed codebases on JUL / Log4j2 / `System.out` (no Commons). |
 | **`MigrateToSlf4jRecipeNoDeps`** | Same, no dependency edits | no | Multi-module variant. |
 
 The leaf-level `*` recipes (no `Recipe` suffix — `Slf4jConcatToParameterized`, `ThrowableLastArgumentNoPlaceholder`, `ConcatThrowableMessage`) are SLF4J cleanups that never touch dependencies. See [SLF4J cleanup recipes](#slf4j-cleanup-recipes).
 
-### `SystemOutToSlf4jRecipe` — the one you usually want
+### `MigrateToCleanLoggingRecipe` — the one you usually want
 
-Runs all Java transforms, creates the log4j2 configs, and **auto-detects** your dependency setup:
+The full Clean Logging pipeline. Runs every leaf transform in a single pass, **auto-detects** your dependency setup, and seeds the Log4j2 configs:
 
-- If your project has a Gradle version catalog (`gradle/libs.versions.toml`), entries are added to it and `build.gradle.kts` uses `libs.lombok`, `libs.log4jApi`, `libs.log4jCore` references.
-- Otherwise inline `compileOnly("org.projectlombok:lombok:1.18.44")` etc. declarations are added to `build.gradle.kts`.
+- Apache Commons Logging `Log` fields → `@Slf4j` (with `fatal` → `error`).
+- Hand-rolled Log4j2 `Logger log = LogManager.getLogger(...)` fields → `@Slf4j`.
+- Hand-rolled SLF4J `Logger log = LoggerFactory.getLogger(...)` fields → `@Slf4j`.
+- `java.util.logging.Logger` calls → `log.xxx`, with the JUL field + import removed.
+- `System.out` / `System.err` / `printStackTrace()` → `log.info` / `log.error`.
+- SLF4J cleanups: concatenated messages → `{}` placeholders; trailing-`{}` placeholders that consumed a `Throwable` arg → throwable in the trailing slot.
+- Adds Lombok + SLF4J + Log4j2 backend dependencies, catalog-aware: if `gradle/libs.versions.toml` is present, entries land in the catalog and `build.gradle.kts` uses `libs.lombok` / `libs.slf4jApi` / `libs.log4jSlf4jImpl` / `libs.log4jCore`; otherwise inline `compileOnly("...")` declarations.
+- Seeds production-ready `log4j2.xml` + console-only `log4j2-test.xml`.
 
 You don't pick a variant — the recipe figures it out.
 
 ```kotlin
 rewrite {
-    activeRecipe("io.github.fiftieshousewife.SystemOutToSlf4jRecipe")
+    activeRecipe("io.github.fiftieshousewife.cleanlogging.MigrateToCleanLoggingRecipe")
 }
 ```
 
-### `SystemOutToSlf4jRecipeNoDeps`
+A `NoDeps` variant (`MigrateToCleanLoggingRecipeNoDeps`) exists for multi-module projects where Lombok / SLF4J / Log4j2 deps live on a parent. With `NoDeps`, only modules whose classpath actually contains `lombok.extern.slf4j.Slf4j` are rewritten — modules without Lombok are skipped rather than rewritten into uncompilable code.
 
-Runs all the Java transforms and creates the log4j2 configs but touches neither the catalog nor `build.gradle.kts`. Use this in multi-module projects where dependencies live at a parent level, or anywhere you want full manual control.
+### Targeted variants (one source pattern at a time)
 
-```kotlin
-rewrite {
-    activeRecipe("io.github.fiftieshousewife.SystemOutToSlf4jRecipeNoDeps")
-}
-```
+If you only have one source pattern to fix and want a faster, narrower run, the focused recipes are still published:
 
-### `MigrateToSlf4jRecipe` — everything at once
+- `SystemOutToSlf4jRecipe` — `System.out` / `System.err` / `printStackTrace` + JUL only.
+- `ConvertManualLoggerToSlf4jRecipe` — hand-rolled Log4j2 `Logger` fields only. See [Migrating existing Log4j2 code](#migrating-existing-log4j2-code).
+- `DirectSlf4jLoggerFieldToLombokRecipe` — hand-rolled SLF4J `Logger` fields only. See [Migrating existing SLF4J code](#migrating-existing-slf4j-code).
+- `CommonsLoggingToSlf4jRecipe` — Apache Commons Logging only. See [Migrating Apache Commons Logging code](#migrating-apache-commons-logging-code).
+- `MigrateToSlf4jRecipe` — JUL + Log4j2 + `System.out` (no Commons Logging).
 
-Does what `SystemOutToSlf4jRecipe` does **plus** the hand-rolled Log4j2 conversion below, in a single pass. Use this when your codebase has a mix of several of these patterns (a `System.out.println` here, a `java.util.logging.Logger` there, a `private static final Logger log = LogManager.getLogger(…)` over there) so you don't have to run two recipes in sequence.
-
-The focused recipes (`SystemOutToSlf4jRecipe`, `ConvertManualLoggerToSlf4jRecipe`) still exist and run faster — use them if you only have one pattern to fix.
-
-```kotlin
-rewrite {
-    activeRecipe("io.github.fiftieshousewife.MigrateToSlf4jRecipe")
-}
-```
-
-A `NoDeps` variant (`MigrateToSlf4jRecipeNoDeps`) exists for projects that manage dependencies at a parent level.
+Each has a matching `*NoDeps` variant for the multi-module case.
 
 ## Migrating existing Log4j2 code
 
@@ -199,7 +217,7 @@ If your codebase already uses Log4j2 but declares `Logger` fields by hand (`priv
 
 ```kotlin
 rewrite {
-    activeRecipe("io.github.fiftieshousewife.ConvertManualLoggerToSlf4jRecipe")
+    activeRecipe("io.github.fiftieshousewife.cleanlogging.ConvertManualLoggerToSlf4jRecipe")
 }
 ```
 
@@ -217,7 +235,7 @@ If your codebase is already on SLF4J but declares `Logger` fields by hand (`priv
 
 ```kotlin
 rewrite {
-    activeRecipe("io.github.fiftieshousewife.DirectSlf4jLoggerFieldToLombokRecipe")
+    activeRecipe("io.github.fiftieshousewife.cleanlogging.DirectSlf4jLoggerFieldToLombokRecipe")
 }
 ```
 
@@ -238,7 +256,7 @@ If your codebase uses Apache Commons Logging (`private static final Log log = Lo
 
 ```kotlin
 rewrite {
-    activeRecipe("io.github.fiftieshousewife.CommonsLoggingToSlf4jRecipe")
+    activeRecipe("io.github.fiftieshousewife.cleanlogging.CommonsLoggingToSlf4jRecipe")
 }
 ```
 
@@ -280,7 +298,7 @@ log.info("user {} did {}", userId, action);
 
 ```kotlin
 rewrite {
-    activeRecipe("io.github.fiftieshousewife.recipes.Slf4jConcatToParameterized")
+    activeRecipe("io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterized")
 }
 ```
 
@@ -312,7 +330,7 @@ log.error("user {} failed", id, e);      // stack trace logged
 
 ```kotlin
 rewrite {
-    activeRecipe("io.github.fiftieshousewife.recipes.ThrowableLastArgumentNoPlaceholder")
+    activeRecipe("io.github.fiftieshousewife.cleanlogging.ThrowableLastArgumentNoPlaceholder")
 }
 ```
 
@@ -336,7 +354,7 @@ log.error("failed: ", e);
 
 ```kotlin
 rewrite {
-    activeRecipe("io.github.fiftieshousewife.recipes.ConcatThrowableMessage")
+    activeRecipe("io.github.fiftieshousewife.cleanlogging.ConcatThrowableMessage")
 }
 ```
 

@@ -41,7 +41,7 @@ class RecipeResolutionSmokeTest {
                         result.logFile(), result.output())
                 .isTrue();
 
-        final String coordinate = config.projectGroup() + ":system-out-to-lombok-log4j:"
+        final String coordinate = config.projectGroup() + ":clean-logging:"
                 + config.projectVersion();
         assertThat(result.output())
                 .as("rewrite configuration should list the recipe coordinate %s\n%s",
@@ -68,7 +68,7 @@ class RecipeResolutionSmokeTest {
                     }
 
                     dependencies {
-                        rewrite("%s:system-out-to-lombok-log4j:%s")
+                        rewrite("%s:clean-logging:%s")
                     }
                     """.formatted(
                     config.rewritePluginVersion(),

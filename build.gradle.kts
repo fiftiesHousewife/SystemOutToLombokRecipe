@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "io.github.fiftieshousewife"
-version = "0.9"
+version = "1.0"
 
 repositories {
     mavenCentral()
@@ -310,12 +310,12 @@ mavenPublishing {
     publishToMavenCentral(automaticRelease = true)
     signAllPublications()
 
-    coordinates(group.toString(), "system-out-to-lombok-log4j", version.toString())
+    coordinates(group.toString(), "clean-logging", version.toString())
 
     pom {
         name.set("System.out to Lombok Log4j")
         description.set("OpenRewrite recipes to convert System.out/err calls to Lombok @Log4j2 logging")
-        url.set("https://github.com/fiftiesHousewife/SystemOutToLombokRecipe")
+        url.set("https://github.com/fiftiesHousewife/clean-logging")
         licenses {
             license {
                 name.set("The Apache License, Version 2.0")
@@ -330,9 +330,9 @@ mavenPublishing {
             }
         }
         scm {
-            connection.set("scm:git:git://github.com/fiftiesHousewife/SystemOutToLombokRecipe.git")
-            developerConnection.set("scm:git:ssh://github.com/fiftiesHousewife/SystemOutToLombokRecipe.git")
-            url.set("https://github.com/fiftiesHousewife/SystemOutToLombokRecipe")
+            connection.set("scm:git:git://github.com/fiftiesHousewife/clean-logging.git")
+            developerConnection.set("scm:git:ssh://github.com/fiftiesHousewife/clean-logging.git")
+            url.set("https://github.com/fiftiesHousewife/clean-logging")
         }
     }
 }
@@ -341,7 +341,7 @@ publishing {
     repositories {
         maven {
             name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/fiftiesHousewife/SystemOutToLombokRecipe")
+            url = uri("https://maven.pkg.github.com/fiftiesHousewife/clean-logging")
             credentials {
                 username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR")
                 password = project.findProperty("gpr.token") as String? ?: System.getenv("GITHUB_TOKEN")

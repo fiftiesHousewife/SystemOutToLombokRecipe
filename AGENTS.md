@@ -29,20 +29,20 @@ When the cleancode plugin (`./gradlew analyseCleanCode`, or the live report at `
 | `clean-code-test-quality` | T1, T3, T4 |
 | `clean-code-project-conventions` | project-specific conventions not covered by a single heuristic |
 
-Some findings are false positives — see `CLEANCODE_PLUGIN_FEEDBACK.md` for the catalogue we've identified (G18 inheritance + method-reference blind spots, G19 over-eager firing after extraction, G5 sensitivity to OpenRewrite framework boilerplate). The skill's first job is to triage real-vs-noise.
+Some findings are false positives — known patterns include G18 inheritance + method-reference blind spots, G19 over-eager firing after extraction, and G5 sensitivity to OpenRewrite framework boilerplate. The skill's first job is to triage real-vs-noise.
 
 ## Project structure
 
 ```
 src/
 ├── main/
-│   ├── java/io/github/fiftieshousewife/recipes/
+│   ├── java/io/github/fiftieshousewife/cleanlogging/
 │   │   ├── *Recipe class files          # leaf recipes (one per transformation)
 │   │   └── LombokClasspathGate.java     # shared helpers (package-private)
 │   └── resources/META-INF/rewrite/
-│       └── system-out-to-lombok.yml     # composed top-level recipes
+│       └── clean-logging.yml     # composed top-level recipes
 └── test/
-    └── java/io/github/fiftieshousewife/recipes/
+    └── java/io/github/fiftieshousewife/cleanlogging/
         ├── *Test.java                   # RewriteTest integration tests
         ├── *MethodTest.java             # unit tests for package-private helpers
         └── matrix/                      # KotlinDslMatrixTest + GroovyDslMatrixTest

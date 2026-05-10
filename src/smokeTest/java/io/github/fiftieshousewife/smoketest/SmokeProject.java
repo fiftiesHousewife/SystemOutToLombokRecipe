@@ -101,7 +101,7 @@ final class SmokeProject {
                 }
 
                 dependencies {
-                    rewrite("%s:system-out-to-lombok-log4j:%s")
+                    rewrite("%s:clean-logging:%s")
                 %s}
 
                 rewrite {
