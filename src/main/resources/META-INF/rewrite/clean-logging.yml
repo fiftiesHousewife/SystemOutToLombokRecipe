@@ -477,6 +477,7 @@ recipeList:
   # ParameterizedLogging) because upstream's UsesMethod precondition matches
   # by bound type — and our converted calls still carry the pre-conversion
   # logger type since OpenRewrite doesn't re-parse the LST mid-pipeline.
+  - io.github.fiftieshousewife.cleanlogging.StringFormatInLogCall
   - io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterized
   # Then drop trailing `{}` placeholders that consumed a Throwable arg —
   # `log.error("failed: {}", e)` → `log.error("failed", e)`. Without this
@@ -549,6 +550,7 @@ recipeList:
   - io.github.fiftieshousewife.cleanlogging.CommonsLoggingToSlf4j
   - io.github.fiftieshousewife.cleanlogging.ConvertManualLoggerToSlf4j
   - io.github.fiftieshousewife.cleanlogging.JavaTransforms
+  - io.github.fiftieshousewife.cleanlogging.StringFormatInLogCall
   - io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterized
   - io.github.fiftieshousewife.cleanlogging.ThrowableLastArgumentNoPlaceholder
   - io.github.fiftieshousewife.cleanlogging.ThrowableGetMessageInPlaceholder
@@ -581,6 +583,7 @@ recipeList:
   - io.github.fiftieshousewife.cleanlogging.ConvertManualLoggerToSlf4j:
       requireLombokOnClasspath: true
   - io.github.fiftieshousewife.cleanlogging.JavaTransformsClasspathGated
+  - io.github.fiftieshousewife.cleanlogging.StringFormatInLogCall
   - io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterized
   - io.github.fiftieshousewife.cleanlogging.ThrowableLastArgumentNoPlaceholder
   - io.github.fiftieshousewife.cleanlogging.ThrowableGetMessageInPlaceholder
