@@ -9,17 +9,27 @@ Automated SLF4J / Lombok hygiene for Java codebases. A suite of OpenRewrite reci
 
 Your application code talks to SLF4J (the standard Java logging facade), so it's never coupled to a specific backend. Log4j2 handles the actual log routing and file rolling under the covers via the `log4j-slf4j2-impl` bridge.
 
-## Why this project? (and why not just `rewrite-logging-frameworks`?)
+## Why this project? (and how does it compare to `rewrite-logging-frameworks`?)
 
-OpenRewrite ships an excellent [`rewrite-logging-frameworks`](https://docs.openrewrite.org/recipes/java/logging) module that converts between SLF4J / Log4j1 / Log4j2 / JUL / Commons Logging. If you're already comfortable with that, use it.
+OpenRewrite's recipe ecosystem ships [`rewrite-logging-frameworks`](https://docs.openrewrite.org/recipes/java/logging) — an excellent, mature module that converts between SLF4J / Log4j1 / Log4j2 / JUL / Commons Logging. It's a **peer** of this project, not an upstream: clean-logging doesn't depend on it at runtime, and the two pursue different opinions about what "migrated" means. If `rewrite-logging-frameworks` matches your taste, use it directly — it's broader and better-tested across logging-framework permutations.
 
-What this project adds on top — and the only reason it exists — is the three things upstream doesn't do:
+Where the two projects differ in opinion:
 
-1. **Lombok `@Slf4j` as the destination, not a hand-rolled `Logger` field.** Upstream's logger-introducing recipes write `private static final Logger log = LoggerFactory.getLogger(...)` via its `AddLogger` machinery. We finish the job at `@Slf4j`, so the class body never carries the boilerplate field at all.
-2. **Gradle version-catalog awareness.** When `gradle/libs.versions.toml` is present, dependency additions land in the catalog and `build.gradle.kts` references go through `libs.lombok` / `libs.slf4jApi` / `libs.log4jSlf4jImpl` / `libs.log4jCore`. Upstream's `AddDependency` only writes inline `"group:artifact:version"` strings.
-3. **Per-module Lombok-classpath gating.** The `*NoDeps` variants and the `requireLombokOnClasspath` option skip `@Slf4j` insertion in modules that don't actually have Lombok on the classpath, so multi-module projects where Lombok lives on a parent don't get rewritten into uncompilable code.
+| Aspect | `rewrite-logging-frameworks` | Clean Logging |
+| --- | --- | --- |
+| **Logger field shape** | Hand-rolled `private static final Logger log = LoggerFactory.getLogger(...)` via the `AddLogger` machinery. | **Lombok `@Slf4j`.** No field appears in the class body — the annotation generates it. |
+| **Gradle version-catalog awareness** | None — `AddDependency` writes inline `"group:artifact:version"` strings into `build.gradle.kts`. | **Auto-detect.** When `gradle/libs.versions.toml` is present, entries land in the catalog and the build file uses `libs.lombok` / `libs.slf4jApi` / `libs.log4jSlf4jImpl` / `libs.log4jCore`. Falls back to inline strings when no catalog exists. |
+| **Multi-module classpath gating** | None. Recipes apply uniformly across every source set. Modules without Lombok end up rewritten into uncompilable code. | **`requireLombokOnClasspath` option** (and `*NoDeps` recipe variants) skip `@Slf4j` insertion in modules whose classpath doesn't resolve `lombok.extern.slf4j.Slf4j`. |
+| **One-shot front door** | No single composed recipe; users compose framework-specific recipes themselves. | `MigrateToCleanLoggingRecipe` folds the full pipeline (Commons + Log4j2 + SLF4J + JUL + `System.out` + SLF4J cleanups) into one `rewriteRun`. |
+| **`System.out` / `System.err` / `printStackTrace`** | Has `PrintStackTraceToLogError` for `printStackTrace`; no `System.out` recipe. | Both. `SystemOutToSlf4j` covers `println`/`print`/`printf` (printf specifiers convert to `{}` placeholders); `PrintStackTraceToLog` covers `printStackTrace()` plus the `printStackTrace(System.err)` / `printStackTrace(System.out)` overloads. |
+| **Concat → parameterised SLF4J** | `ParameterizedLogging` (works on calls whose receiver type resolves to an SLF4J `Logger`). | `Slf4jConcatToParameterized` (structural detection on receiver name `log`, the `@Slf4j` convention). Works on calls inserted earlier in the same pipeline whose LST type info is stale — `rewrite-logging-frameworks`'s `UsesMethod` precondition silently skips those. |
+| **Trailing-`{}` swallowing a `Throwable`** | Not addressed. | `ThrowableLastArgumentNoPlaceholder` detects `log.error("failed: {}", e)` (where the throwable falls into the placeholder via `toString()` and the stack trace is silently lost) and rewrites to `log.error("failed", e)`. |
+| **Concat-getMessage** | Not addressed. | `ConcatThrowableMessage` rewrites `log.error("failed: " + e.getMessage())` to `log.error("failed: ", e)` so the stack trace gets logged. |
+| **JUL `isLoggable` / lambda suppliers** | Has its own `JulToSlf4j` covering basic level methods. | `JulToSlf4j` adds `logger.isLoggable(Level.FINE)` → `log.isDebugEnabled()` rewriting and lambda-supplier overload unwrapping (`logger.fine(() -> "v=" + v)` → `log.debug("v=" + v)`). Block-body lambdas and bare `Supplier` references are left alone. |
+| **Apache Commons `fatal`** | Maps `fatal` to `error` as part of its Commons → SLF4J recipe. | Same — `CommonsLoggingToSlf4j` rewrites `fatal` / `isFatalEnabled` → `error` / `isErrorEnabled`. |
+| **Adoption** | Wide. The `org.openrewrite.recipe:rewrite-logging-frameworks` artifact is part of the standard recipe BOM and pulled in by many migration paths. | Narrow. One project (this one), one artifact (`io.github.fiftieshousewife:clean-logging`), pinned dependencies, opinionated about Lombok. |
 
-If your codebase is on JUL or Log4j2 and you're happy with a directly-declared `Logger` field, prefer upstream. If you want `@Slf4j` everywhere, catalog-aware deps, and multi-module gating, this project is what fills that gap.
+The short version: **if you want `@Slf4j` everywhere, catalog-aware deps, and multi-module gating, use this. If you want directly-declared `Logger` fields and don't care about Gradle catalogs or Lombok, use `rewrite-logging-frameworks`.** A `rewrite-logging-frameworks` migration followed by a focused clean-logging recipe (e.g. `DirectSlf4jLoggerFieldToLombokRecipe`) to lift the resulting `Logger` field onto `@Slf4j` is also a valid composition — see [Migrating existing SLF4J code](#migrating-existing-slf4j-code).
 
 ## What It Does
 
