@@ -62,12 +62,6 @@ The Tier-2/3/4 follow-ons sketched during the v1.0 rename — none scoped or sch
 
 - **PMD ruleset noise cleanup** — `AvoidFieldNameMatchingMethodName` ×3 was addressed in the 2026-05-04 cleanup pass (field renames preserving the accessor public-API names). Remaining noise stands as plugin-ruleset work: `AvoidLiteralsInIfCondition` (×7, things like `args.size() == 1`), `AvoidDuplicateLiterals` (×7 on test fixture text deliberately repeated), `CompareObjectsWithEquals` (`IdentifierUsageCounter.java:20` — intentional AST-node identity, suppressed inline). Belongs in the cleancode plugin's PMD ruleset (project owns that plugin), not per-site suppressions here.
 
-- **Push two convention-plugin patches upstream to `fiftiesHousewife/recipescaffold`** — landed locally during the A14 retrofit (commit `2b1749c`); both are real bugs that affect any consumer with similar shape:
-  1. `tasks.withType<SpotBugsTask>().configureEach { reports.create("html"/"xml") }` clashes with downstream plugins (e.g. cleancode) that already create those reports — fails task realization with "Cannot add a SpotBugsReport with name 'xml' as a SpotBugsReport with that name already exists". Fix: drop the `reports.create` block; the SpotBugs plugin's defaults are sufficient.
-  2. `integrationTest` is missing the `org.gradle.java.home` system-property pin in `doFirst` (the convention plugin already has this on `smokeTest`). Without it, the embedded Gradle 8.14.3 daemon spawned by `withToolingApi()` inherits the outer toolchain's JDK 25 and bombs out on v69 system classes — 12/14 of clean-logging's integration tests fail.
-
-  Both fixes are in `clean-logging/build-logic/src/main/kotlin/recipe-library.gradle.kts` ready to lift. Two small PRs to recipescaffold.
-
 - **Multi-module integration tests** — the `withToolingApi()` harness models a single `forProjectDirectory` per test, so multi-module / `includeBuild` shapes are only exercised by the `smokeTest` runner today. Investigating whether the Tooling API can model multi-module projects in-process would close the last in-process coverage gap. Defer unless smokeTest stops being enough signal.
 
 - **Re-enable Java 25 in integration tests** — re-bisected 2026-05-02 (originally conflated JDK 25 and Gradle 9; the third cell isolated the trigger). Catalog regression is a **Gradle 9.x daemon** behaviour change in `org.openrewrite.gradle.AddDependency`, **independent of JDK launcher version**. `openrewrite-core 8.81.3` throughout, JDK 21 launcher throughout:
