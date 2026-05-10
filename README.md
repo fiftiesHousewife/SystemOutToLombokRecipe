@@ -30,6 +30,16 @@ Where the two projects differ in opinion:
 
 The short version: **if you want `@Slf4j` everywhere, catalog-aware deps, and the multi-module Lombok safety check, use this. If you want directly-declared `Logger` fields and don't care about Gradle catalogs or Lombok, use `rewrite-logging-frameworks`.** A `rewrite-logging-frameworks` migration followed by a focused clean-logging recipe (e.g. `DirectSlf4jLoggerFieldToLombokRecipe`) to lift the resulting `Logger` field onto `@Slf4j` is also a valid composition — see [Migrating existing SLF4J code](#migrating-existing-slf4j-code).
 
+### Opinions baked in
+
+Two non-negotiable: using any clean-logging recipe commits you to **SLF4J as the application-facing API** and **Lombok `@Slf4j` as the logger-field shape**. Reversing either means not using this project.
+
+Three soft defaults you can override:
+
+- **Log4j2 as the backend implementation.** The recipe adds `log4j-slf4j2-impl` + `log4j-core` so SLF4J calls route through Log4j2 at runtime. To run on Logback instead, swap those two deps for `logback-classic` after the recipe runs — application code stays put because it only talks to the SLF4J facade.
+- **The seeded `log4j2.xml` shape** (stdout/stderr split, rolling file under `./logs/` with daily + 10 MB rollover, 10-file retention). `CreateLog4j2Config` writes with `overwriteExisting: false`, so an existing config in your project is left alone. The file the recipe seeds is a starting point, not a contract.
+- **Pinned Lombok / SLF4J / Log4j2 versions.** Deterministic at recipe-run time. Bump in `gradle/libs.versions.toml` afterwards, or run the Ben-Manes versions plugin (`./gradlew dependencyUpdates`) to track upgrades.
+
 ## What It Does
 
 The default recipe, `MigrateToCleanLoggingRecipe`, takes any Java project — whatever mix of legacy logging it has — and converges it onto Lombok `@Slf4j` + parameterised SLF4J calls in a single pass. On any given class it will:
