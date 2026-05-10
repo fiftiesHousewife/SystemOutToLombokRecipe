@@ -10,7 +10,7 @@ import org.openrewrite.java.tree.JContainer;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterizedVisitor.isSlf4jLogCall;
+import static io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterizedVisitor.isSlf4jLogCallWithMultipleArgs;
 
 @NullMarked
 class ExplicitToStringInLogCallVisitor extends JavaIsoVisitor<ExecutionContext> {
@@ -20,7 +20,7 @@ class ExplicitToStringInLogCallVisitor extends JavaIsoVisitor<ExecutionContext> 
     @Override
     public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method, final ExecutionContext ctx) {
         final J.MethodInvocation visited = super.visitMethodInvocation(method, ctx);
-        if (!isSlf4jLogCall(visited) || visited.getArguments().size() < 2) {
+        if (!isSlf4jLogCallWithMultipleArgs(visited)) {
             return visited;
         }
         final List<Expression> args = visited.getArguments();
@@ -46,7 +46,7 @@ class ExplicitToStringInLogCallVisitor extends JavaIsoVisitor<ExecutionContext> 
         if (!(arg instanceof J.MethodInvocation call)) {
             return arg;
         }
-        if (!TO_STRING.equals(call.getSimpleName()) || !isNoArg(call)) {
+        if (!TO_STRING.equals(call.getSimpleName()) || hasArgs(call)) {
             return arg;
         }
         final Expression select = call.getSelect();
@@ -56,8 +56,11 @@ class ExplicitToStringInLogCallVisitor extends JavaIsoVisitor<ExecutionContext> 
         return select.withPrefix(arg.getPrefix());
     }
 
-    private static boolean isNoArg(final J.MethodInvocation call) {
+    private static boolean hasArgs(final J.MethodInvocation call) {
         final List<Expression> args = call.getArguments();
-        return args.isEmpty() || (args.size() == 1 && args.get(0) instanceof J.Empty);
+        if (args.isEmpty()) {
+            return false;
+        }
+        return !(args.size() == 1 && args.get(0) instanceof J.Empty);
     }
 }

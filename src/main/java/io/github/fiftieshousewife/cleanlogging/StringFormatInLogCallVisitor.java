@@ -15,7 +15,7 @@ import java.util.List;
 
 import static io.github.fiftieshousewife.cleanlogging.LogCallTemplate.escape;
 import static io.github.fiftieshousewife.cleanlogging.PrintfToSlf4jFormatConverter.convert;
-import static io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterizedVisitor.isSlf4jLogCall;
+import static io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterizedVisitor.isSlf4jLogCallWithSingleArg;
 
 @NullMarked
 class StringFormatInLogCallVisitor extends JavaIsoVisitor<ExecutionContext> {
@@ -26,19 +26,24 @@ class StringFormatInLogCallVisitor extends JavaIsoVisitor<ExecutionContext> {
     @Override
     public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method, final ExecutionContext ctx) {
         final J.MethodInvocation visited = super.visitMethodInvocation(method, ctx);
-        if (!isSlf4jLogCall(visited) || visited.getArguments().size() != 1) {
+        if (!isSlf4jLogCallWithSingleArg(visited)) {
             return visited;
         }
         final Expression arg = visited.getArguments().get(0);
-        if (!(arg instanceof J.MethodInvocation formatCall) || !STRING_FORMAT.matches(formatCall)) {
+        if (!isStringFormatCall(arg)) {
             return visited;
         }
+        final J.MethodInvocation formatCall = (J.MethodInvocation) arg;
         final List<Expression> formatArgs = formatCall.getArguments();
         if (formatArgs.isEmpty() || !(formatArgs.get(0) instanceof J.Literal formatLiteral)
                 || !(formatLiteral.getValue() instanceof String printfFormat)) {
             return visited;
         }
         return rewriteAsParameterized(visited, printfFormat, formatLiteral, formatArgs);
+    }
+
+    private static boolean isStringFormatCall(final Expression expr) {
+        return expr instanceof J.MethodInvocation call && STRING_FORMAT.matches(call);
     }
 
     private J.MethodInvocation rewriteAsParameterized(final J.MethodInvocation original,

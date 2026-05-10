@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static io.github.fiftieshousewife.cleanlogging.LogCallTemplate.escape;
-import static io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterizedVisitor.isSlf4jLogCall;
+import static io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterizedVisitor.isSlf4jLogCallWithMultipleArgs;
 
 @NullMarked
 class ThrowableLastArgumentNoPlaceholderVisitor extends JavaIsoVisitor<ExecutionContext> {
@@ -23,7 +23,7 @@ class ThrowableLastArgumentNoPlaceholderVisitor extends JavaIsoVisitor<Execution
     @Override
     public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method, final ExecutionContext ctx) {
         final J.MethodInvocation visited = super.visitMethodInvocation(method, ctx);
-        if (!isSlf4jLogCall(visited) || visited.getArguments().size() < 2) {
+        if (!isSlf4jLogCallWithMultipleArgs(visited)) {
             return visited;
         }
         final List<Expression> args = visited.getArguments();

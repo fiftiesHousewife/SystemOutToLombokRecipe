@@ -27,7 +27,7 @@ class Slf4jConcatToParameterizedVisitor extends JavaIsoVisitor<ExecutionContext>
     @Override
     public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method, final ExecutionContext ctx) {
         final J.MethodInvocation visited = super.visitMethodInvocation(method, ctx);
-        if (!isSlf4jLogCall(visited) || visited.getArguments().size() != 1) {
+        if (!isSlf4jLogCallWithSingleArg(visited)) {
             return visited;
         }
         final Expression arg = visited.getArguments().get(0);
@@ -46,6 +46,16 @@ class Slf4jConcatToParameterizedVisitor extends JavaIsoVisitor<ExecutionContext>
         return SLF4J_LEVELS.contains(method.getSimpleName())
                 && method.getSelect() instanceof J.Identifier id
                 && LOG_RECEIVER.equals(id.getSimpleName());
+    }
+
+    /** {@code log.X(arg)} — used by single-arg recipe entry guards. */
+    static boolean isSlf4jLogCallWithSingleArg(final J.MethodInvocation method) {
+        return isSlf4jLogCall(method) && method.getArguments().size() == 1;
+    }
+
+    /** {@code log.X(format, ...args)} — used by parameterised-call recipe entry guards. */
+    static boolean isSlf4jLogCallWithMultipleArgs(final J.MethodInvocation method) {
+        return isSlf4jLogCall(method) && method.getArguments().size() >= 2;
     }
 
     private J.MethodInvocation rebuildAsParameterized(final J.MethodInvocation original,

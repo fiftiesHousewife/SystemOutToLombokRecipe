@@ -13,7 +13,7 @@ import org.openrewrite.java.tree.TypeUtils;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterizedVisitor.isSlf4jLogCall;
+import static io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterizedVisitor.isSlf4jLogCallWithMultipleArgs;
 import static io.github.fiftieshousewife.cleanlogging.ThrowableLastArgumentNoPlaceholderVisitor.countPlaceholders;
 
 @NullMarked
@@ -25,20 +25,20 @@ class ThrowableGetMessageInPlaceholderVisitor extends JavaIsoVisitor<ExecutionCo
     @Override
     public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method, final ExecutionContext ctx) {
         final J.MethodInvocation visited = super.visitMethodInvocation(method, ctx);
-        if (!isSlf4jLogCall(visited) || visited.getArguments().size() < 2) {
+        if (!isSlf4jLogCallWithMultipleArgs(visited)) {
             return visited;
         }
         final List<Expression> args = visited.getArguments();
         if (!isStringLiteral(args.get(0))) {
             return visited;
         }
-        final Expression lastArg = args.get(args.size() - 1);
-        final Expression throwableReceiver = throwableReceiverOfGetMessage(lastArg);
+        final int lastArgIndex = args.size() - 1;
+        final Expression throwableReceiver = throwableReceiverOfGetMessage(args.get(lastArgIndex));
         if (throwableReceiver == null) {
             return visited;
         }
         final String message = (String) ((J.Literal) args.get(0)).getValue();
-        final int substitutionArgs = args.size() - 1;
+        final int substitutionArgs = lastArgIndex;
         if (countPlaceholders(message) != substitutionArgs) {
             return visited;
         }
@@ -53,7 +53,7 @@ class ThrowableGetMessageInPlaceholderVisitor extends JavaIsoVisitor<ExecutionCo
         if (!(expr instanceof J.MethodInvocation call)) {
             return null;
         }
-        if (!GET_MESSAGE.equals(call.getSimpleName()) || !isNoArg(call)) {
+        if (!GET_MESSAGE.equals(call.getSimpleName()) || hasArgs(call)) {
             return null;
         }
         final Expression select = call.getSelect();
@@ -63,9 +63,12 @@ class ThrowableGetMessageInPlaceholderVisitor extends JavaIsoVisitor<ExecutionCo
         return select;
     }
 
-    private static boolean isNoArg(final J.MethodInvocation call) {
+    private static boolean hasArgs(final J.MethodInvocation call) {
         final List<Expression> args = call.getArguments();
-        return args.isEmpty() || (args.size() == 1 && args.get(0) instanceof J.Empty);
+        if (args.isEmpty()) {
+            return false;
+        }
+        return !(args.size() == 1 && args.get(0) instanceof J.Empty);
     }
 
     private J.MethodInvocation appendThrowableArg(final J.MethodInvocation original, final Expression throwable) {
