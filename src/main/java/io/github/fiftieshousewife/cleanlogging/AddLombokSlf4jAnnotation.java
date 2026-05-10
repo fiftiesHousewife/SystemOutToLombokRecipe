@@ -17,7 +17,6 @@ import org.openrewrite.java.tree.J;
 import java.time.Duration;
 import java.util.Set;
 
-import static io.github.fiftieshousewife.cleanlogging.JulToSlf4j.JUL_LEVEL_METHODS;
 import static io.github.fiftieshousewife.cleanlogging.JulToSlf4j.julLevelOf;
 import static io.github.fiftieshousewife.cleanlogging.LombokLoggingAnnotation.matchesSimpleName;
 import static io.github.fiftieshousewife.cleanlogging.LombokLoggingAnnotation.matchesTypeFragment;
@@ -40,7 +39,8 @@ import static io.github.fiftieshousewife.cleanlogging.SystemOutToSlf4j.isSystemO
 @NullMarked
 public class AddLombokSlf4jAnnotation extends Recipe {
 
-    private static final MethodMatcher PRINT_STACK_TRACE = new MethodMatcher("java.lang.Throwable printStackTrace(..)");
+    private static final String PRINT_STACK_TRACE_PATTERN = "java.lang.Throwable printStackTrace(..)";
+    private static final MethodMatcher PRINT_STACK_TRACE = new MethodMatcher(PRINT_STACK_TRACE_PATTERN);
     private static final Set<String> LOGGER_FIELD_NAMES = Set.of("log", "logger", "LOG", "LOGGER");
 
     @Option(displayName = "Require Lombok on classpath",
@@ -79,7 +79,7 @@ public class AddLombokSlf4jAnnotation extends Recipe {
                         new UsesMethod<>("java.io.PrintStream println(..)"),
                         new UsesMethod<>("java.io.PrintStream print(..)"),
                         new UsesMethod<>("java.io.PrintStream printf(..)"),
-                        new UsesMethod<>("java.lang.Throwable printStackTrace(..)"),
+                        new UsesMethod<>(PRINT_STACK_TRACE_PATTERN),
                         new UsesType<>(LoggerNames.JUL_LOGGER.fqn(), false)),
                 new AddLombokSlf4jVisitor(requireLombokOnClasspath));
     }
@@ -134,7 +134,7 @@ public class AddLombokSlf4jAnnotation extends Recipe {
 
         @Override
         public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method, final Boolean ctx) {
-            if (JUL_LEVEL_METHODS.contains(method.getSimpleName())
+            if (JulLevel.byJulMethod(method.getSimpleName()).isPresent()
                     && julLevelOf(method).isPresent()) {
                 found = true;
             }

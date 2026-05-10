@@ -6,6 +6,7 @@ import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.JavaType;
 import org.openrewrite.java.tree.TypeUtils;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -37,7 +38,7 @@ final class JulLoggerTypeDetector extends JavaIsoVisitor<Integer> {
     static Set<String> referencedJulFqnsIn(final J.CompilationUnit compilationUnit) {
         if (compilationUnit.getImports().stream()
                 .noneMatch(imp -> imp.getTypeName() != null && imp.getTypeName().startsWith(JUL_PACKAGE_PREFIX))) {
-            return java.util.Collections.emptySet();
+            return Collections.emptySet();
         }
         final JulLoggerTypeDetector detector = new JulLoggerTypeDetector();
         detector.visit(compilationUnit, 0);

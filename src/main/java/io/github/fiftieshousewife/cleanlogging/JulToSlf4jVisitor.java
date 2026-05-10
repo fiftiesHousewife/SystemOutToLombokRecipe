@@ -15,8 +15,6 @@ import java.util.Optional;
 import java.util.Set;
 
 import static io.github.fiftieshousewife.cleanlogging.JulToSlf4j.IS_LOGGABLE;
-import static io.github.fiftieshousewife.cleanlogging.JulToSlf4j.JUL_LEVEL_TO_SLF4J_IS_ENABLED;
-import static io.github.fiftieshousewife.cleanlogging.JulToSlf4j.JUL_TO_LOG4J;
 import static io.github.fiftieshousewife.cleanlogging.LoggerNames.JUL_LOGGER;
 import static io.github.fiftieshousewife.cleanlogging.LombokClasspathGate.isAvailable;
 
@@ -38,9 +36,10 @@ class JulToSlf4jVisitor extends JavaIsoVisitor<ExecutionContext> {
     public J.CompilationUnit visitCompilationUnit(final J.CompilationUnit compilationUnit, final ExecutionContext ctx) {
         final J.CompilationUnit visited = super.visitCompilationUnit(compilationUnit, ctx);
         final Set<String> referenced = JulLoggerTypeDetector.referencedJulFqnsIn(visited);
-        return visited.withImports(visited.getImports().stream()
+        final List<J.Import> stillUsedImports = visited.getImports().stream()
                 .filter(imp -> !isJulImport(imp.getTypeName()) || referenced.contains(imp.getTypeName()))
-                .toList());
+                .toList();
+        return visited.withImports(stillUsedImports);
     }
 
     static boolean isJulImport(final @Nullable String typeName) {
@@ -75,7 +74,7 @@ class JulToSlf4jVisitor extends JavaIsoVisitor<ExecutionContext> {
             return Optional.empty();
         }
         return JulToSlf4j.julLevelOf(method)
-                .map(JUL_TO_LOG4J::get)
+                .map(JulLevel::slf4jMethod)
                 .map(targetMethod -> rewriteAsSlf4jCall(method, targetMethod));
     }
 
@@ -105,7 +104,8 @@ class JulToSlf4jVisitor extends JavaIsoVisitor<ExecutionContext> {
             return Optional.empty();
         }
         return julLevelConstantNameFrom(method.getArguments().get(0))
-                .map(JUL_LEVEL_TO_SLF4J_IS_ENABLED::get)
+                .flatMap(JulLevel::byLevelName)
+                .map(JulLevel::slf4jIsEnabled)
                 .map(slf4jIsEnabled -> JavaTemplate.builder("log.%s()".formatted(slf4jIsEnabled))
                         .build()
                         .apply(getCursor(), method.getCoordinates().replace()));
@@ -113,11 +113,11 @@ class JulToSlf4jVisitor extends JavaIsoVisitor<ExecutionContext> {
 
     static Optional<String> julLevelConstantNameFrom(final Expression arg) {
         if (arg instanceof J.FieldAccess fieldAccess
-                && JUL_LEVEL_TO_SLF4J_IS_ENABLED.containsKey(fieldAccess.getName().getSimpleName())) {
+                && JulLevel.byLevelName(fieldAccess.getName().getSimpleName()).isPresent()) {
             return Optional.of(fieldAccess.getName().getSimpleName());
         }
         if (arg instanceof J.Identifier identifier
-                && JUL_LEVEL_TO_SLF4J_IS_ENABLED.containsKey(identifier.getSimpleName())) {
+                && JulLevel.byLevelName(identifier.getSimpleName()).isPresent()) {
             return Optional.of(identifier.getSimpleName());
         }
         return Optional.empty();

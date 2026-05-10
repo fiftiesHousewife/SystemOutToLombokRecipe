@@ -16,8 +16,11 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static io.github.fiftieshousewife.cleanlogging.LoggerNames.JUL_LOGGER;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toUnmodifiableMap;
 
 /**
  * Converts {@code java.util.logging.Logger} level-named method calls to the
@@ -51,37 +54,11 @@ public class JulToSlf4j extends Recipe {
 
     private static final String MATCHER_TEMPLATE = "%s %s(..)";
 
-    private static final Map<String, MethodMatcher> MATCHERS = Map.of(
-            "severe", matcher("severe"),
-            "warning", matcher("warning"),
-            "info", matcher("info"),
-            "config", matcher("config"),
-            "fine", matcher("fine"),
-            "finer", matcher("finer"),
-            "finest", matcher("finest"));
-
-    static final Set<String> JUL_LEVEL_METHODS = MATCHERS.keySet();
-
-    static final Map<String, String> JUL_TO_LOG4J = Map.of(
-            "severe", "error",
-            "warning", "warn",
-            "info", "info",
-            "config", "debug",
-            "fine", "debug",
-            "finer", "trace",
-            "finest", "trace");
+    private static final Map<JulLevel, MethodMatcher> MATCHERS = Stream.of(JulLevel.values())
+            .collect(toUnmodifiableMap(identity(), level -> matcher(level.julMethod())));
 
     static final MethodMatcher IS_LOGGABLE =
             new MethodMatcher("java.util.logging.Logger isLoggable(java.util.logging.Level)");
-
-    static final Map<String, String> JUL_LEVEL_TO_SLF4J_IS_ENABLED = Map.of(
-            "SEVERE", "isErrorEnabled",
-            "WARNING", "isWarnEnabled",
-            "INFO", "isInfoEnabled",
-            "CONFIG", "isDebugEnabled",
-            "FINE", "isDebugEnabled",
-            "FINER", "isTraceEnabled",
-            "FINEST", "isTraceEnabled");
 
     private static MethodMatcher matcher(final String methodName) {
         return new MethodMatcher(MATCHER_TEMPLATE.formatted(JUL_LOGGER.fqn(), methodName));
@@ -121,7 +98,7 @@ public class JulToSlf4j extends Recipe {
         return Preconditions.check(new UsesType<>(JUL_LOGGER.fqn(), false), new JulToSlf4jVisitor(requireLombokOnClasspath));
     }
 
-    static Optional<String> julLevelOf(final J.MethodInvocation method) {
+    static Optional<JulLevel> julLevelOf(final J.MethodInvocation method) {
         return MATCHERS.entrySet().stream()
                 .filter(entry -> entry.getValue().matches(method))
                 .map(Map.Entry::getKey)

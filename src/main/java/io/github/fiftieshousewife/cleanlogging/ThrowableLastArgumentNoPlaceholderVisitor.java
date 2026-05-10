@@ -27,12 +27,13 @@ class ThrowableLastArgumentNoPlaceholderVisitor extends JavaIsoVisitor<Execution
             return visited;
         }
         final List<Expression> args = visited.getArguments();
-        if (!isStringLiteral(args.get(0)) || !isThrowable(args.get(args.size() - 1))) {
+        final int lastArgIndex = args.size() - 1;
+        if (!isStringLiteral(args.get(0)) || !isThrowable(args.get(lastArgIndex))) {
             return visited;
         }
         final String message = (String) ((J.Literal) args.get(0)).getValue();
         final int placeholderCount = countPlaceholders(message);
-        final int substitutionArgs = args.size() - 1;
+        final int substitutionArgs = lastArgIndex;
         if (placeholderCount != substitutionArgs) {
             return visited;
         }

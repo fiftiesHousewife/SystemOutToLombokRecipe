@@ -40,7 +40,8 @@ import static io.github.fiftieshousewife.cleanlogging.LombokClasspathGate.isAvai
 @NullMarked
 public class PrintStackTraceToLog extends Recipe {
 
-    private static final MethodMatcher PRINT_STACK_TRACE = new MethodMatcher("java.lang.Throwable printStackTrace(..)");
+    private static final String PRINT_STACK_TRACE_PATTERN = "java.lang.Throwable printStackTrace(..)";
+    private static final MethodMatcher PRINT_STACK_TRACE = new MethodMatcher(PRINT_STACK_TRACE_PATTERN);
     private static final String LOG_ERROR_TEMPLATE = "log.error(\"Exception occurred\", #{any()})";
 
     @Option(displayName = "Require Lombok on classpath",
@@ -72,7 +73,7 @@ public class PrintStackTraceToLog extends Recipe {
 
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
-        return Preconditions.check(new UsesMethod<>("java.lang.Throwable printStackTrace(..)"), new JavaIsoVisitor<>() {
+        return Preconditions.check(new UsesMethod<>(PRINT_STACK_TRACE_PATTERN), new JavaIsoVisitor<>() {
             @Override
             public J.MethodInvocation visitMethodInvocation(final J.MethodInvocation method,
                                                             final ExecutionContext ctx) {
