@@ -96,9 +96,9 @@ class DirectSlf4jLoggerFieldToLombokIntegrationTest implements RewriteTest {
                                 }
 
                                 dependencies {
-                                    annotationProcessor("org.projectlombok:lombok:1.18.44")
+                                    annotationProcessor("org.projectlombok:lombok:1.18.46")
 
-                                    compileOnly("org.projectlombok:lombok:1.18.44")
+                                    compileOnly("org.projectlombok:lombok:1.18.46")
                                 }
                                 """
                 )
@@ -117,7 +117,7 @@ class DirectSlf4jLoggerFieldToLombokIntegrationTest implements RewriteTest {
                                 """,
                         """
                                 [versions]
-                                lombok = "1.18.44"
+                                lombok = "1.18.46"
 
                                 [libraries]
                                 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }

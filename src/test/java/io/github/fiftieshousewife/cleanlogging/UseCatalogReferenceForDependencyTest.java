@@ -30,7 +30,7 @@ class UseCatalogReferenceForDependencyTest implements RewriteTest {
                                 }
                                 repositories { mavenCentral() }
                                 dependencies {
-                                    compileOnly("org.projectlombok:lombok:1.18.44")
+                                    compileOnly("org.projectlombok:lombok:1.18.46")
                                 }
                                 """,
                         """
@@ -56,7 +56,7 @@ class UseCatalogReferenceForDependencyTest implements RewriteTest {
                                 }
                                 repositories { mavenCentral() }
                                 dependencies {
-                                    compileOnly("org.projectlombok:lombok:1.18.44")
+                                    compileOnly("org.projectlombok:lombok:1.18.46")
                                 }
                                 """
                 )
@@ -92,7 +92,7 @@ class UseCatalogReferenceForDependencyTest implements RewriteTest {
                                 }
                                 repositories { mavenCentral() }
                                 dependencies {
-                                    annotationProcessor("org.projectlombok:lombok:1.18.44")
+                                    annotationProcessor("org.projectlombok:lombok:1.18.46")
                                 }
                                 """,
                         """
@@ -110,7 +110,7 @@ class UseCatalogReferenceForDependencyTest implements RewriteTest {
 
     private static final String CATALOG_STUB = """
             [versions]
-            lombok = "1.18.44"
+            lombok = "1.18.46"
 
             [libraries]
             lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }

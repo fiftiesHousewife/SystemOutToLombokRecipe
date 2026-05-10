@@ -24,14 +24,14 @@ class AddVersionCatalogEntryMethodTest {
 
     @Test
     void parseKeyValue_returnsParsedKeyValue() {
-        final Toml.KeyValue kv = parseKeyValue("lombok = \"1.18.44\"");
+        final Toml.KeyValue kv = parseKeyValue("lombok = \"1.18.46\"");
         assertThat(kv.getKey()).isInstanceOfSatisfying(Toml.Identifier.class,
                 id -> assertThat(id.getName()).isEqualTo("lombok"));
     }
 
     @Test
     void parseTable_returnsParsedTable() {
-        final Toml.Table table = parseTable("[versions]\nlombok = \"1.18.44\"\n");
+        final Toml.Table table = parseTable("[versions]\nlombok = \"1.18.46\"\n");
         assertThat(table.getName()).isNotNull();
         assertThat(table.getName().getName()).isEqualTo("versions");
     }
@@ -67,13 +67,13 @@ class AddVersionCatalogEntryMethodTest {
 
     @Test
     void tableHasKey_trueWhenKeyPresent() {
-        final List<TomlValue> values = parseValues("[versions]\nlombok = \"1.18.44\"\n");
+        final List<TomlValue> values = parseValues("[versions]\nlombok = \"1.18.46\"\n");
         assertThat(tableHasKey(values, VERSIONS, "lombok")).isTrue();
     }
 
     @Test
     void tableHasKey_falseWhenKeyMissing() {
-        final List<TomlValue> values = parseValues("[versions]\nlombok = \"1.18.44\"\n");
+        final List<TomlValue> values = parseValues("[versions]\nlombok = \"1.18.46\"\n");
         assertThat(tableHasKey(values, VERSIONS, "junit")).isFalse();
     }
 
@@ -116,7 +116,7 @@ class AddVersionCatalogEntryMethodTest {
 
     @Test
     void addIfMissing_returnsSameListWhenKeyPresent() {
-        final List<TomlValue> values = parseValues("[versions]\nlombok = \"1.18.44\"\n");
+        final List<TomlValue> values = parseValues("[versions]\nlombok = \"1.18.46\"\n");
         final List<TomlValue> result = addIfMissing(values, VERSIONS, "lombok", "lombok = \"9.9.9\"");
         assertThat(result).isSameAs(values);
     }
@@ -124,7 +124,7 @@ class AddVersionCatalogEntryMethodTest {
     @Test
     void addIfMissing_addsRowWhenKeyAbsent() {
         final List<TomlValue> values = parseValues("[versions]\n");
-        final List<TomlValue> result = addIfMissing(values, VERSIONS, "lombok", "lombok = \"1.18.44\"");
+        final List<TomlValue> result = addIfMissing(values, VERSIONS, "lombok", "lombok = \"1.18.46\"");
         assertThat(result).isNotSameAs(values);
         assertThat(tableHasKey(result, VERSIONS, "lombok")).isTrue();
     }

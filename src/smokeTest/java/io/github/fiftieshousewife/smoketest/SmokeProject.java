@@ -81,8 +81,8 @@ final class SmokeProject {
         }
         if (!variant.managesDependencies()) {
             deps.append("""
-                        compileOnly("org.projectlombok:lombok:1.18.44")
-                        annotationProcessor("org.projectlombok:lombok:1.18.44")
+                        compileOnly("org.projectlombok:lombok:1.18.46")
+                        annotationProcessor("org.projectlombok:lombok:1.18.46")
                         implementation("org.slf4j:slf4j-api:2.0.17")
                         runtimeOnly("org.apache.logging.log4j:log4j-core:2.25.4")
                         runtimeOnly("org.apache.logging.log4j:log4j-slf4j2-impl:2.25.4")

@@ -167,7 +167,7 @@ rewrite {
 
 ### Versions installed
 
-Lombok `1.18.44`, SLF4J `2.0.17`, and Log4j2 `2.25.4` at the time of this release. These are pinned so the transform is deterministic. To pick up later patch releases, add the Ben-Manes `versions` plugin to your project (`./gradlew dependencyUpdates`) and bump the catalog entries or inline strings by hand after the recipe runs.
+Lombok `1.18.46`, SLF4J `2.0.17`, and Log4j2 `2.25.4` at the time of this release. These are pinned so the transform is deterministic. To pick up later patch releases, add the Ben-Manes `versions` plugin to your project (`./gradlew dependencyUpdates`) and bump the catalog entries or inline strings by hand after the recipe runs.
 
 ## Recipes
 

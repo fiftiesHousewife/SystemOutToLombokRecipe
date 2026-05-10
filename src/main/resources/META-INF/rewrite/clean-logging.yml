@@ -140,7 +140,7 @@ description: >-
 recipeList:
   - io.github.fiftieshousewife.cleanlogging.AddVersionCatalogEntry:
       versionAlias: lombok
-      versionValue: 1.18.44
+      versionValue: 1.18.46
       libraryAlias: lombok
       module: org.projectlombok:lombok
 
@@ -165,14 +165,14 @@ recipeList:
   - org.openrewrite.gradle.AddDependency:
       groupId: org.projectlombok
       artifactId: lombok
-      version: 1.18.44
+      version: 1.18.46
       configuration: compileOnly
       acceptTransitive: true
 
   - org.openrewrite.gradle.AddDependency:
       groupId: org.projectlombok
       artifactId: lombok
-      version: 1.18.44
+      version: 1.18.46
       configuration: annotationProcessor
       acceptTransitive: true
 
@@ -229,21 +229,21 @@ description: >-
 recipeList:
   - io.github.fiftieshousewife.cleanlogging.AddVersionCatalogEntry:
       versionAlias: lombok
-      versionValue: 1.18.44
+      versionValue: 1.18.46
       libraryAlias: lombok
       module: org.projectlombok:lombok
 
   - org.openrewrite.gradle.AddDependency:
       groupId: org.projectlombok
       artifactId: lombok
-      version: 1.18.44
+      version: 1.18.46
       configuration: compileOnly
       acceptTransitive: true
 
   - org.openrewrite.gradle.AddDependency:
       groupId: org.projectlombok
       artifactId: lombok
-      version: 1.18.44
+      version: 1.18.46
       configuration: annotationProcessor
       acceptTransitive: true
 

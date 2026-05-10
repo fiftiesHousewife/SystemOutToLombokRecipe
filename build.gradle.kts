@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "io.github.fiftieshousewife"
-version = "1.0"
+version = "1.1"
 
 // The cleancode plugin sets ignoreFailures=true on Checkstyle, so findings
 // land in CI as advisory warnings. We want them to gate the build like

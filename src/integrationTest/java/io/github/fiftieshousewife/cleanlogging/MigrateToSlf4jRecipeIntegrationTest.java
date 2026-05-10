@@ -112,9 +112,9 @@ class MigrateToSlf4jRecipeIntegrationTest implements RewriteTest {
                                 }
 
                                 dependencies {
-                                    annotationProcessor("org.projectlombok:lombok:1.18.44")
+                                    annotationProcessor("org.projectlombok:lombok:1.18.46")
 
-                                    compileOnly("org.projectlombok:lombok:1.18.44")
+                                    compileOnly("org.projectlombok:lombok:1.18.46")
 
                                     implementation("org.slf4j:slf4j-api:2.0.17")
 
@@ -189,9 +189,9 @@ class MigrateToSlf4jRecipeIntegrationTest implements RewriteTest {
                                 }
 
                                 dependencies {
-                                    annotationProcessor("org.projectlombok:lombok:1.18.44")
+                                    annotationProcessor("org.projectlombok:lombok:1.18.46")
 
-                                    compileOnly("org.projectlombok:lombok:1.18.44")
+                                    compileOnly("org.projectlombok:lombok:1.18.46")
 
                                     implementation("org.slf4j:slf4j-api:2.0.17")
 
@@ -256,9 +256,9 @@ class MigrateToSlf4jRecipeIntegrationTest implements RewriteTest {
                                 }
 
                                 dependencies {
-                                    annotationProcessor("org.projectlombok:lombok:1.18.44")
+                                    annotationProcessor("org.projectlombok:lombok:1.18.46")
 
-                                    compileOnly("org.projectlombok:lombok:1.18.44")
+                                    compileOnly("org.projectlombok:lombok:1.18.46")
 
                                     implementation("org.slf4j:slf4j-api:2.0.17")
 

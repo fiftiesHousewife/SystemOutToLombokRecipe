@@ -32,7 +32,7 @@ class GroovyDslMatrixTest implements RewriteTest {
                                 plugins { id 'java' }
                                 repositories { mavenCentral() }
                                 dependencies {
-                                    compileOnly 'org.projectlombok:lombok:1.18.44'
+                                    compileOnly 'org.projectlombok:lombok:1.18.46'
                                 }
                                 """,
                         """
@@ -55,7 +55,7 @@ class GroovyDslMatrixTest implements RewriteTest {
                                 plugins { id 'java' }
                                 repositories { mavenCentral() }
                                 dependencies {
-                                    compileOnly 'org.projectlombok:lombok:1.18.44'
+                                    compileOnly 'org.projectlombok:lombok:1.18.46'
                                 }
                                 """
                 )
@@ -95,7 +95,7 @@ class GroovyDslMatrixTest implements RewriteTest {
                                 plugins { id 'java' }
                                 repositories { mavenCentral() }
                                 dependencies {
-                                    compileOnly 'org.projectlombok:lombok:1.18.44'
+                                    compileOnly 'org.projectlombok:lombok:1.18.46'
                                 }
                                 """,
                         """
@@ -112,7 +112,7 @@ class GroovyDslMatrixTest implements RewriteTest {
                                 plugins { id 'java' }
                                 repositories { mavenCentral() }
                                 dependencies {
-                                    compileOnly 'org.projectlombok:lombok:1.18.44'
+                                    compileOnly 'org.projectlombok:lombok:1.18.46'
                                 }
                                 """,
                         """
@@ -142,7 +142,7 @@ class GroovyDslMatrixTest implements RewriteTest {
                                 plugins { id 'java' }
                                 repositories { mavenCentral() }
                                 dependencies {
-                                    compileOnly 'org.projectlombok:lombok:1.18.44'
+                                    compileOnly 'org.projectlombok:lombok:1.18.46'
                                 }
                                 """,
                         spec -> spec.path("app/build.gradle").markers(gradleProjectMarker(":app"))
@@ -152,7 +152,7 @@ class GroovyDslMatrixTest implements RewriteTest {
                                 plugins { id 'java' }
                                 repositories { mavenCentral() }
                                 dependencies {
-                                    compileOnly 'org.projectlombok:lombok:1.18.44'
+                                    compileOnly 'org.projectlombok:lombok:1.18.46'
                                 }
                                 """,
                         spec -> spec.path("lib/build.gradle").markers(gradleProjectMarker(":lib"))
@@ -170,7 +170,7 @@ class GroovyDslMatrixTest implements RewriteTest {
                                 plugins { id 'groovy-gradle-plugin' }
                                 repositories { mavenCentral() }
                                 dependencies {
-                                    implementation 'org.projectlombok:lombok:1.18.44'
+                                    implementation 'org.projectlombok:lombok:1.18.46'
                                 }
                                 """,
                         """
@@ -195,7 +195,7 @@ class GroovyDslMatrixTest implements RewriteTest {
                                 plugins { id 'groovy-gradle-plugin' }
                                 repositories { mavenCentral() }
                                 dependencies {
-                                    implementation 'org.projectlombok:lombok:1.18.44'
+                                    implementation 'org.projectlombok:lombok:1.18.46'
                                 }
                                 """,
                         """

@@ -10,7 +10,7 @@ class AddVersionCatalogEntryTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        spec.recipe(new AddVersionCatalogEntry("lombok", "1.18.44", "lombok", "org.projectlombok:lombok"));
+        spec.recipe(new AddVersionCatalogEntry("lombok", "1.18.46", "lombok", "org.projectlombok:lombok"));
     }
 
     @Test
@@ -24,7 +24,7 @@ class AddVersionCatalogEntryTest implements RewriteTest {
                                 """,
                         """
                                 [versions]
-                                lombok = "1.18.44"
+                                lombok = "1.18.46"
 
                                 [libraries]
                                 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
@@ -48,7 +48,7 @@ class AddVersionCatalogEntryTest implements RewriteTest {
                         """
                                 [versions]
                                 junit = "5.10.0"
-                                lombok = "1.18.44"
+                                lombok = "1.18.46"
 
                                 [libraries]
                                 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
@@ -65,7 +65,7 @@ class AddVersionCatalogEntryTest implements RewriteTest {
                 toml(
                         """
                                 [versions]
-                                lombok = "1.18.44"
+                                lombok = "1.18.46"
 
                                 [libraries]
                                 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }

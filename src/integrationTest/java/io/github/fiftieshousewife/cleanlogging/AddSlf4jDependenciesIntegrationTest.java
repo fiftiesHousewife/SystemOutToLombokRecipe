@@ -44,9 +44,9 @@ class AddSlf4jDependenciesIntegrationTest implements RewriteTest {
                                 }
 
                                 dependencies {
-                                    annotationProcessor("org.projectlombok:lombok:1.18.44")
+                                    annotationProcessor("org.projectlombok:lombok:1.18.46")
 
-                                    compileOnly("org.projectlombok:lombok:1.18.44")
+                                    compileOnly("org.projectlombok:lombok:1.18.46")
 
                                     implementation("org.slf4j:slf4j-api:2.0.17")
 
@@ -70,7 +70,7 @@ class AddSlf4jDependenciesIntegrationTest implements RewriteTest {
                                 """,
                         """
                                 [versions]
-                                lombok = "1.18.44"
+                                lombok = "1.18.46"
                                 slf4j = "2.0.17"
                                 log4j = "2.25.4"
 

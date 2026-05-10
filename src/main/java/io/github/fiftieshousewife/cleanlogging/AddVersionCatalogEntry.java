@@ -33,7 +33,7 @@ public class AddVersionCatalogEntry extends Recipe {
 
     @Option(displayName = "Version value",
             description = "Version string.",
-            example = "1.18.44")
+            example = "1.18.46")
     String versionValue;
 
     @Option(displayName = "Library alias",
