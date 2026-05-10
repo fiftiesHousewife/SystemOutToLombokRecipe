@@ -24,6 +24,7 @@ Where the two projects differ in opinion:
 | **`System.out` / `System.err` / `printStackTrace`** | Has `PrintStackTraceToLogError` for `printStackTrace`; no `System.out` recipe. | Both. `SystemOutToSlf4j` covers `println`/`print`/`printf` (printf specifiers convert to `{}` placeholders); `PrintStackTraceToLog` covers `printStackTrace()` plus the `printStackTrace(System.err)` / `printStackTrace(System.out)` overloads. |
 | **Concat → parameterised SLF4J** | `ParameterizedLogging` (works on calls whose receiver type resolves to an SLF4J `Logger`). | `Slf4jConcatToParameterized` (structural detection on receiver name `log`, the `@Slf4j` convention). Works on calls inserted earlier in the same pipeline whose LST type info is stale — `rewrite-logging-frameworks`'s `UsesMethod` precondition silently skips those. |
 | **Trailing-`{}` swallowing a `Throwable`** | Not addressed. | `ThrowableLastArgumentNoPlaceholder` detects `log.error("failed: {}", e)` (where the throwable falls into the placeholder via `toString()` and the stack trace is silently lost) and rewrites to `log.error("failed", e)`. |
+| **`getMessage()` in placeholder dropping the trace** | Not addressed. | `ThrowableGetMessageInPlaceholder` detects `log.error("oops: {}", e.getMessage())` (the throwable's message is substituted but the throwable itself is never passed, so SLF4J has nothing to bind to the stack-trace slot) and rewrites to `log.error("oops: {}", e.getMessage(), e)` — explicit message text preserved, throwable now logs in full. |
 | **Concat-getMessage** | Not addressed. | `ConcatThrowableMessage` rewrites `log.error("failed: " + e.getMessage())` to `log.error("failed: ", e)` so the stack trace gets logged. |
 | **JUL `isLoggable` / lambda suppliers** | Has its own `JulToSlf4j` covering basic level methods. | `JulToSlf4j` adds `logger.isLoggable(Level.FINE)` → `log.isDebugEnabled()` rewriting and lambda-supplier overload unwrapping (`logger.fine(() -> "v=" + v)` → `log.debug("v=" + v)`). Block-body lambdas and bare `Supplier` references are left alone. |
 | **Apache Commons `fatal`** | Maps `fatal` to `error` as part of its Commons → SLF4J recipe. | Same — `CommonsLoggingToSlf4j` rewrites `fatal` / `isFatalEnabled` → `error` / `isErrorEnabled`. |
@@ -187,7 +188,7 @@ Lombok `1.18.44`, SLF4J `2.0.17`, and Log4j2 `2.25.4` at the time of this releas
 | **`MigrateToSlf4jRecipe`** | All `*ToSlf4j` paths *except* Commons Logging, in one pass + SLF4J cleanups | yes (catalog-aware) | Mixed codebases on JUL / Log4j2 / `System.out` (no Commons). |
 | **`MigrateToSlf4jRecipeNoDeps`** | Same, no dependency edits | no | Multi-module variant. |
 
-The leaf-level `*` recipes (no `Recipe` suffix — `Slf4jConcatToParameterized`, `ThrowableLastArgumentNoPlaceholder`, `ConcatThrowableMessage`) are SLF4J cleanups that never touch dependencies. See [SLF4J cleanup recipes](#slf4j-cleanup-recipes).
+The leaf-level `*` recipes (no `Recipe` suffix — `Slf4jConcatToParameterized`, `ThrowableLastArgumentNoPlaceholder`, `ThrowableGetMessageInPlaceholder`, `ConcatThrowableMessage`) are SLF4J cleanups that never touch dependencies. See [SLF4J cleanup recipes](#slf4j-cleanup-recipes).
 
 ### `MigrateToCleanLoggingRecipe` — the one you usually want
 
@@ -297,6 +298,7 @@ Pure transformations on existing SLF4J code — no dependency changes. Useful on
 | --- | --- | --- |
 | **`Slf4jConcatToParameterized`** | `log.info("user " + id + " did " + a)` → `log.info("user {} did {}", id, a)` | Performance: assembles the message string even when the level is disabled. |
 | **`ThrowableLastArgumentNoPlaceholder`** | `log.error("failed: {}", e)` → `log.error("failed", e)` | **Stack trace silently lost.** SLF4J consumes `e` via `toString()` because the placeholder count matches the substitution-arg count. |
+| **`ThrowableGetMessageInPlaceholder`** | `log.error("oops: {}", e.getMessage())` → `log.error("oops: {}", e.getMessage(), e)` | **Stack trace silently lost.** `e.getMessage()` fills the placeholder, but the throwable itself is never passed — nothing for SLF4J to bind to the stack-trace slot. |
 | **`ConcatThrowableMessage`** | `log.error("failed: " + e.getMessage())` → `log.error("failed: ", e)` | **Stack trace silently lost.** The message includes only `e.getMessage()`, not the trace. |
 
 All three target SLF4J's `log.X(...)` API — they detect the receiver structurally (named `log`, the Lombok `@Slf4j` convention) so they're safe to compose after the `@Slf4j`-adding recipes whose post-conversion calls don't carry resolved SLF4J types.
@@ -354,6 +356,46 @@ rewrite {
 ```
 
 Trailing ` `, `:`, `,` after the dropped placeholder are trimmed. Escaped `\{}` sequences are recognised and don't count as placeholders. If trimming would yield an empty message, the call is left alone (we'd have to guess at a default).
+
+### `ThrowableGetMessageInPlaceholder`
+
+Sibling of the previous recipe for the inverse case: the user has explicitly placed `e.getMessage()` in a placeholder, but never passed the throwable itself, so SLF4J has no trailing throwable to bind to the stack-trace slot:
+
+```java
+@Slf4j
+public class Worker {
+    public void boom() {
+        try { risky(); } catch (Exception e) {
+            log.error("oops: {}", e.getMessage());            // bug: stack trace lost
+            log.error("user {} failed: {}", id, e.getMessage()); // bug: stack trace lost
+        }
+    }
+}
+```
+
+becomes
+
+```java
+@Slf4j
+public class Worker {
+    public void boom() {
+        try { risky(); } catch (Exception e) {
+            log.error("oops: {}", e.getMessage(), e);              // stack trace logged
+            log.error("user {} failed: {}", id, e.getMessage(), e); // stack trace logged
+        }
+    }
+}
+```
+
+```kotlin
+rewrite {
+    activeRecipe("io.github.fiftieshousewife.cleanlogging.ThrowableGetMessageInPlaceholder")
+}
+```
+
+The recipe preserves the original message format and the explicit `e.getMessage()` argument — it only appends the throwable as a new trailing argument. SLF4J substitutes `e.getMessage()` into the placeholder *and* logs the full stack trace because the trailing `e` lands on the throwable slot.
+
+Skipped when the call already has a trailing throwable, the last argument isn't `<throwable>.getMessage()`, the placeholder count doesn't match the substitution-argument count, or the receiver isn't named `log`.
 
 ### `ConcatThrowableMessage`
 

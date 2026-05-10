@@ -484,6 +484,7 @@ recipeList:
   # substitution. Runs after the parameterizer so concat-then-throwable
   # patterns get normalised first.
   - io.github.fiftieshousewife.cleanlogging.ThrowableLastArgumentNoPlaceholder
+  - io.github.fiftieshousewife.cleanlogging.ThrowableGetMessageInPlaceholder
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
@@ -550,6 +551,7 @@ recipeList:
   - io.github.fiftieshousewife.cleanlogging.JavaTransforms
   - io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterized
   - io.github.fiftieshousewife.cleanlogging.ThrowableLastArgumentNoPlaceholder
+  - io.github.fiftieshousewife.cleanlogging.ThrowableGetMessageInPlaceholder
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
@@ -581,4 +583,5 @@ recipeList:
   - io.github.fiftieshousewife.cleanlogging.JavaTransformsClasspathGated
   - io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterized
   - io.github.fiftieshousewife.cleanlogging.ThrowableLastArgumentNoPlaceholder
+  - io.github.fiftieshousewife.cleanlogging.ThrowableGetMessageInPlaceholder
 
