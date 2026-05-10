@@ -1,12 +1,18 @@
 [versions]
 openrewrite = "7.30.0"
 openrewrite-bom = "3.28.0"
+# rewrite-templating's version is managed by the recipe BOM; pin here only for
+# the annotationProcessor coordinate, which doesn't pull from the BOM.
+rewrite-templating = "1.41.6"
+errorprone = "2.49.0"
 junit = "6.1.0-M1"
 assertj = "4.0.0-M1"
 jspecify = "1.0.0"
 lombok = "1.18.44"
+javax-annotation-api = "1.3.2"
 versions = "0.53.0"
 maven-publish = "0.36.0"
+spotbugs-plugin = "6.5.4"
 cleancode = "0.1.3"
 
 [libraries]
@@ -37,8 +43,20 @@ jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 # that's the standard pattern in the OpenRewrite ecosystem (see moderneinc/rewrite-recipe-starter).
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 
+# Refaster recipe support — annotation processor generates the Recipe class
+# from @BeforeTemplate/@AfterTemplate methods. Errorprone provides the
+# Refaster annotations themselves. Required by the recipe-library convention
+# plugin even though clean-logging doesn't ship Refaster recipes today.
+openrewrite-templating = { module = "org.openrewrite:rewrite-templating", version.ref = "rewrite-templating" }
+errorprone-core = { module = "com.google.errorprone:error_prone_core", version.ref = "errorprone" }
+
+# javax.annotation.Generated — referenced by the Refaster annotation processor's
+# generated code. Removed from the JDK in 11+; supply it as a compile-only dep.
+javax-annotation-api = { module = "javax.annotation:javax.annotation-api", version.ref = "javax-annotation-api" }
+
 [plugins]
 openrewrite = { id = "org.openrewrite.rewrite", version.ref = "openrewrite" }
 versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
+spotbugs = { id = "com.github.spotbugs", version.ref = "spotbugs-plugin" }
 cleancode = { id = "io.github.fiftieshousewife.cleancode", version.ref = "cleancode" }
