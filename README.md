@@ -30,6 +30,7 @@ Where the two projects differ in opinion:
 | **Concat-getMessage** | Not addressed. | `ConcatThrowableMessage` rewrites `log.error("failed: " + e.getMessage())` to `log.error("failed: ", e)` so the stack trace gets logged. |
 | **JUL `isLoggable` / lambda suppliers** | Has its own `JulToSlf4j` covering basic level methods. | `JulToSlf4j` adds `logger.isLoggable(Level.FINE)` → `log.isDebugEnabled()` rewriting and lambda-supplier overload unwrapping (`logger.fine(() -> "v=" + v)` → `log.debug("v=" + v)`). Block-body lambdas and bare `Supplier` references are left alone. |
 | **Apache Commons `fatal`** | Maps `fatal` to `error` as part of its Commons → SLF4J recipe. | Same — `CommonsLoggingToSlf4j` rewrites `fatal` / `isFatalEnabled` → `error` / `isErrorEnabled`. |
+| **Apache Log4j 1.x** | Has `Log4j1ToLog4j2`, `Log4j1ToSlf4j1` etc. — direct downgrade paths to a single target. | Doesn't ship its own Log4j 1.x → SLF4J path (Log4j 1.x has been EOL since 2015 and shipping a one-shot would let users stay on dead runtime semantics). Instead, `Log4j1ToSlf4jRecipe` wraps `rewrite-logging-frameworks`'s `Log4j1ToLog4j2` and chains our `ConvertManualLoggerToSlf4j` afterward — so users go Log4j 1.x → Log4j 2.x → `@Slf4j` in one rewriteRun, with the Log4j 1.x → 2.x step delegated to upstream's well-tested implementation. |
 
 The short version: **if you want `@Slf4j` everywhere, catalog-aware deps, and the multi-module Lombok safety check, use this. If you want directly-declared `Logger` fields and don't care about Gradle catalogs or Lombok, use `rewrite-logging-frameworks`.** A `rewrite-logging-frameworks` migration followed by a focused clean-logging recipe (e.g. `DirectSlf4jLoggerFieldToLombokRecipe`) to lift the resulting `Logger` field onto `@Slf4j` is also a valid composition — see [Migrating existing SLF4J code](#migrating-existing-slf4j-code).
 
@@ -187,6 +188,7 @@ Lombok `1.18.46`, SLF4J `2.0.17`, and Log4j2 `2.25.4` at the time of this releas
 | **`DirectSlf4jLoggerFieldToLombokRecipeNoDeps`** | Same, no dependency edits | no | Multi-module variant. |
 | **`CommonsLoggingToSlf4jRecipe`** | Apache Commons Logging `Log` field → `@Slf4j`, plus `fatal`→`error` | yes (Lombok only) | Targeted: legacy codebases on `org.apache.commons.logging.Log` / `LogFactory`. |
 | **`CommonsLoggingToSlf4jRecipeNoDeps`** | Same, no dependency edits | no | Multi-module variant. |
+| **`Log4j1ToSlf4jRecipe`** | Apache Log4j 1.x → Log4j 2.x → `@Slf4j` (delegates the 1.x→2.x step to upstream `rewrite-logging-frameworks`) | yes (Lombok + SLF4J + Log4j2 backend) | Targeted: codebases still on the EOL Log4j 1.x. |
 | **`MigrateToSlf4jRecipe`** | All `*ToSlf4j` paths *except* Commons Logging, in one pass + SLF4J cleanups | yes (catalog-aware) | Mixed codebases on JUL / Log4j2 / `System.out` (no Commons). |
 | **`MigrateToSlf4jRecipeNoDeps`** | Same, no dependency edits | no | Multi-module variant. |
 
@@ -291,6 +293,27 @@ rewrite {
 | `log.isErrorEnabled()` … `log.isTraceEnabled()` | (unchanged) | Already SLF4J-compatible. |
 
 A `NoDeps` variant (`CommonsLoggingToSlf4jRecipeNoDeps`) exists for multi-module projects where Lombok lives at a parent level.
+
+## Migrating Apache Log4j 1.x code
+
+Log4j 1.x has been end-of-life since 2015 — no security patches, no Java 11+ guarantees, [CVE-2019-17571](https://www.cve.org/CVERecord?id=CVE-2019-17571) and others unpatched. Shipping a one-shot Log4j 1.x → `@Slf4j` recipe of our own would let users skip the actual upgrade and stay on the dead runtime semantics. We don't.
+
+`Log4j1ToSlf4jRecipe` instead wraps two existing pieces:
+
+1. **Step 1**: `org.openrewrite.java.logging.log4j.Log4j1ToLog4j2` from [`rewrite-logging-frameworks`](https://docs.openrewrite.org/recipes/java/logging/log4j) does the actual upgrade — package change `org.apache.log4j` → `org.apache.logging.log4j`, method renames, parameterised logging, dep additions/removals.
+2. **Step 2**: `ConvertManualLoggerToSlf4j` (this project) takes the resulting Log4j 2.x manual logger field and lifts it onto `@Slf4j`.
+
+Plus `AddSlf4jDependencies` so Lombok + slf4j-api + the log4j-slf4j2-impl bridge + log4j-core land in the build (catalog-aware, same auto-detect as the other migration recipes).
+
+```kotlin
+rewrite {
+    activeRecipe("io.github.fiftieshousewife.cleanlogging.Log4j1ToSlf4jRecipe")
+}
+```
+
+The end result for source code: `private static final Logger log = Logger.getLogger(X.class);` (Log4j 1.x) → `@Slf4j` (Lombok + SLF4J facade + Log4j2 backend).
+
+For mixed codebases where Log4j 1.x is one of several patterns to migrate, use `MigrateToCleanLoggingRecipe` instead — it includes the upstream `Log4j1ToLog4j2` step at the head of its pipeline, so a class with both a Log4j 1.x field and a `System.out.println` gets fully cleaned up in one pass.
 
 ## SLF4J cleanup recipes
 

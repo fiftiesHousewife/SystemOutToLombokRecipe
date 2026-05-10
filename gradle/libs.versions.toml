@@ -29,6 +29,11 @@ openrewrite-java25 = { module = "org.openrewrite:rewrite-java-25" }
 openrewrite-gradle = { module = "org.openrewrite:rewrite-gradle" }
 openrewrite-gradle-tooling-api = { module = "org.openrewrite.gradle.tooling:model" }
 openrewrite-test = { module = "org.openrewrite:rewrite-test" }
+# Upstream rewrite-logging-frameworks. Pulled in for the Log4j 1.x → Log4j 2.x
+# migration recipe (`org.openrewrite.java.logging.log4j.Log4j1ToLog4j2`),
+# which `Log4j1ToSlf4jRecipe` wraps to lift legacy Log4j 1.x codebases through
+# Log4j 2.x and on to @Slf4j without us re-implementing the Log4j 1.x rewrite.
+rewrite-logging-frameworks = { module = "org.openrewrite.recipe:rewrite-logging-frameworks" }
 
 # Testing
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }

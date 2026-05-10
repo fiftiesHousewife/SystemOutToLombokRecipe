@@ -10,6 +10,15 @@ plugins {
 group = "io.github.fiftieshousewife"
 version = "1.1"
 
+// rewrite-logging-frameworks is referenced by Log4j1ToSlf4jRecipe's YAML
+// composition (it wraps upstream's `org.openrewrite.java.logging.log4j.Log4j1ToLog4j2`
+// to take legacy Log4j 1.x codebases through Log4j 2.x and on to @Slf4j).
+// runtimeOnly because the recipe is invoked by name from YAML, not referenced
+// from Java source.
+dependencies {
+    runtimeOnly(libs.rewrite.logging.frameworks)
+}
+
 // The cleancode plugin sets ignoreFailures=true on Checkstyle, so findings
 // land in CI as advisory warnings. We want them to gate the build like
 // SpotBugs does — flip back here so any error-level finding fails ./gradlew check.

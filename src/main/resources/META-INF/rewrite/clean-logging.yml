@@ -436,6 +436,41 @@ recipeList:
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
+name: io.github.fiftieshousewife.cleanlogging.Log4j1ToSlf4jRecipe
+displayName: Migrate Apache Log4j 1.x → Log4j 2.x → Lombok @Slf4j
+description: >-
+  For codebases still on Apache Log4j 1.x (end-of-life since 2015):
+  delegates the Log4j 1.x → Log4j 2.x step to upstream's
+  `org.openrewrite.java.logging.log4j.Log4j1ToLog4j2` (package change
+  org.apache.log4j → org.apache.logging.log4j, method renames,
+  parameterised logging, dep additions/removals), then continues to
+  Lombok @Slf4j by running `ConvertManualLoggerToSlf4j` on the
+  resulting Log4j 2.x manual logger field.
+
+  Adds Lombok + slf4j-api + the log4j-slf4j2-impl bridge + log4j-core
+  (catalog-aware) so the post-conversion code compiles. The upstream
+  Log4j1ToLog4j2 step also adds log4j-api/log4j-core via its own
+  AddDependency steps; that's redundant with what AddSlf4jDependencies
+  adds (log4j-api is a transitive of log4j-core) but harmless.
+
+  Use this recipe when Log4j 1.x is the dominant pattern in your
+  codebase. Mixed codebases (Log4j 1.x + other patterns) should use
+  MigrateToCleanLoggingRecipe instead — it includes the Log4j1ToLog4j2
+  step at the head of its pipeline.
+tags:
+  - logging
+  - lombok
+  - slf4j
+  - log4j1
+  - log4j2
+
+recipeList:
+  - org.openrewrite.java.logging.log4j.Log4j1ToLog4j2
+  - io.github.fiftieshousewife.cleanlogging.AddSlf4jDependencies
+  - io.github.fiftieshousewife.cleanlogging.ConvertManualLoggerToSlf4j
+
+---
+type: specs.openrewrite.org/v1beta/recipe
 name: io.github.fiftieshousewife.cleanlogging.MigrateToSlf4jRecipe
 displayName: Migrate all logging patterns to Lombok @Slf4j (all-in-one)
 description: >-
@@ -517,6 +552,8 @@ description: >-
   Lombok @Slf4j + parameterised SLF4J calls in a single rewriteRun:
 
   - Apache Commons Logging `Log` fields → @Slf4j (with `fatal` → `error`).
+  - Apache Log4j 1.x → Log4j 2.x (via upstream rewrite-logging-frameworks),
+    then the resulting Log4j 2.x logger field → @Slf4j.
   - Hand-rolled Log4j2 `Logger log = LogManager.getLogger(...)` fields → @Slf4j.
   - System.out / System.err / printf → log.info / log.error with parameterised {}.
   - Throwable.printStackTrace() → log.error("Exception occurred", e).
@@ -537,12 +574,19 @@ tags:
   - lombok
   - slf4j
   - log4j2
+  - log4j1
   - jul
   - commons-logging
 
 recipeList:
   - io.github.fiftieshousewife.cleanlogging.AddSlf4jDependencies
   - io.github.fiftieshousewife.cleanlogging.CreateLog4j2Config
+  # Log4j 1.x → Log4j 2.x first via the upstream rewrite-logging-frameworks
+  # recipe. Log4j 1.x is end-of-life (no security patches since 2015) so we
+  # don't ship a Log4j1 → @Slf4j path of our own; we ride on upstream's
+  # well-tested upgrade and let the resulting Log4j2 manual logger field
+  # get picked up by ConvertManualLoggerToSlf4j below.
+  - org.openrewrite.java.logging.log4j.Log4j1ToLog4j2
   # Commons Logging and manual Log4j2 logger conversions both run BEFORE
   # JavaTransforms so a class that has BOTH a manual logger field AND
   # System.out calls gets its field removed first; JavaTransforms'
@@ -575,11 +619,16 @@ tags:
   - lombok
   - slf4j
   - log4j2
+  - log4j1
   - jul
   - commons-logging
 
 recipeList:
   - io.github.fiftieshousewife.cleanlogging.CreateLog4j2Config
+  # Log4j 1.x → Log4j 2.x via the upstream rewrite-logging-frameworks
+  # recipe before our own conversions kick in (see the comment on the
+  # MigrateToCleanLoggingRecipe pipeline above for the rationale).
+  - org.openrewrite.java.logging.log4j.Log4j1ToLog4j2
   - io.github.fiftieshousewife.cleanlogging.CommonsLoggingToSlf4j:
       requireLombokOnClasspath: true
   - io.github.fiftieshousewife.cleanlogging.ConvertManualLoggerToSlf4j:
