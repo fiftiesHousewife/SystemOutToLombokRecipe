@@ -54,6 +54,31 @@ Key files at repo root:
 - `SMOKE_TEST.md` — the pre-release release gate (§2a covers the six project-shape templates)
 - `BACKLOG.md` — Shipped / Queued / Active / Parked
 - `README.md` — user-facing
+- `build-logic/` — included build hosting the `recipe-library` convention plugin lifted from [`fiftiesHousewife/recipescaffold`](https://github.com/fiftiesHousewife/recipescaffold) (clean-logging commit `2b1749c`). Reusable build shape (toolchain, JaCoCo, SpotBugs, integrationTest source set + JDK-21 launcher pin, smokeTest source set + mavenLocal-publish gate, `publishAndReleaseToMavenCentral` `dependsOn("smokeTest")`) lives here, leaving `build.gradle.kts` to project identity + POM. Knobs in `gradle.properties` keys: `recipeLibrary.javaTargetMain` / `…Tests` / `minLineCoverage` / `spotbugsStrict` / `failOnStaleDependencies`.
+- `.recipescaffold.yml` — dropfile recognised by the recipescaffold CLI (`add-recipe`, `verify-gates`, `upgrade-skills`).
+
+## Authoring new recipes — recipescaffold CLI
+
+The project carries a `.recipescaffold.yml` dropfile, so the [recipescaffold](https://github.com/fiftiesHousewife/recipescaffold) JBang CLI works against this checkout. Three commands worth knowing:
+
+```bash
+# add a Java recipe + test (defaults to type=java, test-style=block)
+jbang recipescaffold@fiftiesHousewife/recipescaffold add-recipe \
+  --name MyRecipe \
+  --display-name "..." \
+  --description "..." \
+  --package=io.github.fiftieshousewife.cleanlogging   # <-- IMPORTANT, see below
+
+# pre-push gate — runs ./gradlew check integrationTest smokeTest
+jbang recipescaffold@fiftiesHousewife/recipescaffold verify-gates
+
+# refresh .claude/skills/ from the upstream scaffolder copy
+jbang recipescaffold@fiftiesHousewife/recipescaffold upgrade-skills [--dry-run]
+```
+
+**Footgun: `--package` default vs. clean-logging's flat layout.** The CLI's default is `<rootPackage>.recipes` (i.e. `io.github.fiftieshousewife.cleanlogging.recipes`). Clean-logging's v1.0 rename flattened that — every recipe sits at `io.github.fiftieshousewife.cleanlogging.*` with no `.recipes.` segment. **Always pass `--package=io.github.fiftieshousewife.cleanlogging`** when running `add-recipe` here, or new recipes drift into a parallel sub-package and the YAML manifest's recipe IDs won't line up. Upstream feedback raised — once recipescaffold reads a `recipePackage:` key from the dropfile, the flag becomes optional.
+
+`add-recipe --type` values: `java` (idiomatic visitor), `scanning` (two-pass `ScanningRecipe<Acc>`), `yaml` (composition manifest under `META-INF/rewrite/`), `refaster` (template-pair holder). `--test-style method` swaps in the one-line `java(...)` test scaffold (java/scanning only). `--no-tests` skips the test file.
 
 ## Publication workflow
 

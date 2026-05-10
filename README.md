@@ -684,6 +684,31 @@ These transforms are motivated by a few principles from Robert C. Martin's *Clea
 
 `AGENTS.md` (with `CLAUDE.md` symlinked to it for Claude Code back-compat) is the entry point for anything that's specific to this particular repo (project structure, the publication workflow, the coding standards SpotBugs doesn't catch). If you're tempted to add generic recipe / testing / Gradle / smoke-test guidance to `AGENTS.md`, stop — that content belongs in the corresponding skill.
 
+### Build shape
+
+The reusable build (toolchain, JaCoCo, SpotBugs, integrationTest source set + JDK-21 launcher pin, smokeTest source set + mavenLocal-publish gate, `publishAndReleaseToMavenCentral` `dependsOn("smokeTest")`) lives in `build-logic/` as the `recipe-library` convention plugin lifted from [`fiftiesHousewife/recipescaffold`](https://github.com/fiftiesHousewife/recipescaffold). The project's own `build.gradle.kts` is just identity (group, version, POM) plus a small handful of clean-logging-specific extras (the `cleancode` plugin, Checkstyle strictness, the GitHub Packages publishing repo). Knobs are exposed via `gradle.properties` keys: `recipeLibrary.javaTargetMain`, `recipeLibrary.javaTargetTests`, `recipeLibrary.minLineCoverage`, `recipeLibrary.spotbugsStrict`, `recipeLibrary.failOnStaleDependencies`.
+
+### Authoring new recipes
+
+The project carries a `.recipescaffold.yml` dropfile, so the [recipescaffold](https://github.com/fiftiesHousewife/recipescaffold) JBang CLI works against this checkout:
+
+```bash
+# add a Java recipe + test
+jbang recipescaffold@fiftiesHousewife/recipescaffold add-recipe \
+  --name MyRecipe \
+  --display-name "..." \
+  --description "..." \
+  --package=io.github.fiftieshousewife.cleanlogging   # avoids the .recipes subpackage default
+
+# pre-push gate — runs ./gradlew check integrationTest smokeTest
+jbang recipescaffold@fiftiesHousewife/recipescaffold verify-gates
+
+# refresh .claude/skills/ from upstream
+jbang recipescaffold@fiftiesHousewife/recipescaffold upgrade-skills [--dry-run]
+```
+
+The `--package` flag is currently load-bearing: the CLI's default is `<rootPackage>.recipes`, but clean-logging's v1.0 rename flattened that — recipes sit at `io.github.fiftieshousewife.cleanlogging.*` with no `.recipes.` segment. Always pass `--package=io.github.fiftieshousewife.cleanlogging` when adding new recipes. See `AGENTS.md` § "Authoring new recipes" for the full set of `--type` and `--test-style` options.
+
 ---
 
 **Built with OpenRewrite • Lombok • Log4j2**
