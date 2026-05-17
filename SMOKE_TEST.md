@@ -47,10 +47,17 @@ Catalog handling is auto-detected post-0.5: each non-`NoDeps` recipe checks whet
 | --- | --- | --- |
 | `io.github.fiftieshousewife.cleanlogging.SystemOutToSlf4jRecipe` | Greeting.java | with + without |
 | `io.github.fiftieshousewife.cleanlogging.SystemOutToSlf4jRecipeNoDeps` | Greeting.java | n/a (no dep management) |
-| `io.github.fiftieshousewife.cleanlogging.ConvertManualLoggerToSlf4jRecipe` | OrderService.java | with + without |
-| `io.github.fiftieshousewife.cleanlogging.ConvertManualLoggerToSlf4jRecipeNoDeps` | OrderService.java | n/a |
-| `io.github.fiftieshousewife.cleanlogging.MigrateToSlf4jRecipe` | Greeting.java + OrderService.java | with + without |
-| `io.github.fiftieshousewife.cleanlogging.MigrateToSlf4jRecipeNoDeps` | Greeting.java + OrderService.java | n/a |
+| `io.github.fiftieshousewife.cleanlogging.ConvertManualLoggerToSlf4jRecipe` | OrderService.java (manual Log4j2) | with + without |
+| `io.github.fiftieshousewife.cleanlogging.ConvertManualLoggerToSlf4jRecipeNoDeps` | OrderService.java (manual Log4j2) | n/a |
+| `io.github.fiftieshousewife.cleanlogging.DirectSlf4jLoggerFieldToLombokRecipe` | OrderService.java (manual SLF4J) | with + without |
+| `io.github.fiftieshousewife.cleanlogging.DirectSlf4jLoggerFieldToLombokRecipeNoDeps` | OrderService.java (manual SLF4J) | n/a |
+| `io.github.fiftieshousewife.cleanlogging.CommonsLoggingToSlf4jRecipe` | OrderService.java (Commons Logging) | with + without |
+| `io.github.fiftieshousewife.cleanlogging.CommonsLoggingToSlf4jRecipeNoDeps` | OrderService.java (Commons Logging) | n/a |
+| `io.github.fiftieshousewife.cleanlogging.Log4j1ToSlf4jRecipe` | OrderService.java (Log4j 1.x) | with + without |
+| `io.github.fiftieshousewife.cleanlogging.MigrateToSlf4jRecipe` | Greeting.java + OrderService.java (manual Log4j2) | with + without |
+| `io.github.fiftieshousewife.cleanlogging.MigrateToSlf4jRecipeNoDeps` | Greeting.java + OrderService.java (manual Log4j2) | n/a |
+| `io.github.fiftieshousewife.cleanlogging.MigrateToCleanLoggingRecipe` | Greeting.java + OrderService.java (manual Log4j2) | with + without |
+| `io.github.fiftieshousewife.cleanlogging.MigrateToCleanLoggingRecipeNoDeps` | Greeting.java + OrderService.java (manual Log4j2) | n/a |
 
 For `*NoDeps` variants the throwaway project must declare Lombok / SLF4J / log4j2 itself before `compileJava` will pass — otherwise the rewrite produces uncompilable Java.
 

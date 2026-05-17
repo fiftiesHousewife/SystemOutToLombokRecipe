@@ -50,4 +50,57 @@ record Fixture(String relativePath, String body, List<String> prerequisiteImplem
                     }
                     """,
             List.of("org.apache.logging.log4j:log4j-api:2.25.4"));
+
+    static final Fixture ORDER_SERVICE_SLF4J_DIRECT = new Fixture(
+            "src/main/java/com/example/OrderService.java",
+            """
+                    package com.example;
+
+                    import org.slf4j.Logger;
+                    import org.slf4j.LoggerFactory;
+
+                    public class OrderService {
+                        private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
+
+                        public void placeOrder(String id) {
+                            logger.info("Placing " + id);
+                        }
+                    }
+                    """,
+            List.of("org.slf4j:slf4j-api:2.0.17"));
+
+    static final Fixture ORDER_SERVICE_COMMONS_LOGGING = new Fixture(
+            "src/main/java/com/example/OrderService.java",
+            """
+                    package com.example;
+
+                    import org.apache.commons.logging.Log;
+                    import org.apache.commons.logging.LogFactory;
+
+                    public class OrderService {
+                        private static final Log logger = LogFactory.getLog(OrderService.class);
+
+                        public void placeOrder(String id) {
+                            logger.info("Placing " + id);
+                        }
+                    }
+                    """,
+            List.of("commons-logging:commons-logging:1.2", "org.slf4j:slf4j-api:2.0.17"));
+
+    static final Fixture ORDER_SERVICE_LOG4J1 = new Fixture(
+            "src/main/java/com/example/OrderService.java",
+            """
+                    package com.example;
+
+                    import org.apache.log4j.Logger;
+
+                    public class OrderService {
+                        private static final Logger logger = Logger.getLogger(OrderService.class);
+
+                        public void placeOrder(String id) {
+                            logger.info("Placing " + id);
+                        }
+                    }
+                    """,
+            List.of("log4j:log4j:1.2.17"));
 }
