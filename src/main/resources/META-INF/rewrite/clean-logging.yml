@@ -513,6 +513,12 @@ recipeList:
   # by bound type — and our converted calls still carry the pre-conversion
   # logger type since OpenRewrite doesn't re-parse the LST mid-pipeline.
   - io.github.fiftieshousewife.cleanlogging.StringFormatInLogCall
+  # ConcatThrowableMessage runs BEFORE Slf4jConcatToParameterized so the
+  # `"failed: " + e.getMessage()` shape gets the throwable peeled off into
+  # a separate arg (`"failed: ", e`) — cleaner output than letting SCP
+  # parameterise it into `"failed: {}", e.getMessage()` for TGMIP to then
+  # append `e` to. Same stack-trace-loss bug class as TLANP / TGMIP.
+  - io.github.fiftieshousewife.cleanlogging.ConcatThrowableMessage
   - io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterized
   - io.github.fiftieshousewife.cleanlogging.ExplicitToStringInLogCall
   # Then drop trailing `{}` placeholders that consumed a Throwable arg —
@@ -542,6 +548,16 @@ recipeList:
   - io.github.fiftieshousewife.cleanlogging.ConvertManualLoggerToSlf4j:
       requireLombokOnClasspath: true
   - io.github.fiftieshousewife.cleanlogging.JavaTransformsClasspathGated
+  # SLF4J cleanups — same set as MigrateToSlf4jRecipe. These transform
+  # log calls only; they don't touch dependencies, so they're safe in
+  # the NoDeps variant. See the deps variant above for the full ordering
+  # rationale (CTM before SCP, throwable rules last).
+  - io.github.fiftieshousewife.cleanlogging.StringFormatInLogCall
+  - io.github.fiftieshousewife.cleanlogging.ConcatThrowableMessage
+  - io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterized
+  - io.github.fiftieshousewife.cleanlogging.ExplicitToStringInLogCall
+  - io.github.fiftieshousewife.cleanlogging.ThrowableLastArgumentNoPlaceholder
+  - io.github.fiftieshousewife.cleanlogging.ThrowableGetMessageInPlaceholder
 
 ---
 type: specs.openrewrite.org/v1beta/recipe
@@ -596,6 +612,12 @@ recipeList:
   - io.github.fiftieshousewife.cleanlogging.ConvertManualLoggerToSlf4j
   - io.github.fiftieshousewife.cleanlogging.JavaTransforms
   - io.github.fiftieshousewife.cleanlogging.StringFormatInLogCall
+  # ConcatThrowableMessage runs BEFORE Slf4jConcatToParameterized so the
+  # `"failed: " + e.getMessage()` shape gets the throwable peeled off into
+  # a separate arg (`"failed: ", e`) — cleaner output than letting SCP
+  # parameterise it into `"failed: {}", e.getMessage()` for TGMIP to then
+  # append `e` to. Same stack-trace-loss bug class as TLANP / TGMIP.
+  - io.github.fiftieshousewife.cleanlogging.ConcatThrowableMessage
   - io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterized
   - io.github.fiftieshousewife.cleanlogging.ExplicitToStringInLogCall
   - io.github.fiftieshousewife.cleanlogging.ThrowableLastArgumentNoPlaceholder
@@ -635,6 +657,12 @@ recipeList:
       requireLombokOnClasspath: true
   - io.github.fiftieshousewife.cleanlogging.JavaTransformsClasspathGated
   - io.github.fiftieshousewife.cleanlogging.StringFormatInLogCall
+  # ConcatThrowableMessage runs BEFORE Slf4jConcatToParameterized so the
+  # `"failed: " + e.getMessage()` shape gets the throwable peeled off into
+  # a separate arg (`"failed: ", e`) — cleaner output than letting SCP
+  # parameterise it into `"failed: {}", e.getMessage()` for TGMIP to then
+  # append `e` to. Same stack-trace-loss bug class as TLANP / TGMIP.
+  - io.github.fiftieshousewife.cleanlogging.ConcatThrowableMessage
   - io.github.fiftieshousewife.cleanlogging.Slf4jConcatToParameterized
   - io.github.fiftieshousewife.cleanlogging.ExplicitToStringInLogCall
   - io.github.fiftieshousewife.cleanlogging.ThrowableLastArgumentNoPlaceholder

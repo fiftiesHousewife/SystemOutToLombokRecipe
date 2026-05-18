@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "io.github.fiftieshousewife"
-version = "1.1"
+version = "1.2"
 
 // rewrite-logging-frameworks is referenced by Log4j1ToSlf4jRecipe's YAML
 // composition (it wraps upstream's `org.openrewrite.java.logging.log4j.Log4j1ToLog4j2`

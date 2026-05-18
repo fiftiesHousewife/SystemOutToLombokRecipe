@@ -35,8 +35,13 @@ class StringFormatInLogCallVisitor extends JavaIsoVisitor<ExecutionContext> {
         }
         final J.MethodInvocation formatCall = (J.MethodInvocation) arg;
         final List<Expression> formatArgs = formatCall.getArguments();
-        if (formatArgs.isEmpty() || !(formatArgs.get(0) instanceof J.Literal formatLiteral)
-                || !(formatLiteral.getValue() instanceof String printfFormat)) {
+        if (formatArgs.isEmpty()) {
+            return visited;
+        }
+        if (!(formatArgs.get(0) instanceof J.Literal formatLiteral)) {
+            return visited;
+        }
+        if (!(formatLiteral.getValue() instanceof String printfFormat)) {
             return visited;
         }
         return rewriteAsParameterized(visited, printfFormat, formatLiteral, formatArgs);

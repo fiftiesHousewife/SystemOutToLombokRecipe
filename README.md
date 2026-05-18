@@ -203,7 +203,7 @@ The full Clean Logging pipeline. Runs every leaf transform in a single pass, **a
 - Hand-rolled SLF4J `Logger log = LoggerFactory.getLogger(...)` fields → `@Slf4j`.
 - `java.util.logging.Logger` calls → `log.xxx`, with the JUL field + import removed.
 - `System.out` / `System.err` / `printStackTrace()` → `log.info` / `log.error`.
-- SLF4J cleanups: concatenated messages → `{}` placeholders; trailing-`{}` placeholders that consumed a `Throwable` arg → throwable in the trailing slot.
+- SLF4J cleanups: `String.format` inside log calls dropped; explicit `.toString()` on substitution args dropped; concatenated messages → `{}` placeholders; concatenated `e.getMessage()` peeled off into a separate throwable arg; trailing-`{}` placeholders that consumed a `Throwable` arg → throwable in the trailing slot; `getMessage()` in a placeholder with no throwable bound → throwable appended.
 - Adds Lombok + SLF4J + Log4j2 backend dependencies, catalog-aware: if `gradle/libs.versions.toml` is present, entries land in the catalog and `build.gradle.kts` uses `libs.lombok` / `libs.slf4jApi` / `libs.log4jSlf4jImpl` / `libs.log4jCore`; otherwise inline `compileOnly("...")` declarations.
 - Seeds production-ready `log4j2.xml` + console-only `log4j2-test.xml`.
 
